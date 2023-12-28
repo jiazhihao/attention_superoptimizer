@@ -3,9 +3,22 @@ project(ASO LANGUAGES CXX CUDA)
 
 message(STATUS "CMake Version: ${CMAKE_VERSION}")
 
+if (EXISTS ${CMAKE_CURRENT_BINARY_DIR}/config.cmake)
+  include (${CMAKE_CURRENT_BINARY_DIR}/config.cmake)
+else()
+  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/config.cmake)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/config.cmake)
+  endif()
+endif()
+
+#include directories
+include_directories(${CMAKE_INCLUDE_PATH})
+include_directories(${CMAKE_BINARY_DIR}) # to include protobuf headeer files
+include_directories("include")
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
-add_subdirectory(deps/cutlass)
+#add_subdirectory(deps/cutlass)
 
 set(CUTLASS_NVCC_ARCHS 80)
 
@@ -16,7 +29,6 @@ file(GLOB_RECURSE ASO_SRCS
 
 include(CheckCXXCompilerFlag)
 check_cxx_compiler_flag("-std=c++17" SUPPORT_CXX17)
-target_compile_features(${TARGET_NAME} PUBLIC cxx_std_17)
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
   message("Build in Debug mode")
@@ -29,7 +41,7 @@ endif()
 
 #set CUDA
 if (NOT "${USE_CUDA}" STREQUAL "OFF")
-  include(cmake/FindCUDA.cmake)
+  include(cmake/cuda.cmake)
   find_cuda(${USE_CUDA})
   if (CUDA_FOUND)
     list(APPEND TASO_SRCS ${TASO_CUDA_SRCS})
@@ -45,10 +57,34 @@ if (NOT "${USE_CUDA}" STREQUAL "OFF")
   endif(CUDA_FOUND)
 endif()
 
-include_directories(deps/cutlass/include)
-include_directories(deps/cutlass/tools/util/include)
+#include_directories(deps/cutlass/include)
+#include_directories(deps/cutlass/tools/util/include)
 include_directories(${ASO_INCLUDE_DIRS})
 
-add_executable(aso ${ASO_SRCS})
+add_library(lib_aso ${ASO_SRCS})
 
-# target_link_libraries(aso ${ASO_EXT_LIBRARIES})
+set_target_properties(lib_aso
+  PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+target_compile_features(lib_aso PUBLIC cxx_std_17)
+
+target_link_libraries(lib_aso ${ASO_LINK_LIBS})
+
+target_include_directories(lib_aso
+  PUBLIC ${PROJECT_SOURCE_DIR}/include)
+
+install(TARGETS lib_aso
+    LIBRARY DESTINATION lib)
+
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/include
+    DESTINATION .)
+
+if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
+  set(CPP_EXAMPLES_DIR cpp_examples)
+  set(CPP_EXAMPLES_BIN dnn)
+  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/*.cc)
+  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
+  set_target_properties(${CPP_EXAMPLES_BIN}
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
+  target_link_libraries(${CPP_EXAMPLES_BIN} lib_aso)
+endif()
