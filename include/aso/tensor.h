@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include "aso/data_type.h"
+
 namespace aso {
 
 #define MAX_TENSOR_DIMS 4
@@ -22,10 +24,11 @@ namespace aso {
 class Operator;
 
 struct Tensor {
+  aso::datatype::Type data_type;
   int num_dims;
   int dims[MAX_TENSOR_DIMS];
   int stride[MAX_TENSOR_DIMS];
-  Operator* owner_operator;
+  Operator *owner_operator;
   int owner_output_idx;
 };
 

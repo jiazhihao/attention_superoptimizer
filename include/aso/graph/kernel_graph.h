@@ -15,15 +15,20 @@
 
 #pragma once
 
-#include "aso/tensor.h"
+#include "aso/graph/operator_factory.h"
 #include "aso/kernel/operator.h"
+#include "aso/tensor.h"
 #include <vector>
 
 namespace aso {
 namespace graph {
+
 class KernelGraph {
 public:
-  std::vector<aso::kernel::Operator*> operators;
+  KernelGraph(void);
+  Tensor matmul(Tensor const &A, Tensor const &B);
+  std::vector<aso::kernel::Operator *> operators;
+  OperatorFactory *operator_factory;
 };
 
 } // namespace graph

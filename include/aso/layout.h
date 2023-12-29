@@ -22,9 +22,7 @@ struct Layout {
     RowMajor,
     ColumnMajor,
   };
-  Layout(DefaultLayout _layout,
-         int _rows,
-         int _columns);
+  Layout(DefaultLayout _layout, int _rows, int _columns);
   int num_dims;
   int dims[MAX_NUM_DIMS];
   int stride[MAX_NUM_DIMS];

@@ -13,34 +13,32 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include "aso/kernel/operator.h"
+#include "aso/kernel/matmul.h"
+#include <cassert>
 
 namespace aso {
 namespace kernel {
 namespace matmul {
 
-class Operator : public aso::kernel::Operator {
-public:
-  Operator(Tensor const &A, Tensor const &B);
-  bool profile_performance(ProfileResult &profile);
-};
+Operator::Operator(Tensor const &A, Tensor const &B)
+    : aso::kernel::Operator(A, B) {
+  Tensor C;
+  assert(A.num_dims == 2);
+  assert(B.num_dims == 2);
+  // Currently only support row-major output
+  // to be consistent with cutlass
+  C.num_dims = 2;
+  C.dims[0] = A.dims[0];
+  C.dims[1] = B.dims[1];
+  C.stride[0] = C.dims[1];
+  C.stride[1] = 1;
+  C.data_type = A.data_type;
+  assert(output_tensors.size() == 0);
+  output_tensors.push_back(C);
+}
 
-class Key {
-public:
-  Key(Tensor const &A, Tensor const &B);
-  Tensor operand_a;
-  Tensor operand_b;
-};
+Key::Key(Tensor const &A, Tensor const &B) : operand_a(A), operand_b(B) {}
 
 } // namespace matmul
 } // namespace kernel
 } // namespace aso
-
-namespace std {
-template <>
-struct hash<aso::kernel::matmul::Key> {
-  size_t operator()(aso::kernel::matmul::Key const &) const;
-};
-} // namespace std

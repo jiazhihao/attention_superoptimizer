@@ -15,28 +15,25 @@
 
 #pragma once
 
-#include "aso/profile_result.h"
-#include "aso/tensor.h"
+#include "aso/base_operator.h"
+#include "aso/kernel/matmul.h"
+#include <unordered_map>
 #include <vector>
 
 namespace aso {
-namespace base {
+namespace graph {
 
-class Operator {
+using Op = aso::base::Operator *;
+
+class OperatorFactory {
 public:
-  enum Type {
-    KERNEL_OPERATOR,
-    THREADBLOCK_OPERATOR,
-    WARP_OPERATOR,
-    THREAD_OPERATOR
-  };
+  OperatorFactory(void);
+  Op get_or_create_matmul(Tensor const &A, Tensor const &B);
 
 public:
-  virtual Type get_operator_type() = 0;
-  virtual bool profile_performance(ProfileResult &profile) = 0;
-  std::vector<aso::Tensor> input_tensors;
-  std::vector<aso::Tensor> output_tensors;
+  std::unordered_map<aso::kernel::matmul::Key, aso::kernel::matmul::Operator *>
+      matmul;
 };
 
-} // namespace base
+} // namespace graph
 } // namespace aso

@@ -15,19 +15,20 @@
 
 #pragma once
 
-#include "aso/tensor.h"
 #include "aso/base_operator.h"
+#include "aso/tensor.h"
 
 namespace aso {
 namespace kernel {
 
-class Operator : public BaseOperator {
+class Operator : public aso::base::Operator {
 public:
-  BaseOperator::Type get_operator_type(void);
+  Operator(Tensor const &input1, Tensor const &input2);
+  aso::base::Operator::Type get_operator_type(void);
   // std::vector<Tensor> input_tensors;
   // std::vector<Tensor> output_tensors;
   // int num_inputs, num_outputs;
 };
 
-} // namespace layout
+} // namespace kernel
 } // namespace aso

@@ -13,30 +13,22 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include "aso/profile_result.h"
-#include "aso/tensor.h"
-#include <vector>
+#include "aso/graph/operator_factory.h"
+#include "aso/graph/kernel_graph.h"
 
 namespace aso {
-namespace base {
+namespace graph {
 
-class Operator {
-public:
-  enum Type {
-    KERNEL_OPERATOR,
-    THREADBLOCK_OPERATOR,
-    WARP_OPERATOR,
-    THREAD_OPERATOR
-  };
+static OperatorFactory *operator_factory_singleton = nullptr;
 
-public:
-  virtual Type get_operator_type() = 0;
-  virtual bool profile_performance(ProfileResult &profile) = 0;
-  std::vector<aso::Tensor> input_tensors;
-  std::vector<aso::Tensor> output_tensors;
-};
+OperatorFactory::OperatorFactory() {}
 
-} // namespace base
+KernelGraph::KernelGraph() {
+  if (operator_factory_singleton == nullptr) {
+    operator_factory_singleton = new OperatorFactory();
+  }
+  operator_factory = operator_factory_singleton;
+}
+
+} // namespace graph
 } // namespace aso

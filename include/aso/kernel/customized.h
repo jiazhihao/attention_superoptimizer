@@ -15,28 +15,17 @@
 
 #pragma once
 
-#include "aso/profile_result.h"
+#include "aso/graph/threadblock_graph.h"
+#include "aso/kernel/operator.h"
 #include "aso/tensor.h"
-#include <vector>
 
 namespace aso {
-namespace base {
+namespace kernel {
 
-class Operator {
+class Customized : public Operator {
 public:
-  enum Type {
-    KERNEL_OPERATOR,
-    THREADBLOCK_OPERATOR,
-    WARP_OPERATOR,
-    THREAD_OPERATOR
-  };
-
-public:
-  virtual Type get_operator_type() = 0;
-  virtual bool profile_performance(ProfileResult &profile) = 0;
-  std::vector<aso::Tensor> input_tensors;
-  std::vector<aso::Tensor> output_tensors;
+  aso::graph::ThreadBlockGraph *warp_operator_graph;
 };
 
-} // namespace base
+} // namespace kernel
 } // namespace aso

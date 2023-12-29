@@ -13,30 +13,16 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include "aso/profile_result.h"
-#include "aso/tensor.h"
-#include <vector>
+#include "aso/graph/kernel_graph.h"
 
 namespace aso {
-namespace base {
+namespace graph {
 
-class Operator {
-public:
-  enum Type {
-    KERNEL_OPERATOR,
-    THREADBLOCK_OPERATOR,
-    WARP_OPERATOR,
-    THREAD_OPERATOR
-  };
+// BaseOperator::Type KernelOperator::get_operator_type(void) {
+//   return BaseOperator::KERNEL_OPERATOR;
+// }
 
-public:
-  virtual Type get_operator_type() = 0;
-  virtual bool profile_performance(ProfileResult &profile) = 0;
-  std::vector<aso::Tensor> input_tensors;
-  std::vector<aso::Tensor> output_tensors;
-};
+Tensor KernelGraph::matmul(Tensor const &A, Tensor const &B) {}
 
-} // namespace base
+} // namespace graph
 } // namespace aso
