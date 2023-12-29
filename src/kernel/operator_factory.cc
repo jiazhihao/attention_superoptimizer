@@ -13,23 +13,22 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include "aso/graph/operator_factory.h"
-#include "aso/kernel/operator.h"
-#include "aso/tensor.h"
-#include <vector>
+#include "aso/kernel/operator_factory.h"
+#include "aso/kernel/graph.h"
 
 namespace aso {
-namespace graph {
+namespace kernel {
 
-class KernelGraph {
-public:
-  KernelGraph(void);
-  Tensor matmul(Tensor const &A, Tensor const &B);
-  std::vector<aso::kernel::Operator *> operators;
-  OperatorFactory *operator_factory;
-};
+static OperatorFactory *operator_factory_singleton = nullptr;
 
-} // namespace graph
+OperatorFactory::OperatorFactory() {}
+
+Graph::Graph() {
+  if (operator_factory_singleton == nullptr) {
+    operator_factory_singleton = new OperatorFactory();
+  }
+  operator_factory = operator_factory_singleton;
+}
+
+} // namespace kernel
 } // namespace aso

@@ -13,36 +13,34 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include "aso/kernel/operator.h"
+#include "aso/tensor.h"
+#include "aso/utils/hash_utils.h"
+#include <functional>
 
 namespace aso {
-namespace kernel {
-namespace matmul {
-
-class Operator : public aso::kernel::Operator {
-public:
-  Operator(Tensor const &A, Tensor const &B);
-  ~Operator();
-  bool profile_performance(ProfileResult &profile);
-};
-
-class Key {
-public:
-  Key(Tensor const &A, Tensor const &B);
-  bool operator==(const Key& b) const;
-  Tensor operand_a;
-  Tensor operand_b;
-};
-
-} // namespace matmul
-} // namespace kernel
+Tensor::Tensor() {
+  data_type = aso::datatype::UNKNOWN;
+  num_dims = 0;
+  for (int i = 0; i < MAX_TENSOR_DIMS; i++) {
+    dim[i] = 0;
+    stride[i] = 0;
+  }
+  owner_operator = nullptr;
+  owner_output_idx = 0;
+}
 } // namespace aso
 
 namespace std {
-template <>
-struct hash<aso::kernel::matmul::Key> {
-  size_t operator()(aso::kernel::matmul::Key const &) const;
-};
+
+size_t hash<aso::Tensor>::operator()(
+    aso::Tensor const &tensor) const {
+  size_t ret = hash<int>()((tensor.data_type));
+  hash_combine(ret, tensor.num_dims);
+  for (int i = 0; i < tensor.num_dims; i++) {
+    hash_combine(ret, tensor.dim[i]);
+    hash_combine(ret, tensor.stride[i]);
+  }
+  return ret;
+}
+
 } // namespace std

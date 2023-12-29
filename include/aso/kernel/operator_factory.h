@@ -13,16 +13,27 @@
  * limitations under the License.
  */
 
-#include "aso/graph/kernel_graph.h"
+#pragma once
+
+#include "aso/base_operator.h"
+#include "aso/kernel/matmul.h"
+#include <unordered_map>
+#include <vector>
 
 namespace aso {
-namespace graph {
+namespace kernel {
 
-// BaseOperator::Type KernelOperator::get_operator_type(void) {
-//   return BaseOperator::KERNEL_OPERATOR;
-// }
+using Op = Operator *;
 
-Tensor KernelGraph::matmul(Tensor const &A, Tensor const &B) {}
+class OperatorFactory {
+public:
+  OperatorFactory(void);
+  Op get_or_create_matmul(Tensor const &A, Tensor const &B);
 
-} // namespace graph
+public:
+  std::unordered_map<aso::kernel::matmul::Key, aso::kernel::matmul::Operator *>
+      matmul;
+};
+
+} // namespace kernel
 } // namespace aso

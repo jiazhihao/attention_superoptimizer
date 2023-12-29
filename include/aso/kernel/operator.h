@@ -21,13 +21,13 @@
 namespace aso {
 namespace kernel {
 
-class Operator : public aso::base::Operator {
+class Operator {
 public:
   Operator(Tensor const &input1, Tensor const &input2);
-  aso::base::Operator::Type get_operator_type(void);
-  // std::vector<Tensor> input_tensors;
-  // std::vector<Tensor> output_tensors;
-  // int num_inputs, num_outputs;
+  ~Operator();
+  // aso::base::Operator::Type get_operator_type(void);
+  std::vector<aso::Tensor> input_tensors;
+  std::vector<aso::Tensor> output_tensors;
 };
 
 } // namespace kernel

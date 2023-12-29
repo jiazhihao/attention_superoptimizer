@@ -61,19 +61,19 @@ endif()
 #include_directories(deps/cutlass/tools/util/include)
 include_directories(${ASO_INCLUDE_DIRS})
 
-add_library(lib_aso ${ASO_SRCS})
+add_library(aso_runtime ${ASO_SRCS})
 
-set_target_properties(lib_aso
+set_target_properties(aso_runtime
   PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-target_compile_features(lib_aso PUBLIC cxx_std_17)
+target_compile_features(aso_runtime PUBLIC cxx_std_17)
 
-target_link_libraries(lib_aso ${ASO_LINK_LIBS})
+target_link_libraries(aso_runtime ${ASO_LINK_LIBS})
 
-target_include_directories(lib_aso
+target_include_directories(aso_runtime
   PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
-install(TARGETS lib_aso
+install(TARGETS aso_runtime
     LIBRARY DESTINATION lib)
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include
@@ -86,5 +86,5 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} lib_aso)
+  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
 endif()

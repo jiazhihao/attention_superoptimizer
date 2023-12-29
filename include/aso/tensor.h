@@ -16,6 +16,8 @@
 #pragma once
 
 #include "aso/data_type.h"
+#include <cstddef>
+#include <functional>
 
 namespace aso {
 
@@ -24,12 +26,44 @@ namespace aso {
 class Operator;
 
 struct Tensor {
+  Tensor();
+  // Note that Tensor equivalence does not check owner_operator
+  inline bool operator==(const Tensor& b) const {
+    if (data_type != b.data_type) return false;
+    if (num_dims != b.num_dims) return false;
+    for (int i = 0; i < num_dims; i++) {
+      if (dim[i] != b.dim[i])
+        return false;
+      if (stride[i] != b.stride[i])
+        return false;
+    }
+    return true;
+  }
+  inline bool operator!=(const Tensor& b) const {
+    if (data_type != b.data_type) return true;
+    if (num_dims != b.num_dims) return true;
+    for (int i = 0; i < num_dims; i++) {
+      if (dim[i] != b.dim[i])
+        return true;
+      if (stride[i] != b.stride[i])
+        return true;
+    }
+    return false;
+  }
+
   aso::datatype::Type data_type;
   int num_dims;
-  int dims[MAX_TENSOR_DIMS];
+  int dim[MAX_TENSOR_DIMS];
   int stride[MAX_TENSOR_DIMS];
   Operator *owner_operator;
   int owner_output_idx;
 };
 
 } // namespace aso
+
+namespace std {
+template <>
+struct hash<aso::Tensor> {
+  size_t operator()(aso::Tensor const &) const;
+};
+}; // namespace std

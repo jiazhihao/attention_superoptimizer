@@ -13,14 +13,22 @@
  * limitations under the License.
  */
 
-#include "aso/graph/kernel_graph.h"
+#include "aso/kernel/operator.h"
 
 namespace aso {
 namespace kernel {
 
-aso::base::Operator::Type Operator::get_operator_type(void) {
-  return aso::base::Operator::KERNEL_OPERATOR;
+Operator::Operator(const Tensor& A,
+                   const Tensor& B) {
+  input_tensors.push_back(A);
+  input_tensors.push_back(B);
 }
+
+Operator::~Operator() {}
+
+//aso::base::Operator::Type Operator::get_operator_type(void) {
+//  return aso::base::Operator::KERNEL_OPERATOR;
+//}
 
 } // namespace kernel
 } // namespace aso

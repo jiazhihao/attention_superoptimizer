@@ -13,22 +13,18 @@
  * limitations under the License.
  */
 
-#include "aso/graph/operator_factory.h"
-#include "aso/graph/kernel_graph.h"
+#pragma once
 
 namespace aso {
-namespace graph {
-
-static OperatorFactory *operator_factory_singleton = nullptr;
-
-OperatorFactory::OperatorFactory() {}
-
-KernelGraph::KernelGraph() {
-  if (operator_factory_singleton == nullptr) {
-    operator_factory_singleton = new OperatorFactory();
-  }
-  operator_factory = operator_factory_singleton;
-}
-
-} // namespace graph
+namespace datatype {
+enum Type {
+  INT4,
+  INT8,
+  BFLOAT16,
+  FLOAT16,
+  FLOAT32,
+  DOUBLE,
+  UNKNOWN,
+};
+} // namespace datatype
 } // namespace aso
