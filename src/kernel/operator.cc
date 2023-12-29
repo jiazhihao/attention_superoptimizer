@@ -18,17 +18,16 @@
 namespace aso {
 namespace kernel {
 
-Operator::Operator(const Tensor& A,
-                   const Tensor& B) {
+Operator::Operator(Tensor const &A, Tensor const &B) {
   input_tensors.push_back(A);
   input_tensors.push_back(B);
 }
 
 Operator::~Operator() {}
 
-//aso::base::Operator::Type Operator::get_operator_type(void) {
-//  return aso::base::Operator::KERNEL_OPERATOR;
-//}
+// aso::base::Operator::Type Operator::get_operator_type(void) {
+//   return aso::base::Operator::KERNEL_OPERATOR;
+// }
 
 } // namespace kernel
 } // namespace aso

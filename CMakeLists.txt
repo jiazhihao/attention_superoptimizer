@@ -23,8 +23,11 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_LIST_DIR}/cmake)
 set(CUTLASS_NVCC_ARCHS 80)
 
 file(GLOB_RECURSE ASO_SRCS
-  src/*.cu
   src/*.cc
+)
+
+file(GLOB_RECURSE ASO_CUDA_SRCS
+  src/*.cu
 )
 
 include(CheckCXXCompilerFlag)
@@ -44,14 +47,13 @@ if (NOT "${USE_CUDA}" STREQUAL "OFF")
   include(cmake/cuda.cmake)
   find_cuda(${USE_CUDA})
   if (CUDA_FOUND)
-    list(APPEND TASO_SRCS ${TASO_CUDA_SRCS})
+    list(APPEND ASO_SRCS ${ASO_CUDA_SRCS})
     include_directories(${CUDA_INCLUDE_DIRS})
     message(STATUS "CUDA_INCLUDE_DIR=" ${CUDA_INCLUDE_DIRS})
-    add_definitions(-DUSE_CUDNN)
-    list(APPEND TASO_LINK_LIBS ${CUDA_CUDART_LIBRARY})
-    list(APPEND TASO_LINK_LIBS ${CUDA_CUDA_LIBRARY})
-    list(APPEND TASO_LINK_LIBS ${CUDA_CUDNN_LIBRARY})
-    list(APPEND TASO_LINK_LIBS ${CUDA_CUBLAS_LIBRARY})
+    list(APPEND ASO_LINK_LIBS ${CUDA_CUDART_LIBRARY})
+    list(APPEND ASO_LINK_LIBS ${CUDA_CUDA_LIBRARY})
+    list(APPEND ASO_LINK_LIBS ${CUDA_CUDNN_LIBRARY})
+    list(APPEND ASO_LINK_LIBS ${CUDA_CUBLAS_LIBRARY})
   else()
     message(FATAL_ERROR "Cannot find CUDA, USE_CUDA=" ${USE_CUDA})
   endif(CUDA_FOUND)

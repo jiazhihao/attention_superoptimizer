@@ -25,13 +25,13 @@ class Operator : public aso::kernel::Operator {
 public:
   Operator(Tensor const &A, Tensor const &B);
   ~Operator();
-  bool profile_performance(ProfileResult &profile);
+  bool profile(ProfileResult &profile);
 };
 
 class Key {
 public:
   Key(Tensor const &A, Tensor const &B);
-  bool operator==(const Key& b) const;
+  bool operator==(Key const &b) const;
   Tensor operand_a;
   Tensor operand_b;
 };

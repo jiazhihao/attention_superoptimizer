@@ -21,22 +21,23 @@
 namespace aso {
 namespace kernel {
 
-Tensor Graph::matmul(Tensor const &A,
-                     Tensor const &B) {
-  Operator* op = operator_factory->get_or_create_matmul(A, B);
+Tensor Graph::matmul(Tensor const &A, Tensor const &B) {
+  Operator *op = operator_factory->get_or_create_matmul(A, B);
   assert(op != nullptr);
   operators.push_back(op);
   return op->output_tensors[0];
 }
 
-Operator* OperatorFactory::get_or_create_matmul(Tensor const &A,
+Operator *OperatorFactory::get_or_create_matmul(Tensor const &A,
                                                 Tensor const &B) {
-  if (A.num_dims != 2 || B.num_dims != 2)
+  if (A.num_dims != 2 || B.num_dims != 2) {
     return nullptr;
-  if (A.dim[1] != B.dim[0])
+  }
+  if (A.dim[1] != B.dim[0]) {
     return nullptr;
+  }
   matmul::Key key(A, B);
-  matmul::Operator* op = nullptr;
+  matmul::Operator *op = nullptr;
   if (matmul.find(key) != matmul.end()) {
     op = matmul[key];
   } else {
@@ -69,11 +70,13 @@ Operator::~Operator() {}
 
 Key::Key(Tensor const &A, Tensor const &B) : operand_a(A), operand_b(B) {}
 
-bool Key::operator==(const Key& b) const {
-  if (b.operand_a != operand_a)
+bool Key::operator==(Key const &b) const {
+  if (b.operand_a != operand_a) {
     return false;
-  if (b.operand_b != operand_b)
+  }
+  if (b.operand_b != operand_b) {
     return false;
+  }
   return true;
 }
 

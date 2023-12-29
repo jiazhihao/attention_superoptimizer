@@ -13,24 +13,27 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include <cassert>
-#include <cstddef>
+#include <cublas_v2.h>
 
 namespace aso {
-namespace datatype {
+namespace simulator {
+class Simulator {
+private:
+  static Simulator *singleton;
+  Simulator();
+  ~Simulator();
+  off_t offset;
+  size_t work_space_size;
+  void *base_ptr;
 
-enum Type {
-  INT8,
-  BFLOAT16,
-  FLOAT16,
-  FLOAT32,
-  DOUBLE,
-  UNKNOWN,
+public:
+  static Simulator *get_instance();
+  void *allocate(size_t size_in_bytes);
+  void free_all();
+
+public:
+  cublasHandle_t blas;
 };
 
-size_t get_datatype_size(Type type);
-
-} // namespace datatype
+} // namespace simulator
 } // namespace aso

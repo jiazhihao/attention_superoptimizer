@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "aso/base_operator.h"
+#include "aso/profile_result.h"
 #include "aso/tensor.h"
 
 namespace aso {
@@ -25,7 +25,8 @@ class Operator {
 public:
   Operator(Tensor const &input1, Tensor const &input2);
   ~Operator();
-  // aso::base::Operator::Type get_operator_type(void);
+  // aso::base::Operator::Type get_operator_type(void)
+  bool profile(ProfileResult &result);
   std::vector<aso::Tensor> input_tensors;
   std::vector<aso::Tensor> output_tensors;
 };

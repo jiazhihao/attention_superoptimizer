@@ -32,8 +32,7 @@ Tensor::Tensor() {
 
 namespace std {
 
-size_t hash<aso::Tensor>::operator()(
-    aso::Tensor const &tensor) const {
+size_t hash<aso::Tensor>::operator()(aso::Tensor const &tensor) const {
   size_t ret = hash<int>()((tensor.data_type));
   hash_combine(ret, tensor.num_dims);
   for (int i = 0; i < tensor.num_dims; i++) {

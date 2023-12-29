@@ -15,7 +15,6 @@
 
 #pragma once
 
-#include "aso/base_operator.h"
 #include "aso/kernel/matmul.h"
 #include <unordered_map>
 #include <vector>
