@@ -15,17 +15,34 @@
 
 #pragma once
 
-#include "aso/graph/threadblock_graph.h"
 #include "aso/kernel/operator.h"
+#include "aso/threadblock/operator.h"
 #include "aso/tensor.h"
+#include <vector_types.h>
+#include <tuple>
 
 namespace aso {
 namespace kernel {
+namespace customized {
 
-class Customized : public Operator {
+// using ExecutionPlan = std::vector<std::pair<aso::threadblock::Operator*,std::vector<std::pair<int, int> > > >;
+
+class ExecutionPlan {
 public:
-  aso::threadblock::Graph *operator_graph;
+  std::vector<std::pair<aso::threadblock::Operator*,std::vector<std::pair<int, int> > > > ops;
+  std::vector<dim3> grid_map;
+  std::vector<int> forloop_dim;
+  dim3 grid_dim, block_dim, warp_dim;
 };
 
+class Operator : public aso::kernel::Operator {
+public:
+  Operator(std::vector<TensorShape> const &inputs,
+           ExecutionPlan const &plan);
+  ExecutionPlan plan;
+  //aso::threadblock::Graph *operator_graph;
+};
+
+} // namespace customized
 } // namespace kernel
 } // namespace aso

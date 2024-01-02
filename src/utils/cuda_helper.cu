@@ -1,4 +1,4 @@
-/* Copyright 2023 CMU
+/* Copyright 2023-2024 CMU
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,29 +13,24 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include "aso/kernel/operator.h"
-#include "aso/kernel/operator_factory.h"
-#include "aso/tensor.h"
-#include <vector>
+#include "aso/utils/cuda_helper.h"
 
 namespace aso {
-namespace kernel {
+namespace utils {
 
-class SrcEdge {
-  int owner_op_idx;
-  int owner_ts_idx;
-};
+cudaDataType_t to_cuda_datatype(aso::datatype::Type type) {
+  switch (type) {
+    case aso::datatype::FLOAT16:
+      return CUDA_R_16F;
+    case aso::datatype::FLOAT32:
+      return CUDA_R_32F;
+    case aso::datatype::DOUBLE:
+      return CUDA_R_64F;
+    default:
+      assert(false && "Unspoorted cuda data type");
+  }
+  return CUDA_R_16F;
+}
 
-class Graph {
-public:
-  Graph(void);
-  Tensor matmul(Tensor const &A, Tensor const &B);
-  std::vector<aso::kernel::Operator *> operators;
-  // std::vector<std::vector<SrcEdge>> edges;
-  // aso::kernel::OperatorFactory *operator_factory;
-};
-
-} // namespace kernel
+} // namespace utils
 } // namespace aso

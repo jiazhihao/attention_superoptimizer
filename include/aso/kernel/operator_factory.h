@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "aso/kernel/customized.h"
 #include "aso/kernel/matmul.h"
 #include <unordered_map>
 #include <vector>
@@ -29,7 +30,8 @@ public:
   static OperatorFactory *singleton;
   OperatorFactory(void);
   Op get_or_create_matmul(TensorShape const &A, TensorShape const &B);
-
+  Op get_or_create_customized(std::vector<TensorShape> const &inputs,
+                              aso::kernel::customized::ExecutionPlan const &plan);
 public:
   static OperatorFactory *get_instance();
 

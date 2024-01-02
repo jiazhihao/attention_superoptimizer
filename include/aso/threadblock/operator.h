@@ -1,4 +1,4 @@
-/* Copyright 2023 CMU
+/* Copyright 2023-2024 CMU
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,29 +13,17 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include "aso/kernel/operator.h"
-#include "aso/kernel/operator_factory.h"
 #include "aso/tensor.h"
-#include <vector>
 
 namespace aso {
-namespace kernel {
+namespace threadblock {
 
-class SrcEdge {
-  int owner_op_idx;
-  int owner_ts_idx;
-};
-
-class Graph {
+class Operator {
 public:
-  Graph(void);
-  Tensor matmul(Tensor const &A, Tensor const &B);
-  std::vector<aso::kernel::Operator *> operators;
-  // std::vector<std::vector<SrcEdge>> edges;
-  // aso::kernel::OperatorFactory *operator_factory;
+  Operator(TensorShape const&input1, TensorShape const &input2);
+  std::vector<aso::TensorShape> input_tensors;
+  std::vector<aso::TensorShape> oiutput_tensors;
 };
 
-} // namespace kernel
+} // namespace threadblock
 } // namespace aso
