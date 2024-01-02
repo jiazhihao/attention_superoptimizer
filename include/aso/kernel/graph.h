@@ -23,12 +23,18 @@
 namespace aso {
 namespace kernel {
 
+class SrcEdge {
+  int owner_op_idx;
+  int owner_ts_idx;
+};
+
 class Graph {
 public:
   Graph(void);
   Tensor matmul(Tensor const &A, Tensor const &B);
   std::vector<aso::kernel::Operator *> operators;
-  aso::kernel::OperatorFactory *operator_factory;
+  std::vector<std::vector<SrcEdge>> edges;
+  // aso::kernel::OperatorFactory *operator_factory;
 };
 
 } // namespace kernel

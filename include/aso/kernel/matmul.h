@@ -23,17 +23,17 @@ namespace matmul {
 
 class Operator : public aso::kernel::Operator {
 public:
-  Operator(Tensor const &A, Tensor const &B);
+  Operator(TensorShape const &A, TensorShape const &B);
   ~Operator();
   bool profile(ProfileResult &profile);
 };
 
 class Key {
 public:
-  Key(Tensor const &A, Tensor const &B);
+  Key(TensorShape const &A, TensorShape const &B);
   bool operator==(Key const &b) const;
-  Tensor operand_a;
-  Tensor operand_b;
+  TensorShape operand_a;
+  TensorShape operand_b;
 };
 
 } // namespace matmul

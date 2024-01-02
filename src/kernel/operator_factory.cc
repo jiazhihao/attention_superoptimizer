@@ -19,15 +19,17 @@
 namespace aso {
 namespace kernel {
 
-static OperatorFactory *operator_factory_singleton = nullptr;
+OperatorFactory *OperatorFactory::singleton = nullptr;
 
 OperatorFactory::OperatorFactory() {}
 
-Graph::Graph() {
-  if (operator_factory_singleton == nullptr) {
-    operator_factory_singleton = new OperatorFactory();
+Graph::Graph() {}
+
+OperatorFactory *OperatorFactory::get_instance() {
+  if (singleton == nullptr) {
+    singleton = new OperatorFactory();
   }
-  operator_factory = operator_factory_singleton;
+  return singleton;
 }
 
 } // namespace kernel

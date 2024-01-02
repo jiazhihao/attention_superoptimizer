@@ -1,4 +1,4 @@
-/* Copyright 2023 CMU
+/* Copyright 2023-2024 CMU
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 
 #include "aso/kernel/matmul.h"
 #include "aso/kernel/graph.h"
+#include "aso/kernel/operator_factory.h"
 #include "aso/utils/hash_utils.h"
 #include <cassert>
 
@@ -22,14 +23,17 @@ namespace aso {
 namespace kernel {
 
 Tensor Graph::matmul(Tensor const &A, Tensor const &B) {
-  Operator *op = operator_factory->get_or_create_matmul(A, B);
+  OperatorFactory *operator_factory = OperatorFactory::get_instance();
+  Operator *op =
+      operator_factory->get_or_create_matmul(A.get_shape(), B.get_shape());
   assert(op != nullptr);
   operators.push_back(op);
-  return op->output_tensors[0];
+  Tensor output(op->output_tensors[0], operators.size() - 1, 0);
+  return output;
 }
 
-Operator *OperatorFactory::get_or_create_matmul(Tensor const &A,
-                                                Tensor const &B) {
+Operator *OperatorFactory::get_or_create_matmul(TensorShape const &A,
+                                                TensorShape const &B) {
   if (A.num_dims != 2 || B.num_dims != 2) {
     return nullptr;
   }
@@ -49,9 +53,9 @@ Operator *OperatorFactory::get_or_create_matmul(Tensor const &A,
 
 namespace matmul {
 
-Operator::Operator(Tensor const &A, Tensor const &B)
+Operator::Operator(TensorShape const &A, TensorShape const &B)
     : aso::kernel::Operator(A, B) {
-  Tensor C;
+  TensorShape C;
   assert(A.num_dims == 2);
   assert(B.num_dims == 2);
   // Currently only support row-major output
@@ -68,7 +72,8 @@ Operator::Operator(Tensor const &A, Tensor const &B)
 
 Operator::~Operator() {}
 
-Key::Key(Tensor const &A, Tensor const &B) : operand_a(A), operand_b(B) {}
+Key::Key(TensorShape const &A, TensorShape const &B)
+    : operand_a(A), operand_b(B) {}
 
 bool Key::operator==(Key const &b) const {
   if (b.operand_a != operand_a) {

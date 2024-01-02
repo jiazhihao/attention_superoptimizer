@@ -25,10 +25,9 @@ namespace aso {
 
 class Operator;
 
-struct Tensor {
-  Tensor();
-  // Note that Tensor equivalence does not check owner_operator
-  inline bool operator==(Tensor const &b) const {
+struct TensorShape {
+  TensorShape();
+  inline bool operator==(TensorShape const &b) const {
     if (data_type != b.data_type) {
       return false;
     }
@@ -45,7 +44,7 @@ struct Tensor {
     }
     return true;
   }
-  inline bool operator!=(Tensor const &b) const {
+  inline bool operator!=(TensorShape const &b) const {
     if (data_type != b.data_type) {
       return true;
     }
@@ -99,15 +98,27 @@ struct Tensor {
   int num_dims;
   int dim[MAX_TENSOR_DIMS];
   int stride[MAX_TENSOR_DIMS];
-  Operator *owner_operator;
-  int owner_output_idx;
+};
+
+struct Tensor {
+  // TensorShape fields
+  Tensor(TensorShape const &shape, int owner_op_idx, int owner_ts_idx);
+  Tensor();
+  TensorShape get_shape() const;
+  aso::datatype::Type data_type;
+  int num_dims;
+  int dim[MAX_TENSOR_DIMS];
+  int stride[MAX_TENSOR_DIMS];
+  // Tensor fields
+  int owner_op_idx;
+  int owner_ts_idx;
 };
 
 } // namespace aso
 
 namespace std {
 template <>
-struct hash<aso::Tensor> {
-  size_t operator()(aso::Tensor const &) const;
+struct hash<aso::TensorShape> {
+  size_t operator()(aso::TensorShape const &) const;
 };
 }; // namespace std

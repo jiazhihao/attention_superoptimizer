@@ -26,8 +26,12 @@ using Op = Operator *;
 
 class OperatorFactory {
 public:
+  static OperatorFactory *singleton;
   OperatorFactory(void);
-  Op get_or_create_matmul(Tensor const &A, Tensor const &B);
+  Op get_or_create_matmul(TensorShape const &A, TensorShape const &B);
+
+public:
+  static OperatorFactory *get_instance();
 
 public:
   std::unordered_map<aso::kernel::matmul::Key, aso::kernel::matmul::Operator *>

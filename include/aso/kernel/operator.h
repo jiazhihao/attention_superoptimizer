@@ -23,12 +23,12 @@ namespace kernel {
 
 class Operator {
 public:
-  Operator(Tensor const &input1, Tensor const &input2);
+  Operator(TensorShape const &input1, TensorShape const &input2);
   ~Operator();
   // aso::base::Operator::Type get_operator_type(void)
   bool profile(ProfileResult &result);
-  std::vector<aso::Tensor> input_tensors;
-  std::vector<aso::Tensor> output_tensors;
+  std::vector<aso::TensorShape> input_tensors;
+  std::vector<aso::TensorShape> output_tensors;
 };
 
 } // namespace kernel

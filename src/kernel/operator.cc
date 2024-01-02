@@ -18,7 +18,7 @@
 namespace aso {
 namespace kernel {
 
-Operator::Operator(Tensor const &A, Tensor const &B) {
+Operator::Operator(TensorShape const &A, TensorShape const &B) {
   input_tensors.push_back(A);
   input_tensors.push_back(B);
 }
