@@ -1,4 +1,4 @@
-/* Copyright 2023 CMU
+/* Copyright 2023-2024 CMU
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,6 @@ namespace kernel {
 OperatorFactory *OperatorFactory::singleton = nullptr;
 
 OperatorFactory::OperatorFactory() {}
-
-Graph::Graph() {}
 
 OperatorFactory *OperatorFactory::get_instance() {
   if (singleton == nullptr) {

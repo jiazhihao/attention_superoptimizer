@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 
+#pragma once
 #include "aso/tensor.h"
 
 namespace aso {
@@ -21,6 +22,9 @@ namespace threadblock {
 class Operator {
 public:
   Operator(TensorShape const&input1, TensorShape const &input2);
+  Operator(std::vector<TensorShape> const &inputs);
+  ~Operator();
+  virtual aso::type::OperatorType operator_type() const = 0;
   std::vector<aso::TensorShape> input_tensors;
   std::vector<aso::TensorShape> oiutput_tensors;
 };

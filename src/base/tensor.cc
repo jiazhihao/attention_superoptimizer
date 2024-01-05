@@ -19,7 +19,7 @@
 
 namespace aso {
 TensorShape::TensorShape() {
-  data_type = aso::datatype::UNKNOWN;
+  data_type = aso::type::DT_UNKNOWN;
   num_dims = 0;
   for (int i = 0; i < MAX_TENSOR_DIMS; i++) {
     dim[i] = 0;
@@ -41,7 +41,7 @@ Tensor::Tensor(TensorShape const &_shape,
 }
 
 Tensor::Tensor() {
-  data_type = aso::datatype::UNKNOWN;
+  data_type = aso::type::DT_UNKNOWN;
   num_dims = 0;
   for (int i = 0; i < MAX_TENSOR_DIMS; i++) {
     dim[i] = 0;

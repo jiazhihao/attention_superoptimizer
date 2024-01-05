@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "aso/data_type.h"
+#include "aso/type.h"
 #include <cublas_v2.h>
 #include <cudnn.h>
 #include <iostream>
@@ -63,7 +63,7 @@ namespace aso {
 
 namespace utils {
 
-cudaDataType_t to_cuda_datatype(aso::datatype::Type type);
+cudaDataType_t to_cuda_datatype(aso::type::DataType type);
 
 } // namespace utils
 } // namespace aso

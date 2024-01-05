@@ -1,4 +1,4 @@
-/* Copyright 2023 CMU
+/* Copyright 2023-2024 CMU
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,24 +13,22 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include <cassert>
-#include <cstddef>
+#include "aso/utils/hash_utils.h"
+#include "aso/kernel/graph.h"
 
 namespace aso {
-namespace datatype {
+namespace kernel {
 
-enum Type {
-  INT8,
-  BFLOAT16,
-  FLOAT16,
-  FLOAT32,
-  DOUBLE,
-  UNKNOWN,
-};
+Graph::Graph(std::vector<TensorShape> const &inputs) {
+  assert(false);
+}
 
-size_t get_datatype_size(Type type);
+size_t Graph::pair_hash::operator()(const std::pair<int,int> &p) const {
+  size_t h1 = std::hash<int>{}(p.first);
+  size_t h2 = std::hash<int>{}(p.second);
+  hash_combine(h1, h2);
+  return h1;
+}
 
-} // namespace datatype
+} // namespace kernel
 } // namespace aso

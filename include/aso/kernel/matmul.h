@@ -25,6 +25,7 @@ class Operator : public aso::kernel::Operator {
 public:
   Operator(TensorShape const &A, TensorShape const &B);
   ~Operator();
+  aso::type::OperatorType operator_type() const;
   bool profile(ProfileResult &profile);
 };
 

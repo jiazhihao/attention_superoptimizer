@@ -18,13 +18,13 @@
 namespace aso {
 namespace utils {
 
-cudaDataType_t to_cuda_datatype(aso::datatype::Type type) {
+cudaDataType_t to_cuda_datatype(aso::type::DataType type) {
   switch (type) {
-    case aso::datatype::FLOAT16:
+    case aso::type::DT_FLOAT16:
       return CUDA_R_16F;
-    case aso::datatype::FLOAT32:
+    case aso::type::DT_FLOAT32:
       return CUDA_R_32F;
-    case aso::datatype::DOUBLE:
+    case aso::type::DT_DOUBLE:
       return CUDA_R_64F;
     default:
       assert(false && "Unspoorted cuda data type");

@@ -1,4 +1,4 @@
-/* Copyright 2023-2024 CMU
+/* Copyright 2023 CMU
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,23 +15,31 @@
 
 #pragma once
 
-#include "aso/profile_result.h"
-#include "aso/tensor.h"
+#include <cassert>
+#include <cstddef>
 
 namespace aso {
-namespace kernel {
+namespace type {
 
-class Operator {
-public:
-  Operator(TensorShape const &input1, TensorShape const &input2);
-  Operator(std::vector<TensorShape> const &inputs);
-  ~Operator();
-  // aso::base::Operator::Type get_operator_type(void)
-  bool profile(ProfileResult &result);
-  virtual aso::type::OperatorType operator_type() const = 0;
-  std::vector<aso::TensorShape> input_tensors;
-  std::vector<aso::TensorShape> output_tensors;
+enum DataType {
+  DT_INT8,
+  DT_BFLOAT16,
+  DT_FLOAT16,
+  DT_FLOAT32,
+  DT_DOUBLE,
+  DT_UNKNOWN,
 };
 
-} // namespace kernel
+size_t get_datatype_size(DataType type);
+
+enum OperatorType {
+  KN_UNKOWN = 1000,
+  KN_MATMUL = 1001,
+  KN_CUSTOMIZED = 1999,
+  TB_UNKOWN = 2000,
+  TB_MATMUL = 2001,
+  TB_CUSTOMIZED = 2999
+};
+
+} // namespace datatype
 } // namespace aso

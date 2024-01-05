@@ -30,7 +30,8 @@ namespace customized {
 class ExecutionPlan {
 public:
   std::vector<std::pair<aso::threadblock::Operator*,std::vector<std::pair<int, int> > > > ops;
-  std::vector<dim3> grid_map;
+  std::vector<dim3> input_map;
+  dim3 output_map; // assume that all output must use the same map
   std::vector<int> forloop_dim;
   dim3 grid_dim, block_dim, warp_dim;
 };
@@ -39,10 +40,29 @@ class Operator : public aso::kernel::Operator {
 public:
   Operator(std::vector<TensorShape> const &inputs,
            ExecutionPlan const &plan);
+  ~Operator();
+  aso::type::OperatorType operator_type() const;
+public:
   ExecutionPlan plan;
   //aso::threadblock::Graph *operator_graph;
+};
+
+class Key {
+public:
+  Key(std::vector<TensorShape> const &inputs,
+      ExecutionPlan const &plan);
+  bool operator==(Key const &b) const;
+  std::vector<TensorShape> inputs;
+  ExecutionPlan plan;
 };
 
 } // namespace customized
 } // namespace kernel
 } // namespace aso
+
+namespace std {
+template <>
+struct hash<aso::kernel::customized::Key> {
+  size_t operator()(aso::kernel::customized::Key const &) const;
+};
+} // namespace std

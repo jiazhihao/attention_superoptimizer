@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "aso/data_type.h"
+#include "aso/type.h"
 #include <cstddef>
 #include <functional>
 
@@ -64,7 +64,7 @@ struct TensorShape {
 
   inline size_t size() const {
     size_t num_elements = 1;
-    using namespace aso::datatype;
+    using namespace aso::type;
     size_t data_type_size = get_datatype_size(data_type);
     for (int i = 0; i < num_dims; i++) {
       num_elements *= dim[i];
@@ -94,7 +94,7 @@ struct TensorShape {
     return true;
   }
 
-  aso::datatype::Type data_type;
+  aso::type::DataType data_type;
   int num_dims;
   int dim[MAX_TENSOR_DIMS];
   int stride[MAX_TENSOR_DIMS];
@@ -105,7 +105,7 @@ struct Tensor {
   Tensor(TensorShape const &shape, int owner_op_idx, int owner_ts_idx);
   Tensor();
   TensorShape get_shape() const;
-  aso::datatype::Type data_type;
+  aso::type::DataType data_type;
   int num_dims;
   int dim[MAX_TENSOR_DIMS];
   int stride[MAX_TENSOR_DIMS];

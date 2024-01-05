@@ -13,23 +13,23 @@
  * limitations under the License.
  */
 
-#include "aso/data_type.h"
+#include "aso/type.h"
 
 namespace aso {
-namespace datatype {
+namespace type {
 
-size_t get_datatype_size(Type type) {
+size_t get_datatype_size(DataType type) {
   switch (type) {
-    case INT8:
+    case DT_INT8:
       return 1;
-    case BFLOAT16:
-    case FLOAT16:
+    case DT_BFLOAT16:
+    case DT_FLOAT16:
       return 2;
-    case FLOAT32:
+    case DT_FLOAT32:
       return 4;
-    case DOUBLE:
+    case DT_DOUBLE:
       return 8;
-    case UNKNOWN:
+    case DT_UNKNOWN:
     default:
       assert(false);
   }

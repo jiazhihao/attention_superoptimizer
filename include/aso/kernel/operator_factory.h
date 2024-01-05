@@ -17,16 +17,16 @@
 
 #include "aso/kernel/customized.h"
 #include "aso/kernel/matmul.h"
+#include "aso/kernel/operator.h"
 #include <unordered_map>
 #include <vector>
 
 namespace aso {
 namespace kernel {
 
-using Op = Operator *;
-
 class OperatorFactory {
 public:
+  using Op = Operator *;
   static OperatorFactory *singleton;
   OperatorFactory(void);
   Op get_or_create_matmul(TensorShape const &A, TensorShape const &B);
@@ -38,6 +38,7 @@ public:
 public:
   std::unordered_map<aso::kernel::matmul::Key, aso::kernel::matmul::Operator *>
       matmul;
+  std::unordered_map<aso::kernel::customized::Key, aso::kernel::customized::Operator *> customized;
 };
 
 } // namespace kernel
