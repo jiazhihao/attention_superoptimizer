@@ -59,9 +59,13 @@ if (NOT "${USE_CUDA}" STREQUAL "OFF")
   endif(CUDA_FOUND)
 endif()
 
+#set CUTLASS
+set(CUTLASS_DIR ${PROJECT_SOURCE_DIR}/deps/cutlass)
+include_directories(deps/cutlass/include)
+
 #include_directories(deps/cutlass/include)
 #include_directories(deps/cutlass/tools/util/include)
-include_directories(${ASO_INCLUDE_DIRS})
+#include_directories(${ASO_INCLUDE_DIRS})
 
 add_library(aso_runtime ${ASO_SRCS})
 
