@@ -23,30 +23,27 @@
 namespace aso {
 namespace kernel {
 
-using aso::kernel::customized::ExecutionPlan;
-
 Tensor Graph::customized(std::vector<Tensor> const &inputs,
-                         customized::ExecutionPlan const &plan) {
+                         CustomizedOp::ExecutionPlan const &plan) {
   assert(false);
 }
 
 Operator *OperatorFactory::get_or_create_customized(
-    std::vector<TensorShape> const &inputs, ExecutionPlan const &plan) {
-  customized::Key key(inputs, plan);
-  customized::Operator *op = nullptr;
+    std::vector<TensorShape> const &inputs,
+    CustomizedOp::ExecutionPlan const &plan) {
+  CustomizedKey key(inputs, plan);
+  CustomizedOp *op = nullptr;
   if (customized.find(key) != customized.end()) {
     op = customized[key];
   } else {
-    op = new customized::Operator(inputs, plan);
+    op = new CustomizedOp(inputs, plan);
     customized[key] = op;
   }
   return op;
 }
 
-namespace customized {
-
-Operator::Operator(std::vector<TensorShape> const &_inputs,
-                   ExecutionPlan const &_plan)
+CustomizedOp::CustomizedOp(std::vector<TensorShape> const &_inputs,
+                           ExecutionPlan const &_plan)
     : aso::kernel::Operator(_inputs), plan(_plan) {
   assert(_inputs.size() == plan.input_map.size());
   std::vector<TensorShape> inputs;
@@ -115,12 +112,13 @@ Operator::Operator(std::vector<TensorShape> const &_inputs,
   }
 }
 
-Operator::~Operator() {}
+CustomizedOp::~CustomizedOp() {}
 
-Key::Key(std::vector<TensorShape> const &_inputs, ExecutionPlan const &_plan)
+CustomizedKey::CustomizedKey(std::vector<TensorShape> const &_inputs,
+                             CustomizedOp::ExecutionPlan const &_plan)
     : inputs(_inputs), plan(_plan) {}
 
-bool Key::operator==(Key const &b) const {
+bool CustomizedKey::operator==(CustomizedKey const &b) const {
   if (inputs.size() != b.inputs.size()) {
     return false;
   }
@@ -134,13 +132,12 @@ bool Key::operator==(Key const &b) const {
   return true;
 }
 
-} // namespace customized
 } // namespace kernel
 } // namespace aso
 
 namespace std {
-size_t hash<aso::kernel::customized::Key>::operator()(
-    aso::kernel::customized::Key const &key) const {
+size_t hash<aso::kernel::CustomizedKey>::operator()(
+    aso::kernel::CustomizedKey const &key) const {
   assert(false);
   size_t ret = 0;
   return ret;

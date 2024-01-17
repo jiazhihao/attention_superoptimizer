@@ -13,45 +13,49 @@
  * limitations under the License.
  */
 
+#include "aso/kernel/customized.h"
+#include "aso/threadblock/cuda/matmul.h"
+
 namespace aso {
 namespace kernel {
-namespace customized {
 
-CUTLASS_DEVICE
-void kernel_function(Params const &params) {
+__global__ void customized_kernel_function(CustomizedOp::Params const &params) {
   extern __shared__ char smem_buffer[];
-  for (int i = 0; i < forloop_range; i++) {
+  for (int i = 0; i < params.forloop_range; i++) {
     // TODO: prologue for loading data into shared memory
     // start executing operators
     for (int op = 0; op < params.num_operators; op++) {
-      if (params.operators[op].type == aso::type::TB_MATMUL) {
+      if (params.operator_types[op] == aso::type::TB_MATMUL) {
         using ThreadblockShape = cutlass::gemm::GemmShape<64, 64, 32>;
         using WarpShape = cutlass::gemm::GemmShape<32, 32, 32>;
         using InstructionShape = cutlass::gemm::GemmShape<16, 8, 16>;
-        int thread_idx = threadId.x;
+        int thread_idx = threadIdx.x;
         // Broadcast the warp_id computed by lane 0 to ensure dependent code
         // is compiled as warp-uniform.
         int warp_idx = __shfl_sync(0xffffffff, threadIdx.x / 32, 0);
         int lane_idx = threadIdx.x % 32;
 
         aso::threadblock::matmul::MatmulExecutor<ThreadblockShape,
-            WarpShape, InstructionShape, cutlass::half_t,
-            cutlass::layout::RowMajor, cutlass::layout::ColumnMajor>
-                executor(thread_idx, warp_idx, lane_idx);
+                                                 WarpShape,
+                                                 InstructionShape,
+                                                 cutlass::half_t,
+                                                 cutlass::layout::RowMajor,
+                                                 cutlass::layout::ColumnMajor>
+            executor(thread_idx, warp_idx, lane_idx);
         executor.compute_kernel();
       }
     }
   }
 }
 
-void Customized::run() {
+void CustomizedOp::run() {
   int smem_size = 48 * 1024 * 1024;
-  kernel_function<<<grid_dim, block_dim, smem_size>>>();
+  Params params;
+  customized_kernel_function<<<plan.grid_dim, plan.block_dim, smem_size>>>(
+      params);
 }
 
-bool Customized::profile(ProfileResult &result) {
-}
+bool CustomizedOp::profile(ProfileResult &result) {}
 
-} // namespace customized
 } // namespace kernel
 } // namespace aso

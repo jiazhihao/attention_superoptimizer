@@ -22,9 +22,8 @@
 
 namespace aso {
 namespace kernel {
-namespace matmul {
 
-bool Operator::profile(ProfileResult &result) {
+bool MatmulOp::profile(ProfileResult &result) {
   aso::simulator::Simulator *simulator =
       aso::simulator::Simulator::get_instance();
   float alpha = 1.0f, beta = 0.0f;
@@ -106,6 +105,5 @@ bool Operator::profile(ProfileResult &result) {
   return true;
 }
 
-} // namespace matmul
 } // namespace kernel
 } // namespace aso

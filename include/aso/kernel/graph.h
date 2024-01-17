@@ -34,7 +34,7 @@ public:
   Graph(std::vector<aso::TensorShape> const &_inputs);
   Tensor matmul(Tensor const &A, Tensor const &B);
   Tensor customized(std::vector<Tensor> const &inputs,
-                    customized::ExecutionPlan const &plan);
+                    CustomizedOp::ExecutionPlan const &plan);
 
   std::vector<aso::kernel::Operator *> operators;
   std::unordered_map<std::pair<int, int>, Tensor, pair_hash> tensors;

@@ -32,16 +32,14 @@ public:
   Op get_or_create_matmul(TensorShape const &A, TensorShape const &B);
   Op get_or_create_customized(
       std::vector<TensorShape> const &inputs,
-      aso::kernel::customized::ExecutionPlan const &plan);
+      aso::kernel::CustomizedOp::ExecutionPlan const &plan);
 
 public:
   static OperatorFactory *get_instance();
 
 public:
-  std::unordered_map<aso::kernel::matmul::Key, aso::kernel::matmul::Operator *>
-      matmul;
-  std::unordered_map<aso::kernel::customized::Key,
-                     aso::kernel::customized::Operator *>
+  std::unordered_map<aso::kernel::MatmulKey, aso::kernel::MatmulOp *> matmul;
+  std::unordered_map<aso::kernel::CustomizedKey, aso::kernel::CustomizedOp *>
       customized;
 };
 

@@ -19,31 +19,29 @@
 
 namespace aso {
 namespace kernel {
-namespace matmul {
 
-class Operator : public aso::kernel::Operator {
+class MatmulOp : public aso::kernel::Operator {
 public:
-  Operator(TensorShape const &A, TensorShape const &B);
-  ~Operator();
+  MatmulOp(TensorShape const &A, TensorShape const &B);
+  ~MatmulOp();
   aso::type::OperatorType operator_type() const;
   bool profile(ProfileResult &profile);
 };
 
-class Key {
+class MatmulKey {
 public:
-  Key(TensorShape const &A, TensorShape const &B);
-  bool operator==(Key const &b) const;
+  MatmulKey(TensorShape const &A, TensorShape const &B);
+  bool operator==(MatmulKey const &b) const;
   TensorShape operand_a;
   TensorShape operand_b;
 };
 
-} // namespace matmul
 } // namespace kernel
 } // namespace aso
 
 namespace std {
 template <>
-struct hash<aso::kernel::matmul::Key> {
-  size_t operator()(aso::kernel::matmul::Key const &) const;
+struct hash<aso::kernel::MatmulKey> {
+  size_t operator()(aso::kernel::MatmulKey const &) const;
 };
 } // namespace std

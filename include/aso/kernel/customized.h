@@ -23,50 +23,58 @@
 
 namespace aso {
 namespace kernel {
-namespace customized {
 
 // using ExecutionPlan =
 // std::vector<std::pair<aso::threadblock::Operator*,std::vector<std::pair<int,
 // int> > > >;
 
-class ExecutionPlan {
+class CustomizedOp : public aso::kernel::Operator {
 public:
-  std::vector<
-      std::pair<aso::threadblock::Operator *, std::vector<std::pair<int, int>>>>
-      ops;
-  std::vector<dim3> input_map;
-  dim3 output_map; // assume that all output must use the same map
-  std::vector<int> forloop_dim;
-  int forloop_range;
-  dim3 grid_dim, block_dim, warp_dim;
-};
+  struct Params {
+    const static int MAX_NUM_OPERATORS = 8;
+    int forloop_range;
+    int num_operators;
+    aso::type::OperatorType operator_types[MAX_NUM_OPERATORS];
+  };
+  class ExecutionPlan {
+  public:
+    std::vector<std::pair<aso::threadblock::Operator *,
+                          std::vector<std::pair<int, int>>>>
+        ops;
+    std::vector<dim3> input_map;
+    dim3 output_map; // assume that all output must use the same map
+    std::vector<int> forloop_dim;
+    int forloop_range;
+    dim3 grid_dim, block_dim, warp_dim;
+  };
 
-class Operator : public aso::kernel::Operator {
-public:
-  Operator(std::vector<TensorShape> const &inputs, ExecutionPlan const &plan);
-  ~Operator();
+  CustomizedOp(std::vector<TensorShape> const &inputs,
+               ExecutionPlan const &plan);
+  ~CustomizedOp();
   aso::type::OperatorType operator_type() const;
+  void run();
+  bool profile(ProfileResult &profile);
 
 public:
   ExecutionPlan plan;
   // aso::threadblock::Graph *operator_graph;
 };
 
-class Key {
+class CustomizedKey {
 public:
-  Key(std::vector<TensorShape> const &inputs, ExecutionPlan const &plan);
-  bool operator==(Key const &b) const;
+  CustomizedKey(std::vector<TensorShape> const &inputs,
+                CustomizedOp::ExecutionPlan const &plan);
+  bool operator==(CustomizedKey const &b) const;
   std::vector<TensorShape> inputs;
-  ExecutionPlan plan;
+  CustomizedOp::ExecutionPlan plan;
 };
 
-} // namespace customized
 } // namespace kernel
 } // namespace aso
 
 namespace std {
 template <>
-struct hash<aso::kernel::customized::Key> {
-  size_t operator()(aso::kernel::customized::Key const &) const;
+struct hash<aso::kernel::CustomizedKey> {
+  size_t operator()(aso::kernel::CustomizedKey const &) const;
 };
 } // namespace std

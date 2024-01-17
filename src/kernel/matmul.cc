@@ -40,20 +40,18 @@ Operator *OperatorFactory::get_or_create_matmul(TensorShape const &A,
   if (A.dim[1] != B.dim[0]) {
     return nullptr;
   }
-  matmul::Key key(A, B);
-  matmul::Operator *op = nullptr;
+  MatmulKey key(A, B);
+  MatmulOp *op = nullptr;
   if (matmul.find(key) != matmul.end()) {
     op = matmul[key];
   } else {
-    op = new matmul::Operator(A, B);
+    op = new MatmulOp(A, B);
     matmul[key] = op;
   }
   return op;
 }
 
-namespace matmul {
-
-Operator::Operator(TensorShape const &A, TensorShape const &B)
+MatmulOp::MatmulOp(TensorShape const &A, TensorShape const &B)
     : aso::kernel::Operator(A, B) {
   TensorShape C;
   assert(A.num_dims == 2);
@@ -70,12 +68,12 @@ Operator::Operator(TensorShape const &A, TensorShape const &B)
   output_tensors.push_back(C);
 }
 
-Operator::~Operator() {}
+MatmulOp::~MatmulOp() {}
 
-Key::Key(TensorShape const &A, TensorShape const &B)
+MatmulKey::MatmulKey(TensorShape const &A, TensorShape const &B)
     : operand_a(A), operand_b(B) {}
 
-bool Key::operator==(Key const &b) const {
+bool MatmulKey::operator==(MatmulKey const &b) const {
   if (b.operand_a != operand_a) {
     return false;
   }
@@ -85,13 +83,12 @@ bool Key::operator==(Key const &b) const {
   return true;
 }
 
-} // namespace matmul
 } // namespace kernel
 } // namespace aso
 
 namespace std {
-size_t hash<aso::kernel::matmul::Key>::operator()(
-    aso::kernel::matmul::Key const &key) const {
+size_t hash<aso::kernel::MatmulKey>::operator()(
+    aso::kernel::MatmulKey const &key) const {
   size_t ret = 0;
   hash_combine(ret, key.operand_a);
   hash_combine(ret, key.operand_b);
