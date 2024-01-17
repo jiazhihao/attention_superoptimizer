@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#include "aso/utils/hash_utils.h"
 #include "aso/kernel/graph.h"
+#include "aso/utils/hash_utils.h"
 
 namespace aso {
 namespace kernel {
@@ -23,7 +23,7 @@ Graph::Graph(std::vector<TensorShape> const &inputs) {
   assert(false);
 }
 
-size_t Graph::pair_hash::operator()(const std::pair<int,int> &p) const {
+size_t Graph::pair_hash::operator()(std::pair<int, int> const &p) const {
   size_t h1 = std::hash<int>{}(p.first);
   size_t h2 = std::hash<int>{}(p.second);
   hash_combine(h1, h2);

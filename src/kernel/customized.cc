@@ -25,15 +25,13 @@ namespace kernel {
 
 using aso::kernel::customized::ExecutionPlan;
 
-Tensor Graph::customized(
-    std::vector<Tensor> const &inputs,
-    customized::ExecutionPlan const& plan) {
+Tensor Graph::customized(std::vector<Tensor> const &inputs,
+                         customized::ExecutionPlan const &plan) {
   assert(false);
 }
 
 Operator *OperatorFactory::get_or_create_customized(
-    std::vector<TensorShape> const &inputs,
-    ExecutionPlan const& plan) {
+    std::vector<TensorShape> const &inputs, ExecutionPlan const &plan) {
   customized::Key key(inputs, plan);
   customized::Operator *op = nullptr;
   if (customized.find(key) != customized.end()) {
@@ -48,7 +46,7 @@ Operator *OperatorFactory::get_or_create_customized(
 namespace customized {
 
 Operator::Operator(std::vector<TensorShape> const &_inputs,
-                   ExecutionPlan const &_plan) 
+                   ExecutionPlan const &_plan)
     : aso::kernel::Operator(_inputs), plan(_plan) {
   assert(_inputs.size() == plan.input_map.size());
   std::vector<TensorShape> inputs;
@@ -77,12 +75,12 @@ Operator::Operator(std::vector<TensorShape> const &_inputs,
       shape.dim[dim_idx] /= dim_div;
     }
   }
-  const auto& ops = plan.ops;
+  auto const &ops = plan.ops;
   aso::threadblock::Graph bgraph(inputs);
-  for (const auto& op : ops) {
+  for (auto const &op : ops) {
     std::vector<Tensor> my_inputs;
 
-    for (const auto & idx : op.second) {
+    for (auto const &idx : op.second) {
       assert(bgraph.tensors.find(idx) != bgraph.tensors.end());
       my_inputs.push_back(bgraph.tensors[idx]);
     }
@@ -101,9 +99,9 @@ Operator::Operator(std::vector<TensorShape> const &_inputs,
   assert(output_tensors.size() == 0);
   // Identify outputs: a tensor is an output if it is not used by
   // any other operators
-  for (const auto& t : bgraph.tensors) {
+  for (auto const &t : bgraph.tensors) {
     bool found = false;
-    for (const auto& e : bgraph.edges) {
+    for (auto const &e : bgraph.edges) {
       if (e.second == t.first) {
         found = true;
         break;
@@ -119,22 +117,24 @@ Operator::Operator(std::vector<TensorShape> const &_inputs,
 
 Operator::~Operator() {}
 
-Key::Key(std::vector<TensorShape> const &_inputs,
-         ExecutionPlan const &_plan) : inputs(_inputs), plan(_plan) {}
+Key::Key(std::vector<TensorShape> const &_inputs, ExecutionPlan const &_plan)
+    : inputs(_inputs), plan(_plan) {}
 
 bool Key::operator==(Key const &b) const {
-  if (inputs.size() != b.inputs.size())
+  if (inputs.size() != b.inputs.size()) {
     return false;
+  }
   for (size_t i = 0; i < inputs.size(); i++) {
-    if (inputs[i] != b.inputs[i])
+    if (inputs[i] != b.inputs[i]) {
       return false;
+    }
   }
   // TODO: check execution plan equivalence
   assert(false);
   return true;
 }
 
-} // namespace matmul
+} // namespace customized
 } // namespace kernel
 } // namespace aso
 

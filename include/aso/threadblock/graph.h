@@ -15,8 +15,8 @@
 
 #pragma once
 
-#include "aso/threadblock/operator.h"
 #include "aso/tensor.h"
+#include "aso/threadblock/operator.h"
 #include <vector>
 
 namespace aso {
@@ -25,7 +25,7 @@ namespace threadblock {
 class Graph {
 private:
   struct pair_hash {
-    size_t operator () (const std::pair<int,int> &p) const;
+    size_t operator()(std::pair<int, int> const &p) const;
   };
 
 public:
@@ -34,7 +34,7 @@ public:
 
   std::vector<aso::threadblock::Operator *> operators;
   std::unordered_map<std::pair<int, int>, Tensor, pair_hash> tensors;
-  std::unordered_map<std::pair<int, int>, std::pair<int, int>, pair_hash>edges;
+  std::unordered_map<std::pair<int, int>, std::pair<int, int>, pair_hash> edges;
   // std::vector<std::vector<SrcEdge>> edges;
   // aso::kernel::OperatorFactory *operator_factory;
 };

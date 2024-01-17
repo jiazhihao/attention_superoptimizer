@@ -41,5 +41,5 @@ enum OperatorType {
   TB_CUSTOMIZED = 2999
 };
 
-} // namespace datatype
+} // namespace type
 } // namespace aso

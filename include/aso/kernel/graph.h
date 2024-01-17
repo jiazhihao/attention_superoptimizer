@@ -15,8 +15,8 @@
 
 #pragma once
 
-#include "aso/kernel/operator.h"
 #include "aso/kernel/customized.h"
+#include "aso/kernel/operator.h"
 // #include "aso/kernel/operator_factory.h"
 #include "aso/tensor.h"
 #include <vector>
@@ -27,16 +27,18 @@ namespace kernel {
 class Graph {
 private:
   struct pair_hash {
-    size_t operator() (std::pair<int, int> const &p) const;
+    size_t operator()(std::pair<int, int> const &p) const;
   };
+
 public:
   Graph(std::vector<aso::TensorShape> const &_inputs);
   Tensor matmul(Tensor const &A, Tensor const &B);
-  Tensor customized(std::vector<Tensor> const&inputs, customized::ExecutionPlan const &plan);
+  Tensor customized(std::vector<Tensor> const &inputs,
+                    customized::ExecutionPlan const &plan);
 
   std::vector<aso::kernel::Operator *> operators;
   std::unordered_map<std::pair<int, int>, Tensor, pair_hash> tensors;
-  std::unordered_map<std::pair<int, int>, std::pair<int, int>, pair_hash>edges;
+  std::unordered_map<std::pair<int, int>, std::pair<int, int>, pair_hash> edges;
   // std::vector<std::vector<SrcEdge>> edges;
   // aso::kernel::OperatorFactory *operator_factory;
 };

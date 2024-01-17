@@ -21,7 +21,7 @@ namespace threadblock {
 
 class Operator {
 public:
-  Operator(TensorShape const&input1, TensorShape const &input2);
+  Operator(TensorShape const &input1, TensorShape const &input2);
   Operator(std::vector<TensorShape> const &inputs);
   ~Operator();
   virtual aso::type::OperatorType operator_type() const = 0;

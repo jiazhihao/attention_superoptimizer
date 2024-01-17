@@ -30,15 +30,19 @@ public:
   static OperatorFactory *singleton;
   OperatorFactory(void);
   Op get_or_create_matmul(TensorShape const &A, TensorShape const &B);
-  Op get_or_create_customized(std::vector<TensorShape> const &inputs,
-                              aso::kernel::customized::ExecutionPlan const &plan);
+  Op get_or_create_customized(
+      std::vector<TensorShape> const &inputs,
+      aso::kernel::customized::ExecutionPlan const &plan);
+
 public:
   static OperatorFactory *get_instance();
 
 public:
   std::unordered_map<aso::kernel::matmul::Key, aso::kernel::matmul::Operator *>
       matmul;
-  std::unordered_map<aso::kernel::customized::Key, aso::kernel::customized::Operator *> customized;
+  std::unordered_map<aso::kernel::customized::Key,
+                     aso::kernel::customized::Operator *>
+      customized;
 };
 
 } // namespace kernel

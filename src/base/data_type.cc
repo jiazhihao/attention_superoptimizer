@@ -35,5 +35,5 @@ size_t get_datatype_size(DataType type) {
   }
 }
 
-} // namespace datatype
+} // namespace type
 } // namespace aso
