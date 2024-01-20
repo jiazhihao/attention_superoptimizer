@@ -17,19 +17,20 @@
 #include "aso/kernel/graph.h"
 #include "aso/kernel/operator_factory.h"
 #include "aso/threadblock/graph.h"
+#include "aso/threadblock/smem_tensor.h"
 #include "aso/utils/hash_utils.h"
 #include <cassert>
 
 namespace aso {
 namespace kernel {
 
-Tensor Graph::customized(std::vector<Tensor> const &inputs,
-                         CustomizedOp::ExecutionPlan const &plan) {
+DTensor Graph::customized(std::vector<DTensor> const &inputs,
+                          CustomizedOp::ExecutionPlan const &plan) {
   assert(false);
 }
 
 Operator *OperatorFactory::get_or_create_customized(
-    std::vector<TensorShape> const &inputs,
+    std::vector<DTensor> const &inputs,
     CustomizedOp::ExecutionPlan const &plan) {
   CustomizedKey key(inputs, plan);
   CustomizedOp *op = nullptr;
@@ -42,13 +43,13 @@ Operator *OperatorFactory::get_or_create_customized(
   return op;
 }
 
-CustomizedOp::CustomizedOp(std::vector<TensorShape> const &_inputs,
+CustomizedOp::CustomizedOp(std::vector<DTensor> const &_inputs,
                            ExecutionPlan const &_plan)
     : aso::kernel::Operator(_inputs), plan(_plan) {
   assert(_inputs.size() == plan.input_map.size());
-  std::vector<TensorShape> inputs;
+  std::vector<DTensor> inputs;
   for (size_t i = 0; i < _inputs.size(); i++) {
-    TensorShape shape = _inputs[i];
+    DTensor shape = _inputs[i];
     for (int d = 0; d < 3; d++) {
       int dim_idx = -1;
       int dim_div = 1;
@@ -75,7 +76,7 @@ CustomizedOp::CustomizedOp(std::vector<TensorShape> const &_inputs,
   auto const &ops = plan.ops;
   aso::threadblock::Graph bgraph(inputs);
   for (auto const &op : ops) {
-    std::vector<Tensor> my_inputs;
+    std::vector<aso::threadblock::STensor> my_inputs;
 
     for (auto const &idx : op.second) {
       assert(bgraph.tensors.find(idx) != bgraph.tensors.end());
@@ -106,7 +107,7 @@ CustomizedOp::CustomizedOp(std::vector<TensorShape> const &_inputs,
     }
     if (!found) {
       // TODO: change output tensor_shape
-      TensorShape tensor_shape = t.second.get_shape();
+      DTensor tensor_shape; // = t.second.get_shape();
       output_tensors.push_back(tensor_shape);
     }
   }
@@ -114,7 +115,7 @@ CustomizedOp::CustomizedOp(std::vector<TensorShape> const &_inputs,
 
 CustomizedOp::~CustomizedOp() {}
 
-CustomizedKey::CustomizedKey(std::vector<TensorShape> const &_inputs,
+CustomizedKey::CustomizedKey(std::vector<DTensor> const &_inputs,
                              CustomizedOp::ExecutionPlan const &_plan)
     : inputs(_inputs), plan(_plan) {}
 

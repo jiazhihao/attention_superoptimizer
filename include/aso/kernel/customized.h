@@ -15,8 +15,8 @@
 
 #pragma once
 
+#include "aso/kernel/device_tensor.h"
 #include "aso/kernel/operator.h"
-#include "aso/tensor.h"
 #include "aso/threadblock/operator.h"
 #include <tuple>
 #include <vector_types.h>
@@ -48,8 +48,7 @@ public:
     dim3 grid_dim, block_dim, warp_dim;
   };
 
-  CustomizedOp(std::vector<TensorShape> const &inputs,
-               ExecutionPlan const &plan);
+  CustomizedOp(std::vector<DTensor> const &inputs, ExecutionPlan const &plan);
   ~CustomizedOp();
   aso::type::OperatorType operator_type() const;
   void run();
@@ -62,10 +61,10 @@ public:
 
 class CustomizedKey {
 public:
-  CustomizedKey(std::vector<TensorShape> const &inputs,
+  CustomizedKey(std::vector<DTensor> const &inputs,
                 CustomizedOp::ExecutionPlan const &plan);
   bool operator==(CustomizedKey const &b) const;
-  std::vector<TensorShape> inputs;
+  std::vector<DTensor> inputs;
   CustomizedOp::ExecutionPlan plan;
 };
 

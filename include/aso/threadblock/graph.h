@@ -15,8 +15,9 @@
 
 #pragma once
 
-#include "aso/tensor.h"
+#include "aso/kernel/device_tensor.h"
 #include "aso/threadblock/operator.h"
+#include "aso/threadblock/smem_tensor.h"
 #include <vector>
 
 namespace aso {
@@ -29,11 +30,11 @@ private:
   };
 
 public:
-  Graph(std::vector<aso::TensorShape> const &_inputs);
-  Tensor matmul(Tensor const &A, Tensor const &B);
+  Graph(std::vector<aso::kernel::DTensor> const &_inputs);
+  STensor matmul(STensor const &A, STensor const &B);
 
   std::vector<aso::threadblock::Operator *> operators;
-  std::unordered_map<std::pair<int, int>, Tensor, pair_hash> tensors;
+  std::unordered_map<std::pair<int, int>, STensor, pair_hash> tensors;
   std::unordered_map<std::pair<int, int>, std::pair<int, int>, pair_hash> edges;
   // std::vector<std::vector<SrcEdge>> edges;
   // aso::kernel::OperatorFactory *operator_factory;

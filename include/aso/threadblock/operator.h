@@ -14,19 +14,19 @@
  */
 
 #pragma once
-#include "aso/tensor.h"
+#include "aso/threadblock/smem_tensor.h"
 
 namespace aso {
 namespace threadblock {
 
 class Operator {
 public:
-  Operator(TensorShape const &input1, TensorShape const &input2);
-  Operator(std::vector<TensorShape> const &inputs);
+  Operator(STensor const &input1, STensor const &input2);
+  Operator(std::vector<STensor> const &inputs);
   ~Operator();
   virtual aso::type::OperatorType operator_type() const = 0;
-  std::vector<aso::TensorShape> input_tensors;
-  std::vector<aso::TensorShape> oiutput_tensors;
+  std::vector<STensor> input_tensors;
+  std::vector<STensor> output_tensors;
 };
 
 } // namespace threadblock

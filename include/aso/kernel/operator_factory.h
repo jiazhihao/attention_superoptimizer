@@ -1,4 +1,4 @@
-/* Copyright 2023 CMU
+/* Copyright 2023-2024 CMU
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,16 +29,16 @@ public:
   using Op = Operator *;
   static OperatorFactory *singleton;
   OperatorFactory(void);
-  Op get_or_create_matmul(TensorShape const &A, TensorShape const &B);
+  Op get_or_create_matmul(DTensor const &A, DTensor const &B);
   Op get_or_create_customized(
-      std::vector<TensorShape> const &inputs,
+      std::vector<DTensor> const &inputs,
       aso::kernel::CustomizedOp::ExecutionPlan const &plan);
 
 public:
   static OperatorFactory *get_instance();
 
 public:
-  std::unordered_map<aso::kernel::MatmulKey, aso::kernel::MatmulOp *> matmul;
+  std::unordered_map<aso::kernel::MatmulKey, aso::kernel::MatmulKNOp *> matmul;
   std::unordered_map<aso::kernel::CustomizedKey, aso::kernel::CustomizedOp *>
       customized;
 };

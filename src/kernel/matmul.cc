@@ -22,38 +22,40 @@
 namespace aso {
 namespace kernel {
 
-Tensor Graph::matmul(Tensor const &A, Tensor const &B) {
+DTensor Graph::matmul(DTensor const &A, DTensor const &B) {
   OperatorFactory *operator_factory = OperatorFactory::get_instance();
-  Operator *op =
-      operator_factory->get_or_create_matmul(A.get_shape(), B.get_shape());
+  Operator *op = operator_factory->get_or_create_matmul(A, B);
   assert(op != nullptr);
   operators.push_back(op);
-  Tensor output(op->output_tensors[0], operators.size() - 1, 0);
+  DTensor output = op->output_tensors[0];
   return output;
 }
 
-Operator *OperatorFactory::get_or_create_matmul(TensorShape const &A,
-                                                TensorShape const &B) {
+Operator *OperatorFactory::get_or_create_matmul(DTensor const &A,
+                                                DTensor const &B) {
   if (A.num_dims != 2 || B.num_dims != 2) {
     return nullptr;
   }
   if (A.dim[1] != B.dim[0]) {
     return nullptr;
   }
+#ifdef DEADCODE
   MatmulKey key(A, B);
-  MatmulOp *op = nullptr;
+  MatmulKNOp *op = nullptr;
   if (matmul.find(key) != matmul.end()) {
     op = matmul[key];
   } else {
-    op = new MatmulOp(A, B);
+    op = new MatmulKNOp(A, B);
     matmul[key] = op;
   }
+#endif
+  MatmulKNOp *op = new MatmulKNOp(A, B);
   return op;
 }
 
-MatmulOp::MatmulOp(TensorShape const &A, TensorShape const &B)
+MatmulKNOp::MatmulKNOp(DTensor const &A, DTensor const &B)
     : aso::kernel::Operator(A, B) {
-  TensorShape C;
+  DTensor C;
   assert(A.num_dims == 2);
   assert(B.num_dims == 2);
   // Currently only support row-major output
@@ -64,13 +66,15 @@ MatmulOp::MatmulOp(TensorShape const &A, TensorShape const &B)
   C.stride[0] = C.dim[1];
   C.stride[1] = 1;
   C.data_type = A.data_type;
+  C.owner_op = this;
+  C.owner_ts_idx = 0;
   assert(output_tensors.size() == 0);
   output_tensors.push_back(C);
 }
 
-MatmulOp::~MatmulOp() {}
+MatmulKNOp::~MatmulKNOp() {}
 
-MatmulKey::MatmulKey(TensorShape const &A, TensorShape const &B)
+MatmulKey::MatmulKey(DTensor const &A, DTensor const &B)
     : operand_a(A), operand_b(B) {}
 
 bool MatmulKey::operator==(MatmulKey const &b) const {

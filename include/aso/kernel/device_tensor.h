@@ -1,4 +1,4 @@
-/* Copyright 2023 CMU
+/* Copyright 2023-2024 CMU
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,15 @@
 #include <functional>
 
 namespace aso {
+namespace kernel {
 
 #define MAX_TENSOR_DIMS 4
 
 class Operator;
 
-struct TensorShape {
-  TensorShape();
-  inline bool operator==(TensorShape const &b) const {
+struct DTensor {
+  DTensor(void);
+  inline bool operator==(DTensor const &b) const {
     if (data_type != b.data_type) {
       return false;
     }
@@ -42,9 +43,16 @@ struct TensorShape {
         return false;
       }
     }
+    if (owner_op != b.owner_op) {
+      return false;
+    }
+    if (owner_ts_idx != b.owner_ts_idx) {
+      return false;
+    }
+    assert(data_ptr == b.data_ptr);
     return true;
   }
-  inline bool operator!=(TensorShape const &b) const {
+  inline bool operator!=(DTensor const &b) const {
     if (data_type != b.data_type) {
       return true;
     }
@@ -59,6 +67,13 @@ struct TensorShape {
         return true;
       }
     }
+    if (owner_op != b.owner_op) {
+      return true;
+    }
+    if (owner_ts_idx != b.owner_ts_idx) {
+      return true;
+    }
+    assert(data_ptr == b.data_ptr);
     return false;
   }
 
@@ -98,27 +113,18 @@ struct TensorShape {
   int num_dims;
   int dim[MAX_TENSOR_DIMS];
   int stride[MAX_TENSOR_DIMS];
-};
-
-struct Tensor {
-  // TensorShape fields
-  Tensor(TensorShape const &shape, int owner_op_idx, int owner_ts_idx);
-  Tensor();
-  TensorShape get_shape() const;
-  aso::type::DataType data_type;
-  int num_dims;
-  int dim[MAX_TENSOR_DIMS];
-  int stride[MAX_TENSOR_DIMS];
-  // Tensor fields
-  int owner_op_idx;
+  // DTensor fields
+  Operator *owner_op;
   int owner_ts_idx;
+  void *data_ptr;
 };
 
+} // namespace kernel
 } // namespace aso
 
 namespace std {
 template <>
-struct hash<aso::TensorShape> {
-  size_t operator()(aso::TensorShape const &) const;
+struct hash<aso::kernel::DTensor> {
+  size_t operator()(aso::kernel::DTensor const &) const;
 };
 }; // namespace std

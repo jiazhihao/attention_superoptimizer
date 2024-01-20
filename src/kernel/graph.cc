@@ -19,9 +19,7 @@
 namespace aso {
 namespace kernel {
 
-Graph::Graph(std::vector<TensorShape> const &inputs) {
-  assert(false);
-}
+Graph::Graph() {}
 
 size_t Graph::pair_hash::operator()(std::pair<int, int> const &p) const {
   size_t h1 = std::hash<int>{}(p.first);

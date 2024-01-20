@@ -15,22 +15,22 @@
 
 #pragma once
 
+#include "aso/kernel/device_tensor.h"
 #include "aso/profile_result.h"
-#include "aso/tensor.h"
 
 namespace aso {
 namespace kernel {
 
 class Operator {
 public:
-  Operator(TensorShape const &input1, TensorShape const &input2);
-  Operator(std::vector<TensorShape> const &inputs);
+  Operator(DTensor const &input1, DTensor const &input2);
+  Operator(std::vector<DTensor> const &inputs);
   ~Operator();
   // aso::base::Operator::Type get_operator_type(void)
   bool profile(ProfileResult &result);
   virtual aso::type::OperatorType operator_type() const = 0;
-  std::vector<aso::TensorShape> input_tensors;
-  std::vector<aso::TensorShape> output_tensors;
+  std::vector<DTensor> input_tensors;
+  std::vector<DTensor> output_tensors;
 };
 
 } // namespace kernel

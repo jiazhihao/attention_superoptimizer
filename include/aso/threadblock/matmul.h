@@ -19,16 +19,14 @@
 
 namespace aso {
 namespace threadblock {
-namespace matmul {
 
-class Matmul : public aso::threadblock::Operator {
+class MatmulTBOp : public aso::threadblock::Operator {
 public:
-  Matmul(TensorShape const &A, TensorShape const &B);
-  ~Matmul();
+  MatmulTBOp(STensor const &A, STensor const &B);
+  ~MatmulTBOp();
   aso::type::OperatorType operator_type() const;
   void compute_kernel();
 };
 
-} // namespace matmul
 } // namespace threadblock
 } // namespace aso

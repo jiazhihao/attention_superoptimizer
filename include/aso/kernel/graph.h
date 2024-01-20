@@ -18,7 +18,7 @@
 #include "aso/kernel/customized.h"
 #include "aso/kernel/operator.h"
 // #include "aso/kernel/operator_factory.h"
-#include "aso/tensor.h"
+#include "aso/kernel/device_tensor.h"
 #include <vector>
 
 namespace aso {
@@ -31,15 +31,16 @@ private:
   };
 
 public:
-  Graph(std::vector<aso::TensorShape> const &_inputs);
-  Tensor matmul(Tensor const &A, Tensor const &B);
-  Tensor customized(std::vector<Tensor> const &inputs,
-                    CustomizedOp::ExecutionPlan const &plan);
+  Graph(void);
+  DTensor new_input();
+  DTensor matmul(DTensor const &A, DTensor const &B);
+  DTensor customized(std::vector<DTensor> const &inputs,
+                     CustomizedOp::ExecutionPlan const &plan);
 
   std::vector<aso::kernel::Operator *> operators;
-  std::unordered_map<std::pair<int, int>, Tensor, pair_hash> tensors;
-  std::unordered_map<std::pair<int, int>, std::pair<int, int>, pair_hash> edges;
-  // std::vector<std::vector<SrcEdge>> edges;
+  // std::unordered_map<std::pair<int, int>, DTensor, pair_hash> tensors;
+  // std::unordered_map<std::pair<int, int>, std::pair<int, int>, pair_hash>
+  // edges; std::vector<std::vector<SrcEdge>> edges;
   // aso::kernel::OperatorFactory *operator_factory;
 };
 

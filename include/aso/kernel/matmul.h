@@ -20,20 +20,20 @@
 namespace aso {
 namespace kernel {
 
-class MatmulOp : public aso::kernel::Operator {
+class MatmulKNOp : public aso::kernel::Operator {
 public:
-  MatmulOp(TensorShape const &A, TensorShape const &B);
-  ~MatmulOp();
+  MatmulKNOp(DTensor const &A, DTensor const &B);
+  ~MatmulKNOp();
   aso::type::OperatorType operator_type() const;
   bool profile(ProfileResult &profile);
 };
 
 class MatmulKey {
 public:
-  MatmulKey(TensorShape const &A, TensorShape const &B);
+  MatmulKey(DTensor const &A, DTensor const &B);
   bool operator==(MatmulKey const &b) const;
-  TensorShape operand_a;
-  TensorShape operand_b;
+  DTensor operand_a;
+  DTensor operand_b;
 };
 
 } // namespace kernel

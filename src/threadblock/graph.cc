@@ -19,7 +19,7 @@
 namespace aso {
 namespace threadblock {
 
-Graph::Graph(std::vector<TensorShape> const &inputs) {
+Graph::Graph(std::vector<aso::kernel::DTensor> const &inputs) {
   assert(false);
 }
 
