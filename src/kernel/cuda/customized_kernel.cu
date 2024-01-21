@@ -25,7 +25,7 @@ __global__ void customized_kernel_function(CustomizedOp::Params const &params) {
     // TODO: prologue for loading data into shared memory
     // start executing operators
     for (int op = 0; op < params.num_operators; op++) {
-      if (params.operator_types[op] == aso::type::TB_MATMUL) {
+      if (params.operator_types[op] == aso::type::TB_MATMUL_OP) {
         using ThreadblockShape = cutlass::gemm::GemmShape<64, 64, 32>;
         using WarpShape = cutlass::gemm::GemmShape<32, 32, 32>;
         using InstructionShape = cutlass::gemm::GemmShape<16, 8, 16>;

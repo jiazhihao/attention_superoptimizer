@@ -68,6 +68,8 @@ MatmulKNOp::MatmulKNOp(DTensor const &A, DTensor const &B)
   C.data_type = A.data_type;
   C.owner_op = this;
   C.owner_ts_idx = 0;
+  OperatorFactory *operator_factory = OperatorFactory::get_instance();
+  C.data_ptr = operator_factory->allocate(C.size());
   assert(output_tensors.size() == 0);
   output_tensors.push_back(C);
 }

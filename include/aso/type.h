@@ -34,11 +34,12 @@ size_t get_datatype_size(DataType type);
 
 enum OperatorType {
   KN_UNKOWN = 1000,
-  KN_MATMUL = 1001,
-  KN_CUSTOMIZED = 1999,
+  KN_INPUT_OP = 1001,
+  KN_MATMUL_OP = 1002,
+  KN_CUSTOMIZED_OP = 1999,
   TB_UNKOWN = 2000,
-  TB_MATMUL = 2001,
-  TB_CUSTOMIZED = 2999
+  TB_MATMUL_OP = 2001,
+  TB_CUSTOMIZED_OP = 2999
 };
 
 } // namespace type

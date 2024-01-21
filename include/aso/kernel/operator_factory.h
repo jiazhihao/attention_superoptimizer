@@ -29,10 +29,14 @@ public:
   using Op = Operator *;
   static OperatorFactory *singleton;
   OperatorFactory(void);
+  ~OperatorFactory(void);
   Op get_or_create_matmul(DTensor const &A, DTensor const &B);
+  Op create_input(std::vector<int> const &dims, aso::type::DataType data_type);
   Op get_or_create_customized(
       std::vector<DTensor> const &inputs,
       aso::kernel::CustomizedOp::ExecutionPlan const &plan);
+  void *allocate(size_t size_in_bytes);
+  void free(void *ptr);
 
 public:
   static OperatorFactory *get_instance();
@@ -41,6 +45,11 @@ public:
   std::unordered_map<aso::kernel::MatmulKey, aso::kernel::MatmulKNOp *> matmul;
   std::unordered_map<aso::kernel::CustomizedKey, aso::kernel::CustomizedOp *>
       customized;
+  // fields for managing the preallocated cuda buffer
+  char *base_ptr;
+  off_t offset;
+  size_t total_size;
+  std::vector<std::pair<void *, size_t>> allocated_tensors;
 };
 
 } // namespace kernel

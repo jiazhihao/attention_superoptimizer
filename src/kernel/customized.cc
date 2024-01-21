@@ -72,6 +72,7 @@ CustomizedOp::CustomizedOp(std::vector<DTensor> const &_inputs,
       assert(shape.dim[dim_idx] % dim_div == 0);
       shape.dim[dim_idx] /= dim_div;
     }
+    inputs.push_back(shape);
   }
   auto const &ops = plan.ops;
   aso::threadblock::Graph bgraph(inputs);
@@ -83,7 +84,7 @@ CustomizedOp::CustomizedOp(std::vector<DTensor> const &_inputs,
       my_inputs.push_back(bgraph.tensors[idx]);
     }
     switch (op.first->operator_type()) {
-      case aso::type::TB_MATMUL: {
+      case aso::type::TB_MATMUL_OP: {
         assert(my_inputs.size() == 2);
         bgraph.matmul(my_inputs[0], my_inputs[1]);
         break;

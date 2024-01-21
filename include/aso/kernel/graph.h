@@ -32,7 +32,8 @@ private:
 
 public:
   Graph(void);
-  DTensor new_input();
+  DTensor new_input(std::vector<int> const &dims,
+                    aso::type::DataType data_type);
   DTensor matmul(DTensor const &A, DTensor const &B);
   DTensor customized(std::vector<DTensor> const &inputs,
                      CustomizedOp::ExecutionPlan const &plan);
