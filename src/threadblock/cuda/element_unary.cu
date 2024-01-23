@@ -1,4 +1,4 @@
-/* Copyright 2023 CMU
+/* Copyright 2023-2024 CMU
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,36 +13,9 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include <cassert>
-#include <cstddef>
+#include "cutlass/fast_math.h"
 
 namespace aso {
-namespace type {
-
-enum DataType {
-  DT_INT8,
-  DT_BFLOAT16,
-  DT_FLOAT16,
-  DT_FLOAT32,
-  DT_DOUBLE,
-  DT_UNKNOWN,
-};
-
-size_t get_datatype_size(DataType type);
-
-enum OperatorType {
-  KN_UNKOWN = 1000,
-  KN_INPUT_OP = 1001,
-  KN_MATMUL_OP = 1002,
-  KN_CUSTOMIZED_OP = 1999,
-  TB_UNKOWN = 2000,
-  TB_INPUT_OP = 2001,
-  TB_MATMUL_OP = 2002,
-  TB_EXP_OP = 2003,
-  TB_CUSTOMIZED_OP = 2999
-};
-
-} // namespace type
+namespace threadblock {
+} // namespace threadblock
 } // namespace aso

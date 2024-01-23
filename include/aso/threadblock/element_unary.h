@@ -1,4 +1,4 @@
-/* Copyright 2023 CMU
+/* Copyright 2023-2024 CMU
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,34 +15,24 @@
 
 #pragma once
 
-#include <cassert>
-#include <cstddef>
-
 namespace aso {
-namespace type {
+namespace threadblock {
 
-enum DataType {
-  DT_INT8,
-  DT_BFLOAT16,
-  DT_FLOAT16,
-  DT_FLOAT32,
-  DT_DOUBLE,
-  DT_UNKNOWN,
+using namespace cutlass;
+
+template <typename ElementType>
+class ElementUnaryOp {
+public:
+  ElementType* base_ptr
+public:
+  CUTLASS_DEVICE
+  ElementUnaryOp(ElementType* _base_ptr)
+  : base_ptr(_base_ptr) {}
+
+  void CUTLASS_DEVICE execute_kernel(void) {
+    // extern __shared__ char smem_buffer[];
+  }
 };
 
-size_t get_datatype_size(DataType type);
-
-enum OperatorType {
-  KN_UNKOWN = 1000,
-  KN_INPUT_OP = 1001,
-  KN_MATMUL_OP = 1002,
-  KN_CUSTOMIZED_OP = 1999,
-  TB_UNKOWN = 2000,
-  TB_INPUT_OP = 2001,
-  TB_MATMUL_OP = 2002,
-  TB_EXP_OP = 2003,
-  TB_CUSTOMIZED_OP = 2999
-};
-
-} // namespace type
+} // namespace threadblock
 } // namespace aso

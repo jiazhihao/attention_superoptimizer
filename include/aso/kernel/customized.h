@@ -32,9 +32,15 @@ class CustomizedOp : public aso::kernel::Operator {
 public:
   struct Params {
     const static int MAX_NUM_OPERATORS = 8;
+    const static int MAX_NUM_INPUTS = 3;
     int forloop_range;
     int num_operators;
     aso::type::OperatorType operator_types[MAX_NUM_OPERATORS];
+    aso::threadblock::STensor input_tensors[MAX_NUM_OPERATORS][MAX_NUM_INPUTS];
+    aso::threadblock::STensor output_tensors[MAX_NUM_OPERATORS][MAX_NUM_INPUTS];
+    // input dtensors in device memory
+    int num_inputs;
+    off_t input_tensor_offset_in_smem[MAX_NUM_INPUTS];
   };
   class ExecutionPlan {
   public:

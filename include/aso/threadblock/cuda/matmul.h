@@ -38,7 +38,6 @@
 
 namespace aso {
 namespace threadblock {
-namespace matmul {
 
 using namespace cutlass;
 
@@ -199,7 +198,7 @@ public:
          warp_idx_n * SmemIteratorD::TileIterations::kColumn});
   }
 
-  void CUTLASS_DEVICE compute_kernel(void) {
+  void CUTLASS_DEVICE execute_kernel(void) {
     // extern __shared__ char smem_buffer[];
 
     WarpFragmentA warp_frag_A[2];
@@ -251,6 +250,5 @@ public:
   }
 };
 
-} // namespace matmul
 } // namespace threadblock
 } // namespace aso

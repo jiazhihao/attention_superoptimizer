@@ -18,27 +18,13 @@
 #include <functional>
 
 namespace aso {
-namespace threadblock {
-
-STensor::STensor() {
-  data_type = aso::type::DT_UNKNOWN;
-  num_dims = 0;
-  for (int i = 0; i < MAX_TENSOR_DIMS; i++) {
-    dim[i] = 0;
-    stride[i] = 0;
-  }
-  owner_op = nullptr;
-  owner_ts_idx = -1000;
-  smem_offset = 0;
-}
-
-} // namespace kernel
+namespace threadblock {} // namespace threadblock
 } // namespace aso
 
 namespace std {
 
-size_t
-    hash<aso::threadblock::STensor>::operator()(aso::threadblock::STensor const &tensor) const {
+size_t hash<aso::threadblock::STensor>::operator()(
+    aso::threadblock::STensor const &tensor) const {
   size_t ret = hash<int>()((tensor.data_type));
   hash_combine(ret, tensor.num_dims);
   for (int i = 0; i < tensor.num_dims; i++) {
