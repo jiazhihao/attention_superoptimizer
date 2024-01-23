@@ -17,9 +17,12 @@
 
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 
 namespace aso {
 namespace type {
+
+typedef uint16_t FPType;
 
 enum DataType {
   DT_INT8,

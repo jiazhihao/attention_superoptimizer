@@ -24,52 +24,38 @@ namespace threadblock {
 using namespace cutlass;
 
 template <typename ElementType>
-class ElementUnaryExecutor {
+class RedunctionExecutor {
 public:
   ElementType* base_ptr;
-  aso::type::OperatorType op_type;
   int kElements;
 public:
   CUTLASS_DEVICE
-  ElementUnaryExecutor(ElementType* _base_ptr,
-                       aso::type::OperatorType _type,
-                       int _kElements)
-  : base_ptr(_base_ptr), op_type(_type), kElements(_kElements) {}
+  RedunctionExecutor(ElementType* _base_ptr,
+                     int _kElements)
+  : base_ptr(_base_ptr), kElements(_kElements) {}
 
   void CUTLASS_DEVICE execute_kernel(void) {
     // extern __shared__ char smem_buffer[];
-    if (op_type == aso::type::TB_EXP_OP) {
-      for (int i = 0; i < kElements; i += blockDim.x) {
-        base_ptr[i] = cutlass::fast_exp(base_ptr[i]);
-      }
-    } else {
-      assert(false && "Unsupported operator");
+    assert(false && "To Be Implemented");
+    for (int i = 0; i < kElements; i += blockDim.x) {
+      base_ptr[i] = cutlass::fast_exp(base_ptr[i]);
     }
   }
 };
 
-class ElementUnaryFingerprinter {
+class RedunctionFingerprinter {
 public:
   aso::type::FPType* base_ptr;
-  aso::type::OperatorType op_type;
   int kElements;
 public:
   CUTLASS_DEVICE
-  ElementUnaryFingerprinter(aso::type::FPType* _base_ptr,
-                            aso::type::OperatorType _type,
-                            int _kElements)
-  : base_ptr(_base_ptr), op_type(_type), kElements(_kElements) {}
+  RedunctionFingerprinter(aso::type::FPType* _base_ptr,
+                          int _kElements)
+  : base_ptr(_base_ptr), kElements(_kElements) {}
 
   void CUTLASS_DEVICE compute_fingerprint(void) {
     // extern __shared__ char smem_buffer[];
-    if (op_type == aso::type::TB_EXP_OP) {
-      for (int i = 0; i < kElements; i += blockDim.x) {
-        assert(false && "To Be Implemented");
-        // base_ptr[i] = cutlass::fast_exp(base_ptr[i]);
-      }
-    } else {
-      assert(false && "Unsupported operator");
-    }
+    assert(false && "To Be Implemented");
   }
 };
 

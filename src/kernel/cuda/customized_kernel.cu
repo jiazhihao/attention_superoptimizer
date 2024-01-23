@@ -16,6 +16,7 @@
 #include "aso/kernel/customized.h"
 #include "aso/threadblock/cuda/element_unary.h"
 #include "aso/threadblock/cuda/matmul.h"
+#include "aso/threadblock/cuda/reduction.h"
 
 namespace aso {
 namespace kernel {
