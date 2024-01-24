@@ -23,7 +23,7 @@
 namespace aso {
 namespace kernel {
 
-bool MatmulKNOp::profile(ProfileResult &result) {
+bool KNMatmulOp::profile(ProfileResult &result) {
   aso::simulator::Simulator *simulator =
       aso::simulator::Simulator::get_instance();
   float alpha = 1.0f, beta = 0.0f;

@@ -35,15 +35,20 @@ enum DataType {
 
 size_t get_datatype_size(DataType type);
 
-enum OperatorType {
+enum KNOperatorType {
   KN_UNKOWN = 1000,
   KN_INPUT_OP = 1001,
   KN_MATMUL_OP = 1002,
+  KN_REDUCTION_OP = 1003,
   KN_CUSTOMIZED_OP = 1999,
+};
+
+enum TBOperatorType {
   TB_UNKOWN = 2000,
   TB_INPUT_OP = 2001,
   TB_MATMUL_OP = 2002,
-  TB_EXP_OP = 2003,
+  TB_REDUCTION_OP = 2003,
+  TB_EXP_OP = 2004,
   TB_CUSTOMIZED_OP = 2999
 };
 

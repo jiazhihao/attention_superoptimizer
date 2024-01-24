@@ -21,7 +21,8 @@
 namespace aso {
 namespace kernel {
 
-__global__ void customized_kernel_function(CustomizedOp::Params const &params) {
+__global__ void
+    customized_kernel_function(KNCustomizedOp::Params const &params) {
   extern __shared__ char smem_buffer[];
   for (int i = 0; i < params.forloop_range; i++) {
     // start executing operators
@@ -69,14 +70,14 @@ __global__ void customized_kernel_function(CustomizedOp::Params const &params) {
   }
 }
 
-void CustomizedOp::run() {
+void KNCustomizedOp::run() {
   int smem_size = 48 * 1024; // 48 KB
   Params params;
   customized_kernel_function<<<plan.grid_dim, plan.block_dim, smem_size>>>(
       params);
 }
 
-bool CustomizedOp::profile(ProfileResult &result) {}
+bool KNCustomizedOp::profile(ProfileResult &result) {}
 
 } // namespace kernel
 } // namespace aso

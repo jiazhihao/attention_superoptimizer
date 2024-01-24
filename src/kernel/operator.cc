@@ -14,42 +14,46 @@
  */
 
 #include "aso/kernel/operator.h"
+#include "aso/kernel/device_memory_manager.h"
 #include "aso/kernel/graph.h"
-#include "aso/kernel/operator_factory.h"
 
 namespace aso {
 namespace kernel {
 
-Operator::Operator(void) {}
+KNOperator::KNOperator(aso::type::KNOperatorType _type) : op_type(_type) {}
 
-Operator::Operator(DTensor const &A) {
+KNOperator::KNOperator(aso::type::KNOperatorType _type, DTensor const &A)
+    : op_type(_type) {
   input_tensors.push_back(A);
 }
 
-Operator::Operator(DTensor const &A, DTensor const &B) {
+KNOperator::KNOperator(aso::type::KNOperatorType _type,
+                       DTensor const &A,
+                       DTensor const &B)
+    : op_type(_type) {
   input_tensors.push_back(A);
   input_tensors.push_back(B);
 }
 
-Operator::~Operator() {}
+KNOperator::~KNOperator() {}
 
 DTensor Graph::new_input(std::vector<int> const &dims,
                          aso::type::DataType data_type) {
-  OperatorFactory *operator_factory = OperatorFactory::get_instance();
-  Operator *op = operator_factory->create_input(dims, data_type);
+  KNOperator *op = create_input_op(dims, data_type);
   assert(op != nullptr);
   operators.push_back(op);
   return op->output_tensors[0];
 }
 
-Operator *OperatorFactory::create_input(std::vector<int> const &dims,
-                                        aso::type::DataType data_type) {
-  InputKNOp *op = new InputKNOp(dims, data_type);
+KNOperator *Graph::create_input_op(std::vector<int> const &dims,
+                                   aso::type::DataType data_type) {
+  KNInputOp *op = new KNInputOp(dims, data_type);
   return op;
 }
 
-InputKNOp::InputKNOp(std::vector<int> const &dims,
-                     aso::type::DataType data_type) {
+KNInputOp::KNInputOp(std::vector<int> const &dims,
+                     aso::type::DataType data_type)
+    : KNOperator(aso::type::KN_INPUT_OP) {
   DTensor tensor;
   tensor.num_dims = dims.size();
   for (int i = tensor.num_dims - 1; i >= 0; i--) {
@@ -61,13 +65,14 @@ InputKNOp::InputKNOp(std::vector<int> const &dims,
   tensor.data_type = data_type;
   tensor.owner_op = this;
   tensor.owner_ts_idx = 0;
-  OperatorFactory *operator_factory = OperatorFactory::get_instance();
-  tensor.data_ptr = operator_factory->allocate(tensor.size());
+  DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
+  tensor.data_ptr = dmm->allocate(tensor.size());
   output_tensors.push_back(tensor);
 }
 
-aso::type::OperatorType InputKNOp::operator_type(void) const {
-  return aso::type::KN_INPUT_OP;
+KNInputOp::~KNInputOp() {
+  DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
+  dmm->free(output_tensors[0].data_ptr);
 }
 
 } // namespace kernel

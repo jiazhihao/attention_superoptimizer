@@ -20,12 +20,10 @@
 namespace aso {
 namespace threadblock {
 
-class MatmulTBOp : public aso::threadblock::Operator {
+class MatmulTBOp : public aso::threadblock::TBOperator {
 public:
   MatmulTBOp(STensor const &A, STensor const &B);
   ~MatmulTBOp();
-  aso::type::OperatorType operator_type() const;
-  void compute_kernel();
 };
 
 } // namespace threadblock

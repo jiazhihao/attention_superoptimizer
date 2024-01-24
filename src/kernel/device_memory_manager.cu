@@ -13,27 +13,26 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/graph.h"
-#include "aso/kernel/operator_factory.h"
+#include "aso/kernel/device_memory_manager.h"
 #include "aso/utils/cuda_helper.h"
 
 namespace aso {
 namespace kernel {
 
-OperatorFactory *OperatorFactory::singleton = nullptr;
+DeviceMemoryManager *DeviceMemoryManager::singleton = nullptr;
 
-OperatorFactory::OperatorFactory() {
+DeviceMemoryManager::DeviceMemoryManager() {
   // preallocate 10 GB of device memory
   total_size = (size_t)10 * 1024 * 1024 * 1024;
   offset = 0;
   checkCUDA(cudaMalloc(&base_ptr, total_size));
 }
 
-OperatorFactory::~OperatorFactory() {
+DeviceMemoryManager::~DeviceMemoryManager() {
   checkCUDA(cudaFree(base_ptr));
 }
 
-void *OperatorFactory::allocate(size_t size_in_bytes) {
+void *DeviceMemoryManager::allocate(size_t size_in_bytes) {
   void *ret_ptr = base_ptr + offset;
   offset += size_in_bytes;
   // Assert that we haven't used more than what we pre-allocated
@@ -42,7 +41,7 @@ void *OperatorFactory::allocate(size_t size_in_bytes) {
   return ret_ptr;
 }
 
-void OperatorFactory::free(void *ptr) {
+void DeviceMemoryManager::free(void *ptr) {
   // Currently assume that tensors are freed in the reverse order
   // so ptr must be the last tensor we have created
   assert(allocated_tensors.size() > 0);
@@ -51,9 +50,9 @@ void OperatorFactory::free(void *ptr) {
   allocated_tensors.pop_back();
 }
 
-OperatorFactory *OperatorFactory::get_instance() {
+DeviceMemoryManager *DeviceMemoryManager::get_instance() {
   if (singleton == nullptr) {
-    singleton = new OperatorFactory();
+    singleton = new DeviceMemoryManager();
   }
   return singleton;
 }

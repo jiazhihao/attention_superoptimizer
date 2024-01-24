@@ -1,4 +1,4 @@
-/* Copyright 2023 CMU
+/* Copyright 2023-2024 CMU
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,18 +13,15 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include "aso/tensor.h"
-#include "aso/threadblock/operator.h"
-#include <vector>
+#include <cassert>
+#include "aso/threadblock/graph.h"
 
 namespace aso {
-namespace graph {
-class ThreadBlockGraph {
-public:
-  std::vector<aso::threadblock::Operator *> operators;
-};
+namespace threadblock {
 
-} // namespace graph
+STensor Graph::reduction(STensor const &input) {
+  Operator *op =
+}
+
+} // namespace threadblock
 } // namespace aso

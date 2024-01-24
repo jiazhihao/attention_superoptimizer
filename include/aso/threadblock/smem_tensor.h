@@ -25,7 +25,7 @@ namespace threadblock {
 
 #define MAX_TENSOR_DIMS 4
 
-class Operator;
+class TBOperator;
 
 struct STensor {
   CUTLASS_HOST_DEVICE
@@ -155,7 +155,7 @@ struct STensor {
   int dim[MAX_TENSOR_DIMS];
   int stride[MAX_TENSOR_DIMS];
   // STensor fields
-  Operator *owner_op;
+  TBOperator *owner_op;
   int owner_ts_idx;
   off_t smem_offset;
 };

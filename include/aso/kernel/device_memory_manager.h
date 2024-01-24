@@ -1,4 +1,4 @@
-/* Copyright 2023 CMU
+/* Copyright 2023-2024 CMU
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,31 @@
 
 #pragma once
 
-#include "aso/tensor.h"
-#include "aso/warp/operator.h"
+#include "aso/kernel/customized.h"
+#include "aso/kernel/matmul.h"
+#include "aso/kernel/operator.h"
+#include <unordered_map>
 #include <vector>
 
 namespace aso {
-namespace graph {
-class KernelGraph {
+namespace kernel {
+
+class DeviceMemoryManager {
 public:
-  std::vector<aso::warp::Operator *> operators;
+  static DeviceMemoryManager *singleton;
+  DeviceMemoryManager(void);
+  ~DeviceMemoryManager(void);
+  void *allocate(size_t size_in_bytes);
+  void free(void *ptr);
+public:
+  static DeviceMemoryManager *get_instance();
+public:
+  // fields for managing the preallocated cuda buffer
+  char *base_ptr;
+  off_t offset;
+  size_t total_size;
+  std::vector<std::pair<void *, size_t>> allocated_tensors;
 };
 
-} // namespace graph
+} // namespace kernel
 } // namespace aso

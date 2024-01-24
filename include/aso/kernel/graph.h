@@ -19,6 +19,7 @@
 #include "aso/kernel/operator.h"
 // #include "aso/kernel/operator_factory.h"
 #include "aso/kernel/device_tensor.h"
+#include "aso/threadblock/graph.h"
 #include <vector>
 
 namespace aso {
@@ -32,13 +33,20 @@ private:
 
 public:
   Graph(void);
+  // input operator
   DTensor new_input(std::vector<int> const &dims,
                     aso::type::DataType data_type);
+  KNOperator *create_input_op(std::vector<int> const &dims,
+                              aso::type::DataType data_type);
+  // matmul operator
   DTensor matmul(DTensor const &A, DTensor const &B);
-  DTensor customized(std::vector<DTensor> const &inputs,
-                     CustomizedOp::ExecutionPlan const &plan);
-
-  std::vector<aso::kernel::Operator *> operators;
+  KNOperator *create_matmul_op(DTensor const &A, DTensor const &B);
+  // customized operator
+  std::vector<DTensor> customized(std::vector<DTensor> const &inputs,
+                                  aso::threadblock::ExecutionPlan const &plan);
+  KNOperator *create_customized_op(std::vector<DTensor> const &inputs,
+                                   aso::threadblock::ExecutionPlan const &plan);
+  std::vector<aso::kernel::KNOperator *> operators;
   // std::unordered_map<std::pair<int, int>, DTensor, pair_hash> tensors;
   // std::unordered_map<std::pair<int, int>, std::pair<int, int>, pair_hash>
   // edges; std::vector<std::vector<SrcEdge>> edges;

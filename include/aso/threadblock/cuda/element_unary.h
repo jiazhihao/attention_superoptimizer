@@ -26,15 +26,16 @@ using namespace cutlass;
 template <typename ElementType>
 class ElementUnaryExecutor {
 public:
-  ElementType* base_ptr;
-  aso::type::OperatorType op_type;
+  ElementType *base_ptr;
+  aso::type::TBOperatorType op_type;
   int kElements;
+
 public:
   CUTLASS_DEVICE
-  ElementUnaryExecutor(ElementType* _base_ptr,
-                       aso::type::OperatorType _type,
+  ElementUnaryExecutor(ElementType *_base_ptr,
+                       aso::type::TBOperatorType _type,
                        int _kElements)
-  : base_ptr(_base_ptr), op_type(_type), kElements(_kElements) {}
+      : base_ptr(_base_ptr), op_type(_type), kElements(_kElements) {}
 
   void CUTLASS_DEVICE execute_kernel(void) {
     // extern __shared__ char smem_buffer[];
@@ -50,15 +51,16 @@ public:
 
 class ElementUnaryFingerprinter {
 public:
-  aso::type::FPType* base_ptr;
-  aso::type::OperatorType op_type;
+  aso::type::FPType *base_ptr;
+  aso::type::TBOperatorType op_type;
   int kElements;
+
 public:
   CUTLASS_DEVICE
-  ElementUnaryFingerprinter(aso::type::FPType* _base_ptr,
-                            aso::type::OperatorType _type,
+  ElementUnaryFingerprinter(aso::type::FPType *_base_ptr,
+                            aso::type::TBOperatorType _type,
                             int _kElements)
-  : base_ptr(_base_ptr), op_type(_type), kElements(_kElements) {}
+      : base_ptr(_base_ptr), op_type(_type), kElements(_kElements) {}
 
   void CUTLASS_DEVICE compute_fingerprint(void) {
     // extern __shared__ char smem_buffer[];

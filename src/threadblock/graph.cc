@@ -23,6 +23,8 @@ Graph::Graph(std::vector<aso::kernel::DTensor> const &inputs) {
   assert(false);
 }
 
+Graph::Graph() {}
+
 size_t Graph::pair_hash::operator()(std::pair<int, int> const &p) const {
   size_t h1 = std::hash<int>{}(p.first);
   size_t h2 = std::hash<int>{}(p.second);

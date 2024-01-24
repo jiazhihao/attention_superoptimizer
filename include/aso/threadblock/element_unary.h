@@ -15,23 +15,18 @@
 
 #pragma once
 
+#include "aso/threadblock/operator.h"
+
 namespace aso {
 namespace threadblock {
 
 using namespace cutlass;
 
 template <typename ElementType>
-class ElementUnaryOp {
+class ElementUnaryTBOp : public TBOperator {
 public:
-  ElementType* base_ptr
-public:
-  CUTLASS_DEVICE
-  ElementUnaryOp(ElementType* _base_ptr)
-  : base_ptr(_base_ptr) {}
-
-  void CUTLASS_DEVICE execute_kernel(void) {
-    // extern __shared__ char smem_buffer[];
-  }
+  ElementUnaryTBOp(STensor &const _input, aso::type::TBOperatorType _type);
+  ~ElementUnaryTBOp();
 };
 
 } // namespace threadblock

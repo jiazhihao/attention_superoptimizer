@@ -20,11 +20,10 @@
 namespace aso {
 namespace kernel {
 
-class MatmulKNOp : public aso::kernel::Operator {
+class KNMatmulOp : public aso::kernel::KNOperator {
 public:
-  MatmulKNOp(DTensor const &A, DTensor const &B);
-  ~MatmulKNOp();
-  aso::type::OperatorType operator_type() const;
+  KNMatmulOp(DTensor const &A, DTensor const &B);
+  ~KNMatmulOp();
   bool profile(ProfileResult &profile);
 };
 

@@ -15,16 +15,21 @@
 
 #pragma once
 #include "aso/threadblock/smem_tensor.h"
+#include "aso/type.h"
+#include <vector>
 
 namespace aso {
 namespace threadblock {
 
-class Operator {
+class TBOperator {
 public:
-  Operator(STensor const &input1, STensor const &input2);
-  Operator(std::vector<STensor> const &inputs);
-  ~Operator();
-  virtual aso::type::OperatorType operator_type() const = 0;
+  TBOperator(aso::type::TBOperatorType, STensor const &input1);
+  TBOperator(aso::type::TBOperatorType,
+             STensor const &input1,
+             STensor const &input2);
+  TBOperator(aso::type::TBOperatorType, std::vector<STensor> const &inputs);
+  ~TBOperator();
+  aso::type::TBOperatorType op_type;
   std::vector<STensor> input_tensors;
   std::vector<STensor> output_tensors;
 };

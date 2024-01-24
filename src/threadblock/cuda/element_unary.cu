@@ -16,6 +16,5 @@
 #include "cutlass/fast_math.h"
 
 namespace aso {
-namespace threadblock {
-} // namespace threadblock
+namespace threadblock {} // namespace threadblock
 } // namespace aso

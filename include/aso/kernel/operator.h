@@ -17,29 +17,31 @@
 
 #include "aso/kernel/device_tensor.h"
 #include "aso/profile_result.h"
+#include <vector>
 
 namespace aso {
 namespace kernel {
 
-class Operator {
+class KNOperator {
 public:
-  Operator(void);
-  Operator(DTensor const &input1);
-  Operator(DTensor const &input1, DTensor const &input2);
-  Operator(std::vector<DTensor> const &inputs);
-  ~Operator();
-  // aso::base::Operator::Type get_operator_type(void)
+  KNOperator(aso::type::KNOperatorType _type);
+  KNOperator(aso::type::KNOperatorType _type, DTensor const &input1);
+  KNOperator(aso::type::KNOperatorType _type,
+             DTensor const &input1,
+             DTensor const &input2);
+  KNOperator(aso::type::KNOperatorType _type,
+             std::vector<DTensor> const &inputs);
+  ~KNOperator();
   bool profile(ProfileResult &result);
-  virtual aso::type::OperatorType operator_type() const = 0;
+  aso::type::KNOperatorType op_type;
   std::vector<DTensor> input_tensors;
   std::vector<DTensor> output_tensors;
 };
 
-class InputKNOp : public Operator {
+class KNInputOp : public KNOperator {
 public:
-  InputKNOp(std::vector<int> const &dims, aso::type::DataType data_type);
-  ~InputKNOp();
-  aso::type::OperatorType operator_type(void) const;
+  KNInputOp(std::vector<int> const &dims, aso::type::DataType data_type);
+  ~KNInputOp();
   bool profile(ProfileResult &profile);
 };
 

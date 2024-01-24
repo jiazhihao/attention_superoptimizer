@@ -19,9 +19,20 @@
 #include "aso/threadblock/operator.h"
 #include "aso/threadblock/smem_tensor.h"
 #include <vector>
+#include <vector_types.h>
 
 namespace aso {
 namespace threadblock {
+
+class ExecutionPlan {
+public:
+  std::vector<std::pair<TBOperator *, std::vector<std::pair<int, int>>>> ops;
+  std::vector<dim3> input_map;
+  dim3 output_map; // assume that all output must use the same map
+  std::vector<int> forloop_dim;
+  int forloop_range;
+  dim3 grid_dim, block_dim, warp_dim;
+};
 
 class Graph {
 private:
@@ -31,13 +42,18 @@ private:
 
 public:
   Graph(std::vector<aso::kernel::DTensor> const &_inputs);
+  Graph();
+  STensor new_input(std::vector<int> const &dims, aso::type::DataType);
   STensor matmul(STensor const &A, STensor const &B);
+  STensor exp(STensor const &A);
+  STensor reduction(STensor const &A, int dim);
 
-  std::vector<aso::threadblock::Operator *> operators;
-  std::unordered_map<std::pair<int, int>, STensor, pair_hash> tensors;
-  std::unordered_map<std::pair<int, int>, std::pair<int, int>, pair_hash> edges;
-  // std::vector<std::vector<SrcEdge>> edges;
-  // aso::kernel::OperatorFactory *operator_factory;
+  std::vector<aso::threadblock::TBOperator *> operators;
+  // std::unordered_map<std::pair<int, int>, STensor, pair_hash> tensors;
+  // std::unordered_map<std::pair<int, int>, std::pair<int, int>, pair_hash>
+  // edges;
+  //  std::vector<std::vector<SrcEdge>> edges;
+  //  aso::kernel::OperatorFactory *operator_factory;
 };
 
 } // namespace threadblock

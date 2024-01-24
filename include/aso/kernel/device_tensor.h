@@ -24,7 +24,7 @@ namespace kernel {
 
 #define MAX_TENSOR_DIMS 4
 
-class Operator;
+class KNOperator;
 
 struct DTensor {
   DTensor(void);
@@ -114,7 +114,7 @@ struct DTensor {
   int dim[MAX_TENSOR_DIMS];
   int stride[MAX_TENSOR_DIMS];
   // DTensor fields
-  Operator *owner_op;
+  KNOperator *owner_op;
   int owner_ts_idx;
   void *data_ptr;
 };

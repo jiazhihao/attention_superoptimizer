@@ -15,25 +15,20 @@
 
 #pragma once
 
-#include "cutlass/cutlass.h"
-#include "cutlass/fast_math.h"
+#include "aso/threadblock/operator.h"
 
 namespace aso {
 namespace threadblock {
 
 using namespace cutlass;
 
-template <typename ElementType>
-class RedunctionExecutor {
+class TBReductionOp : public TBOperator {
 public:
-  // reference implementation: ReduceSameRow function from
-  // cutlass/examples/41_fused_multi_head_attention/gemm/mma_accum_lambda_iterator.h
-  CUTLASS_DEVICE
-  RedunctionExecutor() {}
-
-  void CUTLASS_DEVICE execute_kernel(void) {
-    assert(false && "To Be Implemented");
-  }
+  TBReductionOp(STensor const &_input,
+                 int reduce_dim);
+  ~TBReductionOp();
+public:
+  int reduce_dim;
 };
 
 } // namespace threadblock

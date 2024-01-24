@@ -14,8 +14,8 @@
  */
 
 #include "aso/kernel/matmul.h"
+#include "aso/kernel/device_memory_manager.h"
 #include "aso/kernel/graph.h"
-#include "aso/kernel/operator_factory.h"
 #include "aso/utils/hash_utils.h"
 #include <cassert>
 
@@ -23,38 +23,26 @@ namespace aso {
 namespace kernel {
 
 DTensor Graph::matmul(DTensor const &A, DTensor const &B) {
-  OperatorFactory *operator_factory = OperatorFactory::get_instance();
-  Operator *op = operator_factory->get_or_create_matmul(A, B);
+  KNOperator *op = create_matmul_op(A, B);
   assert(op != nullptr);
   operators.push_back(op);
   DTensor output = op->output_tensors[0];
   return output;
 }
 
-Operator *OperatorFactory::get_or_create_matmul(DTensor const &A,
-                                                DTensor const &B) {
+KNOperator *Graph::create_matmul_op(DTensor const &A, DTensor const &B) {
   if (A.num_dims != 2 || B.num_dims != 2) {
     return nullptr;
   }
   if (A.dim[1] != B.dim[0]) {
     return nullptr;
   }
-#ifdef DEADCODE
-  MatmulKey key(A, B);
-  MatmulKNOp *op = nullptr;
-  if (matmul.find(key) != matmul.end()) {
-    op = matmul[key];
-  } else {
-    op = new MatmulKNOp(A, B);
-    matmul[key] = op;
-  }
-#endif
-  MatmulKNOp *op = new MatmulKNOp(A, B);
+  KNMatmulOp *op = new KNMatmulOp(A, B);
   return op;
 }
 
-MatmulKNOp::MatmulKNOp(DTensor const &A, DTensor const &B)
-    : aso::kernel::Operator(A, B) {
+KNMatmulOp::KNMatmulOp(DTensor const &A, DTensor const &B)
+    : aso::kernel::KNOperator(aso::type::KN_MATMUL_OP, A, B) {
   DTensor C;
   assert(A.num_dims == 2);
   assert(B.num_dims == 2);
@@ -68,13 +56,18 @@ MatmulKNOp::MatmulKNOp(DTensor const &A, DTensor const &B)
   C.data_type = A.data_type;
   C.owner_op = this;
   C.owner_ts_idx = 0;
-  OperatorFactory *operator_factory = OperatorFactory::get_instance();
-  C.data_ptr = operator_factory->allocate(C.size());
+  DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
+  C.data_ptr = dmm->allocate(C.size());
   assert(output_tensors.size() == 0);
   output_tensors.push_back(C);
 }
 
-MatmulKNOp::~MatmulKNOp() {}
+KNMatmulOp::~KNMatmulOp() {
+  DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
+  for (int i = output_tensors.size() - 1; i >= 0; i--) {
+    dmm->free(output_tensors[i].data_ptr);
+  }
+}
 
 MatmulKey::MatmulKey(DTensor const &A, DTensor const &B)
     : operand_a(A), operand_b(B) {}
