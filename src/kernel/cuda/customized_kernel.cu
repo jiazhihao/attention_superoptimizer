@@ -17,6 +17,7 @@
 #include "aso/threadblock/cuda/element_unary.h"
 #include "aso/threadblock/cuda/matmul.h"
 #include "aso/threadblock/cuda/reduction.h"
+#include "aso/utils/cuda_helper.h"
 
 namespace aso {
 namespace kernel {
@@ -77,7 +78,24 @@ void KNCustomizedOp::run() {
       params);
 }
 
-bool KNCustomizedOp::profile(ProfileResult &result) {}
+bool KNCustomizedOp::profile(ProfileResult &result) {
+  checkCUDA(cudaDeviceSynchronize());
+  cudaEvent_t events[2];
+  checkCUDA(cudaEventCreate(&events[0]));
+  checkCUDA(cudaEventCreate(&events[1]));
+  checkCUDA(cudaEventRecord(events[0]));
+  for (int i = 0; i < 16; i++) {
+    run();
+  }
+  float runtime_ms = 0;
+  checkCUDA(cudaEventRecord(events[1]));
+  checkCUDA(cudaEventSynchronize(events[1]));
+  checkCUDA(cudaEventElapsedTime(&runtime_ms, events[0], events[1]));
+  result.run_time = runtime_ms / 16;
+  checkCUDA(cudaEventDestroy(events[0]));
+  checkCUDA(cudaEventDestroy(events[1]));
+  return true;
+}
 
 } // namespace kernel
 } // namespace aso

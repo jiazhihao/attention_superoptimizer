@@ -19,17 +19,31 @@
 namespace aso {
 namespace threadblock {
 
-Graph::Graph(std::vector<aso::kernel::DTensor> const &inputs) {
-  assert(false);
-}
+Graph::Graph() : smem_offset(0) {}
 
-Graph::Graph() {}
+const size_t MAX_SMEM_SIZE = 96 * 1024; // 96 KB
 
 size_t Graph::pair_hash::operator()(std::pair<int, int> const &p) const {
   size_t h1 = std::hash<int>{}(p.first);
   size_t h2 = std::hash<int>{}(p.second);
   hash_combine(h1, h2);
   return h1;
+}
+
+off_t Graph::allocate(STensor const &tensor) {
+  off_t ret = smem_offset;
+  smem_offset += tensor.size();
+  assert(smem_offset <= (off_t)MAX_SMEM_SIZE);
+  allocated_tensors.push_back(std::make_pair(ret, tensor.size()));
+  return ret;
+}
+
+void Graph::free(STensor const &tensor) {
+  assert(allocated_tensors.size() > 0);
+  assert(allocated_tensors.back().first == tensor.smem_offset);
+  assert(allocated_tensors.back().second == tensor.size());
+  smem_offset -= allocated_tensors.back().second;
+  allocated_tensors.pop_back();
 }
 
 } // namespace threadblock

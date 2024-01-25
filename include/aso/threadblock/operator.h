@@ -21,14 +21,23 @@
 namespace aso {
 namespace threadblock {
 
+class Graph;
+
 class TBOperator {
 public:
-  TBOperator(aso::type::TBOperatorType, STensor const &input1);
-  TBOperator(aso::type::TBOperatorType,
+  TBOperator(Graph* graph,
+             aso::type::TBOperatorType,
+             STensor const &input1);
+  TBOperator(Graph* graph,
+             aso::type::TBOperatorType,
              STensor const &input1,
              STensor const &input2);
-  TBOperator(aso::type::TBOperatorType, std::vector<STensor> const &inputs);
+  TBOperator(Graph* graph,
+             aso::type::TBOperatorType,
+             std::vector<STensor> const &inputs);
   ~TBOperator();
+public:
+  Graph *bgraph;
   aso::type::TBOperatorType op_type;
   std::vector<STensor> input_tensors;
   std::vector<STensor> output_tensors;

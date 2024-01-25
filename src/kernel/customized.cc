@@ -100,7 +100,7 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
       my_inputs.push_back(
           bgraph.operators[idx.first]->output_tensors[idx.second]);
     }
-    switch (op.first->op_type) {
+    switch (op.first) {
       case aso::type::TB_MATMUL_OP: {
         assert(my_inputs.size() == 2);
         bgraph.matmul(my_inputs[0], my_inputs[1]);
@@ -111,11 +111,13 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         bgraph.exp(my_inputs[0]);
         break;
       }
-      case aso::type::TB_REDUCTION_OP: {
+      case aso::type::TB_REDUCTION_0_OP:
+      case aso::type::TB_REDUCTION_1_OP:
+      case aso::type::TB_REDUCTION_2_OP:
+      {
         assert(my_inputs.size() == 1);
-        aso::threadblock::TBReductionOp *reduction =
-            static_cast<aso::threadblock::TBReductionOp *>(op.first);
-        bgraph.reduction(my_inputs[0], reduction->reduce_dim);
+        int reduce_dim = op.first - aso::type::TB_REDUCTION_0_OP;
+        bgraph.reduction(my_inputs[0], reduce_dim);
         break;
       }
       default: {

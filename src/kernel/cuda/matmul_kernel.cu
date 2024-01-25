@@ -15,7 +15,7 @@
 
 #include "aso/kernel/graph.h"
 #include "aso/kernel/matmul.h"
-#include "aso/simulator.h"
+#include "aso/kernel/device_memory_manager.h"
 #include "aso/utils/cuda_helper.h"
 #include "aso/utils/hash_utils.h"
 #include <cassert>
@@ -24,13 +24,12 @@ namespace aso {
 namespace kernel {
 
 bool KNMatmulOp::profile(ProfileResult &result) {
-  aso::simulator::Simulator *simulator =
-      aso::simulator::Simulator::get_instance();
   float alpha = 1.0f, beta = 0.0f;
-  simulator->free_all();
-  void *A = simulator->allocate(input_tensors[0].size());
-  void *B = simulator->allocate(input_tensors[1].size());
-  void *C = simulator->allocate(output_tensors[0].size());
+  aso::kernel::DeviceMemoryManager *dmm =
+      aso::kernel::DeviceMemoryManager::get_instance();
+  void *A = input_tensors[0].data_ptr;
+  void *B = input_tensors[1].data_ptr;
+  void *C = output_tensors[0].data_ptr;
   // checkCUDA(cudaMalloc(&A, input_tensors[0].size()));
   // checkCUDA(cudaMalloc(&B, input_tensors[1].size()));
   // checkCUDA(cudaMalloc(&C, output_tensors[0].size()));
@@ -75,7 +74,7 @@ bool KNMatmulOp::profile(ProfileResult &result) {
   checkCUDA(cudaEventCreate(&events[1]));
   checkCUDA(cudaEventRecord(events[0]));
   for (int i = 0; i < 16; i++) {
-    checkCUDA(cublasGemmEx(simulator->blas,
+    checkCUDA(cublasGemmEx(dmm->blas,
                            trans_A,
                            trans_B,
                            row_C,

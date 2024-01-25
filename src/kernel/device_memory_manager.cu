@@ -26,10 +26,13 @@ DeviceMemoryManager::DeviceMemoryManager() {
   total_size = (size_t)10 * 1024 * 1024 * 1024;
   offset = 0;
   checkCUDA(cudaMalloc(&base_ptr, total_size));
+  checkCUDA(cublasCreate(&blas));
+  checkCUDA(cublasSetMathMode(blas, CUBLAS_TENSOR_OP_MATH));
 }
 
 DeviceMemoryManager::~DeviceMemoryManager() {
   checkCUDA(cudaFree(base_ptr));
+  checkCUDA(cublasDestroy(blas));
 }
 
 void *DeviceMemoryManager::allocate(size_t size_in_bytes) {

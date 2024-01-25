@@ -21,6 +21,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include <cublas_v2.h>
 namespace aso {
 namespace kernel {
 
@@ -39,6 +40,9 @@ public:
   off_t offset;
   size_t total_size;
   std::vector<std::pair<void *, size_t>> allocated_tensors;
+public:
+  cublasHandle_t blas;
+  // cudnnHandle_t cudnn;
 };
 
 } // namespace kernel

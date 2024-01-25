@@ -26,7 +26,7 @@ namespace threadblock {
 
 class ExecutionPlan {
 public:
-  std::vector<std::pair<TBOperator *, std::vector<std::pair<int, int>>>> ops;
+  std::vector<std::pair<aso::type::TBOperatorType, std::vector<std::pair<int, int>>>> ops;
   std::vector<dim3> input_map;
   dim3 output_map; // assume that all output must use the same map
   std::vector<int> forloop_dim;
@@ -41,19 +41,27 @@ private:
   };
 
 public:
-  Graph(std::vector<aso::kernel::DTensor> const &_inputs);
   Graph();
+  // input operator
   STensor new_input(std::vector<int> const &dims, aso::type::DataType);
+  TBOperator* create_input_op(std::vector<int> const &dims, aso::type::DataType);
+  // matmul operator
   STensor matmul(STensor const &A, STensor const &B);
+  TBOperator* create_matmul_op(STensor const &A, STensor const &B);
+  // element unary operator
   STensor exp(STensor const &A);
+  TBOperator* create_elementunary_op(STensor const &A, aso::type::TBOperatorType _type);
+  // reduction operator
   STensor reduction(STensor const &A, int dim);
+  TBOperator* create_reduction_op(STensor const &A, int dim);
 
   std::vector<aso::threadblock::TBOperator *> operators;
-  // std::unordered_map<std::pair<int, int>, STensor, pair_hash> tensors;
-  // std::unordered_map<std::pair<int, int>, std::pair<int, int>, pair_hash>
-  // edges;
-  //  std::vector<std::vector<SrcEdge>> edges;
-  //  aso::kernel::OperatorFactory *operator_factory;
+
+  off_t allocate(STensor const & tensor);
+  void free(STensor const &tensor);
+public:
+  off_t smem_offset;
+  std::vector<std::pair<off_t, size_t> > allocated_tensors;
 };
 
 } // namespace threadblock
