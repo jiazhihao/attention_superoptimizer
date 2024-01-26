@@ -32,7 +32,7 @@ public:
   KNOperator(aso::type::KNOperatorType _type,
              std::vector<DTensor> const &inputs);
   ~KNOperator();
-  bool profile(ProfileResult &result);
+  virtual bool profile(ProfileResult &result) = 0;
   aso::type::KNOperatorType op_type;
   std::vector<DTensor> input_tensors;
   std::vector<DTensor> output_tensors;

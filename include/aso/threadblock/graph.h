@@ -29,8 +29,8 @@ public:
   std::vector<
       std::pair<aso::type::TBOperatorType, std::vector<std::pair<int, int>>>>
       ops;
-  std::vector<dim3> input_map;
-  dim3 output_map; // assume that all output must use the same map
+  std::vector<int3> input_map;
+  int3 output_map; // assume that all output must use the same map
   std::vector<int> forloop_dim;
   int forloop_range;
   dim3 grid_dim, block_dim, warp_dim;
@@ -45,11 +45,15 @@ private:
 public:
   Graph(dim3 grid_dim, int forloop_range);
   // input operator
-  STensor new_input(aso::kernel::DTensor const &dtensor, dim3 input_map);
-  TBOperator *create_input_op(std::vector<int> const &dims,
-                              aso::type::DataType);
+  STensor new_input(aso::kernel::DTensor const &dtensor,
+                    int3 input_map,
+                    int forloop_dim);
+  TBOperator *create_input_op(aso::kernel::DTensor const &dtensor,
+                              int3 input_map,
+                              int forloop_dim);
   // output operator
-  aso::kernel::DTensor new_output(STensor const &stensor, dim3 output_map);
+  aso::kernel::DTensor new_output(STensor const &stensor, int3 output_map);
+  TBOperator *create_output_op(STensor const &stensor, int3 output_map);
   // matmul operator
   STensor matmul(STensor const &A, STensor const &B);
   TBOperator *create_matmul_op(STensor const &A, STensor const &B);
@@ -65,6 +69,7 @@ public:
 
   off_t allocate(STensor const &tensor);
   void free(STensor const &tensor);
+  void free(std::vector<STensor> const &tensors);
 
 public:
   dim3 grid_dim;

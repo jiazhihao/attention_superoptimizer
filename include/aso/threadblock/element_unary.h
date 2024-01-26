@@ -22,11 +22,12 @@ namespace threadblock {
 
 using namespace cutlass;
 
-template <typename ElementType>
-class ElementUnaryTBOp : public TBOperator {
+class TBElementUnaryOp : public TBOperator {
 public:
-  ElementUnaryTBOp(STensor &const _input, aso::type::TBOperatorType _type);
-  ~ElementUnaryTBOp();
+  TBElementUnaryOp(Graph *_graph,
+                   STensor const &_input,
+                   aso::type::TBOperatorType _type);
+  ~TBElementUnaryOp();
 };
 
 } // namespace threadblock

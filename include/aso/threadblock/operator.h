@@ -14,9 +14,11 @@
  */
 
 #pragma once
+#include "aso/kernel/device_tensor.h"
 #include "aso/threadblock/smem_tensor.h"
 #include "aso/type.h"
 #include <vector>
+#include <vector_types.h>
 
 namespace aso {
 namespace threadblock {
@@ -25,6 +27,7 @@ class Graph;
 
 class TBOperator {
 public:
+  TBOperator(Graph *graph, aso::type::TBOperatorType);
   TBOperator(Graph *graph, aso::type::TBOperatorType, STensor const &input1);
   TBOperator(Graph *graph,
              aso::type::TBOperatorType,
@@ -40,6 +43,27 @@ public:
   aso::type::TBOperatorType op_type;
   std::vector<STensor> input_tensors;
   std::vector<STensor> output_tensors;
+};
+
+class TBInputOp : public TBOperator {
+public:
+  TBInputOp(Graph *_graph,
+            aso::kernel::DTensor const &dtensor,
+            int3 input_map,
+            int forloop_dim);
+  ~TBInputOp();
+
+public:
+  aso::kernel::DTensor dtensor;
+};
+
+class TBOutputOp : public TBOperator {
+public:
+  TBOutputOp(Graph *_graph, STensor const &stensor, int3 output_map);
+  ~TBOutputOp();
+
+public:
+  aso::kernel::DTensor dtensor;
 };
 
 } // namespace threadblock

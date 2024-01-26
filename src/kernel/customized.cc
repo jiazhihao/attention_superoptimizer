@@ -51,7 +51,7 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
   // Step 1: computing input shapes
   // Step 1: creating a stensor for each input
   for (size_t i = 0; i < input_tensors.size(); i++) {
-    bgraph.new_input(input_tensors[i], plan.input_map[i]);
+    bgraph.new_input(input_tensors[i], plan.input_map[i], plan.forloop_dim[i]);
   }
 
   auto const &ops = plan.ops;
@@ -107,41 +107,9 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
       if (!found) {
         // TODO: change output tensor_shape
         STensor stensor = op->output_tensors[i];
-        DTensor dtensor;
-        dtensor.num_dims = stensor.num_dims;
-        dtensor.data_type = stensor.data_type;
+        DTensor dtensor = bgraph.new_output(stensor, plan.output_map);
         dtensor.owner_op = this;
         dtensor.owner_ts_idx = static_cast<int>(output_tensors.size());
-        for (int d = 0; d < dtensor.num_dims; d++) {
-          dtensor.dim[d] = stensor.dim[d];
-        }
-        for (int d = 0; d < 3; d++) {
-          int dim_idx = -1;
-          int dim_div = 1;
-          if (d == 0 && plan.grid_dim.x > 1) {
-            assert(plan.output_map.x >= 0);
-            dim_idx = plan.output_map.x;
-            dim_div = plan.grid_dim.x;
-          }
-          if (d == 1 && plan.grid_dim.y > 1) {
-            assert(plan.output_map.y > 0);
-            dim_idx = plan.output_map.y;
-            dim_div = plan.grid_dim.y;
-          }
-          if (d == 2 && plan.grid_dim.z > 1) {
-            assert(plan.output_map.z > 0);
-            dim_idx = plan.output_map.z;
-            dim_div = plan.grid_dim.z;
-          }
-          assert(dtensor.dim[dim_idx] > 0);
-          assert(dtensor.dim[dim_idx] % dim_div == 0);
-          dtensor.dim[dim_idx] /= dim_div;
-        }
-        for (int d = dtensor.num_dims - 1; d >= 0; d--) {
-          dtensor.stride[d] = (d == dtensor.num_dims - 1)
-                                  ? 1
-                                  : dtensor.stride[d + 1] * dtensor.dim[d + 1];
-        }
         DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
         dtensor.data_ptr = dmm->allocate(dtensor.size());
         output_tensors.push_back(dtensor);

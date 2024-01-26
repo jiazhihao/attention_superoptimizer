@@ -47,5 +47,11 @@ void Graph::free(STensor const &tensor) {
   allocated_tensors.pop_back();
 }
 
+void Graph::free(std::vector<STensor> const &tensors) {
+  for (int i = tensors.size() - 1; i >= 0; i--) {
+    free(tensors[i]);
+  }
+}
+
 } // namespace threadblock
 } // namespace aso

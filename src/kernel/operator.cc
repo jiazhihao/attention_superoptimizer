@@ -35,6 +35,14 @@ KNOperator::KNOperator(aso::type::KNOperatorType _type,
   input_tensors.push_back(B);
 }
 
+KNOperator::KNOperator(aso::type::KNOperatorType _type,
+                       std::vector<DTensor> const &inputs)
+    : op_type(_type) {
+  for (auto const &i : inputs) {
+    input_tensors.push_back(i);
+  }
+}
+
 KNOperator::~KNOperator() {}
 
 DTensor Graph::new_input(std::vector<int> const &dims,
@@ -73,6 +81,11 @@ KNInputOp::KNInputOp(std::vector<int> const &dims,
 KNInputOp::~KNInputOp() {
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
   dmm->free(output_tensors[0].data_ptr);
+}
+
+bool KNInputOp::profile(ProfileResult &profile) {
+  profile.run_time = 0.0f;
+  return true;
 }
 
 } // namespace kernel
