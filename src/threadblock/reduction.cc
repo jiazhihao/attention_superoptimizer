@@ -22,6 +22,8 @@ namespace threadblock {
 
 STensor Graph::reduction(STensor const &input, int dim) {
   TBOperator *op = create_reduction_op(input, dim);
+  assert(op != nullptr);
+  operators.push_back(op);
   return op->output_tensors[0];
 }
 
@@ -36,7 +38,18 @@ TBReductionOp::TBReductionOp(Graph *bgraph, STensor const &input, int dim)
       aso::type::TB_REDUCTION_0_OP + dim);
   this->op_type = type;
   STensor output = input;
-  output.smem_offset = bgraph->allocate(output_tensors[0]);
+  assert(output.num_dims > reduce_dim);
+  assert(output.is_column_major());
+  output.dim[reduce_dim] = 1;
+  for (int i = output.num_dims - 1; i >= 0; i--) {
+    output.stride[i] = (i == output.num_dims - 1)
+                           ? 1
+                           : output.stride[i + 1] * output.dim[i + 1];
+  }
+  output.owner_op = this;
+  output.owner_ts_idx = 0;
+  output.smem_offset = bgraph->allocate(output);
+  output_tensors.push_back(output);
 }
 
 TBReductionOp::~TBReductionOp() {
