@@ -32,14 +32,17 @@ public:
   ~DeviceMemoryManager(void);
   void *allocate(size_t size_in_bytes);
   void free(void *ptr);
+
 public:
   static DeviceMemoryManager *get_instance();
+
 public:
   // fields for managing the preallocated cuda buffer
   char *base_ptr;
   off_t offset;
   size_t total_size;
   std::vector<std::pair<void *, size_t>> allocated_tensors;
+
 public:
   cublasHandle_t blas;
   // cudnnHandle_t cudnn;

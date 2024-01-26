@@ -22,15 +22,15 @@ namespace simulator {
 Simulator *Simulator::singleton = nullptr;
 
 Simulator::Simulator() : offset(0) {
-  //work_space_size = (size_t)2 * 1024 * 1024 * 1024 /*2GB*/;
-  //checkCUDA(cudaMalloc(&base_ptr, work_space_size));
-  //checkCUDA(cublasCreate(&blas));
-  //checkCUDA(cublasSetMathMode(blas, CUBLAS_TENSOR_OP_MATH));
+  // work_space_size = (size_t)2 * 1024 * 1024 * 1024 /*2GB*/;
+  // checkCUDA(cudaMalloc(&base_ptr, work_space_size));
+  // checkCUDA(cublasCreate(&blas));
+  // checkCUDA(cublasSetMathMode(blas, CUBLAS_TENSOR_OP_MATH));
 }
 
 Simulator::~Simulator() {
-  //checkCUDA(cudaFree(base_ptr));
-  //checkCUDA(cublasDestroy(blas));
+  // checkCUDA(cudaFree(base_ptr));
+  // checkCUDA(cublasDestroy(blas));
 }
 
 Simulator *Simulator::get_instance() {

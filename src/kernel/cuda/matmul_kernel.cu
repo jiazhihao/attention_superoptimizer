@@ -13,9 +13,9 @@
  * limitations under the License.
  */
 
+#include "aso/kernel/device_memory_manager.h"
 #include "aso/kernel/graph.h"
 #include "aso/kernel/matmul.h"
-#include "aso/kernel/device_memory_manager.h"
 #include "aso/utils/cuda_helper.h"
 #include "aso/utils/hash_utils.h"
 #include <cassert>

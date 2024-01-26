@@ -19,7 +19,8 @@
 namespace aso {
 namespace threadblock {
 
-Graph::Graph() : smem_offset(0) {}
+Graph::Graph(dim3 _grid_dim, int _forloop_range)
+    : grid_dim(_grid_dim), forloop_range(_forloop_range), smem_offset(0) {}
 
 const size_t MAX_SMEM_SIZE = 96 * 1024; // 96 KB
 

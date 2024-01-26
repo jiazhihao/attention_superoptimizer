@@ -25,17 +25,16 @@ class Graph;
 
 class TBOperator {
 public:
-  TBOperator(Graph* graph,
-             aso::type::TBOperatorType,
-             STensor const &input1);
-  TBOperator(Graph* graph,
+  TBOperator(Graph *graph, aso::type::TBOperatorType, STensor const &input1);
+  TBOperator(Graph *graph,
              aso::type::TBOperatorType,
              STensor const &input1,
              STensor const &input2);
-  TBOperator(Graph* graph,
+  TBOperator(Graph *graph,
              aso::type::TBOperatorType,
              std::vector<STensor> const &inputs);
   ~TBOperator();
+
 public:
   Graph *bgraph;
   aso::type::TBOperatorType op_type;

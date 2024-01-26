@@ -44,48 +44,14 @@ KNOperator *Graph::create_customized_op(std::vector<DTensor> const &inputs,
 
 KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
                                ExecutionPlan const &_plan)
-    : KNOperator(aso::type::KN_CUSTOMIZED_OP, _inputs), plan(_plan) {
+    : KNOperator(aso::type::KN_CUSTOMIZED_OP, _inputs), plan(_plan),
+      bgraph(_plan.grid_dim, _plan.forloop_range) {
   assert(_inputs.size() == plan.input_map.size());
   assert(plan.forloop_dim.size() == plan.input_map.size());
   // Step 1: computing input shapes
   // Step 1: creating a stensor for each input
-  std::vector<DTensor> inputs;
-  for (size_t i = 0; i < _inputs.size(); i++) {
-    DTensor shape = _inputs[i];
-    for (int d = 0; d < 3; d++) {
-      int dim_idx = -1;
-      int dim_div = 1;
-      if (d == 0 && plan.grid_dim.x > 1) {
-        assert(plan.input_map[i].x >= 0);
-        dim_idx = plan.input_map[i].x;
-        dim_div = plan.grid_dim.x;
-      }
-      if (d == 1 && plan.grid_dim.y > 1) {
-        assert(plan.input_map[i].y > 0);
-        dim_idx = plan.input_map[i].y;
-        dim_div = plan.grid_dim.y;
-      }
-      if (d == 2 && plan.grid_dim.z > 1) {
-        assert(plan.input_map[i].z > 0);
-        dim_idx = plan.input_map[i].z;
-        dim_div = plan.grid_dim.z;
-      }
-      assert(shape.dim[dim_idx] > 0);
-      assert(shape.dim[dim_idx] % dim_div == 0);
-      shape.dim[dim_idx] /= dim_div;
-    }
-    inputs.push_back(shape);
-    if (plan.forloop_dim[i] >= 0) {
-      int dim_idx = plan.forloop_dim[i];
-      assert(shape.dim[dim_idx] > 0);
-      assert(shape.dim[dim_idx] % plan.forloop_range == 0);
-      shape.dim[dim_idx] /= plan.forloop_range;
-    }
-    std::vector<int> dims;
-    for (int i = 0; i < shape.num_dims; i++) {
-      dims.push_back(shape.dim[i]);
-    }
-    bgraph.new_input(dims, shape.data_type);
+  for (size_t i = 0; i < input_tensors.size(); i++) {
+    bgraph.new_input(input_tensors[i], plan.input_map[i]);
   }
 
   auto const &ops = plan.ops;
@@ -113,8 +79,7 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
       }
       case aso::type::TB_REDUCTION_0_OP:
       case aso::type::TB_REDUCTION_1_OP:
-      case aso::type::TB_REDUCTION_2_OP:
-      {
+      case aso::type::TB_REDUCTION_2_OP: {
         assert(my_inputs.size() == 1);
         int reduce_dim = op.first - aso::type::TB_REDUCTION_0_OP;
         bgraph.reduction(my_inputs[0], reduce_dim);

@@ -13,9 +13,9 @@
  * limitations under the License.
  */
 
-#include <cassert>
-#include "aso/threadblock/graph.h"
 #include "aso/threadblock/reduction.h"
+#include "aso/threadblock/graph.h"
+#include <cassert>
 
 namespace aso {
 namespace threadblock {
@@ -25,16 +25,15 @@ STensor Graph::reduction(STensor const &input, int dim) {
   return op->output_tensors[0];
 }
 
-TBOperator* Graph::create_reduction_op(STensor const &input, int dim) {
-  TBOperator* op = new TBReductionOp(this, input, dim);
+TBOperator *Graph::create_reduction_op(STensor const &input, int dim) {
+  TBOperator *op = new TBReductionOp(this, input, dim);
   return op;
 }
 
-TBReductionOp::TBReductionOp(Graph *bgraph,
-                             STensor const &input,
-                             int dim)
-  : TBOperator(bgraph, aso::type::TB_REDUCTION_0_OP, input), reduce_dim(dim) {
-  aso::type::TBOperatorType type = static_cast<aso::type::TBOperatorType>(aso::type::TB_REDUCTION_0_OP + dim);
+TBReductionOp::TBReductionOp(Graph *bgraph, STensor const &input, int dim)
+    : TBOperator(bgraph, aso::type::TB_REDUCTION_0_OP, input), reduce_dim(dim) {
+  aso::type::TBOperatorType type = static_cast<aso::type::TBOperatorType>(
+      aso::type::TB_REDUCTION_0_OP + dim);
   this->op_type = type;
   STensor output = input;
   output.smem_offset = bgraph->allocate(output_tensors[0]);

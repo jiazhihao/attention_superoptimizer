@@ -24,10 +24,9 @@ using namespace cutlass;
 
 class TBReductionOp : public TBOperator {
 public:
-  TBReductionOp(Graph *graph,
-                STensor const &_input,
-                int reduce_dim);
+  TBReductionOp(Graph *graph, STensor const &_input, int reduce_dim);
   ~TBReductionOp();
+
 public:
   int reduce_dim;
 };

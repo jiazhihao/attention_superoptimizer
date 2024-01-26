@@ -26,7 +26,9 @@ namespace threadblock {
 
 class ExecutionPlan {
 public:
-  std::vector<std::pair<aso::type::TBOperatorType, std::vector<std::pair<int, int>>>> ops;
+  std::vector<
+      std::pair<aso::type::TBOperatorType, std::vector<std::pair<int, int>>>>
+      ops;
   std::vector<dim3> input_map;
   dim3 output_map; // assume that all output must use the same map
   std::vector<int> forloop_dim;
@@ -41,27 +43,34 @@ private:
   };
 
 public:
-  Graph();
+  Graph(dim3 grid_dim, int forloop_range);
   // input operator
-  STensor new_input(std::vector<int> const &dims, aso::type::DataType);
-  TBOperator* create_input_op(std::vector<int> const &dims, aso::type::DataType);
+  STensor new_input(aso::kernel::DTensor const &dtensor, dim3 input_map);
+  TBOperator *create_input_op(std::vector<int> const &dims,
+                              aso::type::DataType);
+  // output operator
+  aso::kernel::DTensor new_output(STensor const &stensor, dim3 output_map);
   // matmul operator
   STensor matmul(STensor const &A, STensor const &B);
-  TBOperator* create_matmul_op(STensor const &A, STensor const &B);
+  TBOperator *create_matmul_op(STensor const &A, STensor const &B);
   // element unary operator
   STensor exp(STensor const &A);
-  TBOperator* create_elementunary_op(STensor const &A, aso::type::TBOperatorType _type);
+  TBOperator *create_elementunary_op(STensor const &A,
+                                     aso::type::TBOperatorType _type);
   // reduction operator
   STensor reduction(STensor const &A, int dim);
-  TBOperator* create_reduction_op(STensor const &A, int dim);
+  TBOperator *create_reduction_op(STensor const &A, int dim);
 
   std::vector<aso::threadblock::TBOperator *> operators;
 
-  off_t allocate(STensor const & tensor);
+  off_t allocate(STensor const &tensor);
   void free(STensor const &tensor);
+
 public:
+  dim3 grid_dim;
+  int forloop_range;
   off_t smem_offset;
-  std::vector<std::pair<off_t, size_t> > allocated_tensors;
+  std::vector<std::pair<off_t, size_t>> allocated_tensors;
 };
 
 } // namespace threadblock
