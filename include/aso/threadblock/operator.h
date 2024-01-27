@@ -55,6 +55,8 @@ public:
 
 public:
   aso::kernel::DTensor dtensor;
+  int3 input_map;
+  int forloop_dim;
 };
 
 class TBOutputOp : public TBOperator {
@@ -64,6 +66,7 @@ public:
 
 public:
   aso::kernel::DTensor dtensor;
+  int3 output_map;
 };
 
 } // namespace threadblock
