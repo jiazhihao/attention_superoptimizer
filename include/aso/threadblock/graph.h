@@ -33,7 +33,7 @@ public:
   int3 output_map; // assume that all output must use the same map
   std::vector<int> forloop_dim;
   int forloop_range;
-  dim3 grid_dim, block_dim, warp_dim;
+  dim3 grid_dim, block_dim;
 };
 
 class Graph {
@@ -43,7 +43,7 @@ private:
   };
 
 public:
-  Graph(dim3 grid_dim, int forloop_range);
+  Graph(dim3 grid_dim, dim3 block_dim, int forloop_range);
   // input operator
   STensor new_input(aso::kernel::DTensor const &dtensor,
                     int3 input_map,
@@ -65,15 +65,15 @@ public:
   STensor reduction(STensor const &A, int dim);
   TBOperator *create_reduction_op(STensor const &A, int dim);
 
-  std::vector<aso::threadblock::TBOperator *> operators;
-
   off_t allocate(STensor const &tensor);
   void free(STensor const &tensor);
   void free(std::vector<STensor> const &tensors);
 
 public:
-  dim3 grid_dim;
+  dim3 grid_dim, block_dim;
   int forloop_range;
+  std::vector<aso::threadblock::TBOperator *> operators;
+  // memory allocator
   off_t smem_offset;
   std::vector<std::pair<off_t, size_t>> allocated_tensors;
 };

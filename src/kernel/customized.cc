@@ -17,6 +17,7 @@
 #include "aso/kernel/device_memory_manager.h"
 #include "aso/kernel/graph.h"
 #include "aso/threadblock/graph.h"
+#include "aso/threadblock/operator.h"
 #include "aso/threadblock/reduction.h"
 #include "aso/threadblock/smem_tensor.h"
 #include "aso/utils/hash_utils.h"
@@ -45,7 +46,7 @@ KNOperator *Graph::create_customized_op(std::vector<DTensor> const &inputs,
 KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
                                ExecutionPlan const &_plan)
     : KNOperator(aso::type::KN_CUSTOMIZED_OP, _inputs), plan(_plan),
-      bgraph(_plan.grid_dim, _plan.forloop_range) {
+      bgraph(_plan.grid_dim, _plan.block_dim, _plan.forloop_range) {
   assert(_inputs.size() == plan.input_map.size());
   assert(plan.forloop_dim.size() == plan.input_map.size());
   // Step 1: computing input shapes
@@ -113,6 +114,84 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
         dtensor.data_ptr = dmm->allocate(dtensor.size());
         output_tensors.push_back(dtensor);
+      }
+    }
+  }
+}
+
+KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
+                               aso::threadblock::Graph const &_graph)
+    : KNOperator(aso::type::KN_CUSTOMIZED_OP, _inputs),
+      bgraph(_graph.grid_dim, _graph.block_dim, _graph.forloop_range) {
+  ExecutionPlan plan;
+  plan.grid_dim = _graph.grid_dim;
+  plan.block_dim = _graph.block_dim;
+  plan.forloop_range = _graph.forloop_range;
+
+  for (auto const &op : _graph.operators) {
+    std::vector<STensor> my_inputs;
+    std::vector<std::pair<int, int>> indices;
+    for (size_t i = 0; i < op->input_tensors.size(); i++) {
+      int op_idx = -1, ts_idx = op->input_tensors[i].owner_ts_idx;
+      for (size_t l = 0; l < _graph.operators.size(); l++) {
+        if (_graph.operators[l] == op->input_tensors[i].owner_op) {
+          assert(op_idx == -1);
+          op_idx = static_cast<int>(l);
+        }
+      }
+      assert(op_idx != -1);
+      my_inputs.push_back(bgraph.operators[op_idx]->output_tensors[ts_idx]);
+      indices.push_back({op_idx, ts_idx});
+    }
+    if (op->op_type != aso::type::TB_INPUT_OP &&
+        op->op_type != aso::type::TB_OUTPUT_OP) {
+      plan.ops.push_back({op->op_type, indices});
+    }
+    switch (op->op_type) {
+      case aso::type::TB_INPUT_OP: {
+        assert(my_inputs.size() == 0);
+        aso::threadblock::TBInputOp *input_op =
+            static_cast<aso::threadblock::TBInputOp *>(op);
+        bgraph.new_input(
+            input_op->dtensor, input_op->input_map, input_op->forloop_dim);
+        plan.input_map.push_back(input_op->input_map);
+        plan.forloop_dim.push_back(input_op->forloop_dim);
+        break;
+      }
+      case aso::type::TB_OUTPUT_OP: {
+        assert(my_inputs.size() == 1);
+        aso::threadblock::TBOutputOp *output_op =
+            static_cast<aso::threadblock::TBOutputOp *>(op);
+        DTensor dtensor =
+            bgraph.new_output(my_inputs[0], output_op->output_map);
+        dtensor.owner_op = this;
+        dtensor.owner_ts_idx = static_cast<int>(output_tensors.size());
+        DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
+        dtensor.data_ptr = dmm->allocate(dtensor.size());
+        output_tensors.push_back(dtensor);
+        plan.output_map = output_op->output_map;
+        break;
+      }
+      case aso::type::TB_MATMUL_OP: {
+        assert(my_inputs.size() == 2);
+        bgraph.matmul(my_inputs[0], my_inputs[1]);
+        break;
+      }
+      case aso::type::TB_EXP_OP: {
+        assert(my_inputs.size() == 1);
+        bgraph.exp(my_inputs[0]);
+        break;
+      }
+      case aso::type::TB_REDUCTION_0_OP:
+      case aso::type::TB_REDUCTION_1_OP:
+      case aso::type::TB_REDUCTION_2_OP: {
+        assert(my_inputs.size() == 1);
+        int reduce_dim = op->op_type - aso::type::TB_REDUCTION_0_OP;
+        bgraph.reduction(my_inputs[0], reduce_dim);
+        break;
+      }
+      default: {
+        assert(false && "Unsupported kernel operator");
       }
     }
   }

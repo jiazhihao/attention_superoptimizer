@@ -42,6 +42,8 @@ public:
 
   KNCustomizedOp(std::vector<DTensor> const &inputs,
                  aso::threadblock::ExecutionPlan const &plan);
+  KNCustomizedOp(std::vector<DTensor> const &inputs,
+                 aso::threadblock::Graph const &_graph);
   ~KNCustomizedOp();
   void run();
   bool profile(ProfileResult &profile);
