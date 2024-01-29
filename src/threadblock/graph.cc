@@ -54,5 +54,37 @@ void Graph::free(std::vector<STensor> const &tensors) {
   }
 }
 
+KernelParams Graph::get_kernel_params() {
+  KernelParams params;
+  params.forloop_range = this->forloop_range;
+  params.num_operators = operators.size();
+  params.num_input_dtensors = 0;
+  params.num_output_dtensors = 0;
+  assert(params.num_operators <= KernelParams::MAX_NUM_OPERATORS);
+  for (size_t i = 0; i < operators.size(); i++) {
+    params.operator_types[i] = operators[i]->op_type;
+    assert(operators[i]->input_tensors.size() <= KernelParams::MAX_NUM_INPUTS);
+    for (size_t j = 0; j < operators[i]->input_tensors.size(); j++) {
+      params.input_tensors[i][j] = operators[i]->input_tensors[j];
+    }
+    assert(operators[i]->output_tensors.size() <=
+           KernelParams::MAX_NUM_OUTPUTS);
+    for (size_t j = 0; j < operators[i]->output_tensors.size(); j++) {
+      params.output_tensors[i][j] = operators[i]->output_tensors[j];
+    }
+    if (operators[i]->op_type == aso::type::TB_INPUT_OP) {
+      TBInputOp *input_op = static_cast<TBInputOp *>(operators[i]);
+      params.input_device_tensors[params.num_input_dtensors++] =
+          input_op->dtensor;
+    }
+    if (operators[i]->op_type == aso::type::TB_OUTPUT_OP) {
+      TBOutputOp *output_op = static_cast<TBOutputOp *>(operators[i]);
+      params.output_device_tensors[params.num_output_dtensors++] =
+          output_op->dtensor;
+    }
+  }
+  return params;
+}
+
 } // namespace threadblock
 } // namespace aso

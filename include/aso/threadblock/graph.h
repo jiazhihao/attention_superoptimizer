@@ -24,6 +24,21 @@
 namespace aso {
 namespace threadblock {
 
+struct KernelParams {
+  const static int MAX_NUM_OPERATORS = 10;
+  const static int MAX_NUM_INPUTS = 3;
+  const static int MAX_NUM_OUTPUTS = 3;
+  int forloop_range;
+  int num_operators;
+  aso::type::TBOperatorType operator_types[MAX_NUM_OPERATORS];
+  aso::threadblock::STensor input_tensors[MAX_NUM_OPERATORS][MAX_NUM_INPUTS];
+  aso::threadblock::STensor output_tensors[MAX_NUM_OPERATORS][MAX_NUM_INPUTS];
+  // input dtensors in device memory
+  int num_input_dtensors, num_output_dtensors;
+  aso::kernel::DTensor input_device_tensors[MAX_NUM_INPUTS];
+  aso::kernel::DTensor output_device_tensors[MAX_NUM_INPUTS];
+};
+
 class ExecutionPlan {
 public:
   std::vector<
@@ -68,6 +83,8 @@ public:
   off_t allocate(STensor const &tensor);
   void free(STensor const &tensor);
   void free(std::vector<STensor> const &tensors);
+
+  KernelParams get_kernel_params();
 
 public:
   dim3 grid_dim, block_dim;

@@ -15,27 +15,45 @@
 
 #include "aso/kernel/customized.h"
 #include "aso/threadblock/cuda/element_unary.h"
+#include "aso/threadblock/cuda/input.h"
 #include "aso/threadblock/cuda/matmul.h"
 #include "aso/threadblock/cuda/reduction.h"
+#include "aso/threadblock/graph.h"
 #include "aso/utils/cuda_helper.h"
 
 namespace aso {
 namespace kernel {
 
 __global__ void
-    customized_kernel_function(KNCustomizedOp::Params const &params) {
+    customized_kernel_function(aso::threadblock::KernelParams const &params) {
+  // since we are using cutlass, we group all threads within a threadblock
+  // as a 1-D list of threads, therefore blockDim.y and blockDim.z must be
+  // 1
+  assert(blockDim.y == 1);
+  assert(blockDim.z == 1);
   extern __shared__ char smem_buffer[];
   for (int i = 0; i < params.forloop_range; i++) {
+    int device_input_idx = 0;
     // start executing operators
     for (int op = 0; op < params.num_operators; op++) {
       switch (params.operator_types[op]) {
         case aso::type::TB_INPUT_OP: {
+          break;
           // FIXME: use cutlass prologue for loading data into shared memory
           // examples/13_two_tensor_op_fusion/threadblock/
           // b2b_mma_pipelined_smem_accumulator.h prologue iterators
+          cutlass::MatrixCoord threadblock_offset = {0, 0};
+          aso::threadblock::GenericInputLoader loader(
+              smem_buffer,
+              params.input_device_tensors[device_input_idx++],
+              params.output_tensors[op][0],
+              threadIdx.x,
+              blockDim.x,
+              threadblock_offset);
           break;
         }
         case aso::type::TB_MATMUL_OP: {
+          break;
           using ThreadblockShape = cutlass::gemm::GemmShape<64, 64, 32>;
           using WarpShape = cutlass::gemm::GemmShape<32, 32, 32>;
           using InstructionShape = cutlass::gemm::GemmShape<16, 8, 16>;
@@ -55,6 +73,7 @@ __global__ void
           break;
         }
         case aso::type::TB_EXP_OP: {
+          break;
           aso::threadblock::STensor tensor = params.input_tensors[op][0];
           cutlass::half_t *input_ptr =
               (cutlass::half_t *)(smem_buffer + tensor.smem_offset);
@@ -73,8 +92,9 @@ __global__ void
 
 void KNCustomizedOp::run() {
   int smem_size = 48 * 1024; // 48 KB
-  Params params;
-  customized_kernel_function<<<plan.grid_dim, plan.block_dim, smem_size>>>(
+  aso::threadblock::KernelParams params = bgraph.get_kernel_params();
+  assert(bgraph.smem_offset <= smem_size);
+  customized_kernel_function<<<bgraph.grid_dim, bgraph.block_dim, smem_size>>>(
       params);
 }
 
