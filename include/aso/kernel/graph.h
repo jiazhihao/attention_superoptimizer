@@ -46,6 +46,10 @@ public:
                                   aso::threadblock::ExecutionPlan const &plan);
   KNOperator *create_customized_op(std::vector<DTensor> const &inputs,
                                    aso::threadblock::ExecutionPlan const &plan);
+  std::vector<DTensor> customized(std::vector<DTensor> const &inputs,
+                                  aso::threadblock::Graph const &_graph);
+  KNOperator *create_customized_op(std::vector<DTensor> const &inputs,
+                                   aso::threadblock::Graph const &_graph);
   std::vector<aso::kernel::KNOperator *> operators;
   // std::unordered_map<std::pair<int, int>, DTensor, pair_hash> tensors;
   // std::unordered_map<std::pair<int, int>, std::pair<int, int>, pair_hash>
