@@ -121,51 +121,81 @@ std::shared_ptr<AlgebraicPattern>
   }
 }
 
-std::optional<size_t> get_rdeg(type::KNOperatorType op,
-                               int input_rdeg,
-                               DTensor const &input_tensor) {
+size_t get_rdeg(type::KNOperatorType op,
+                int input_rdeg,
+                DTensor const &input_tensor) {
   switch (op) {
     case type::KNOperatorType::KN_REDUCTION_0_OP:
-      if (input_tensor.dim[0] == 1) {
-        return std::nullopt;
-      }
       return input_rdeg * input_tensor.dim[0];
     case type::KNOperatorType::KN_REDUCTION_1_OP:
-      if (input_tensor.dim[1] == 1) {
-        return std::nullopt;
-      }
       return input_rdeg * input_tensor.dim[1];
     case type::KNOperatorType::KN_REDUCTION_2_OP:
-      if (input_tensor.dim[2] == 1) {
-        return std::nullopt;
-      }
       return input_rdeg * input_tensor.dim[2];
     default:
       return input_rdeg;
   }
 }
 
-std::optional<size_t> get_rdeg(type::TBOperatorType op,
-                               int input_rdeg,
-                               STensor const &input_tensor) {
+size_t get_rdeg(type::TBOperatorType op,
+                int input_rdeg,
+                STensor const &input_tensor) {
   switch (op) {
     case type::TBOperatorType::TB_REDUCTION_0_OP:
-      if (input_tensor.dim[0] == 1) {
-        return std::nullopt;
-      }
       return input_rdeg * input_tensor.dim[0];
     case type::TBOperatorType::TB_REDUCTION_1_OP:
-      if (input_tensor.dim[1] == 1) {
-        return std::nullopt;
-      }
       return input_rdeg * input_tensor.dim[1];
     case type::TBOperatorType::TB_REDUCTION_2_OP:
-      if (input_tensor.dim[2] == 1) {
-        return std::nullopt;
-      }
       return input_rdeg * input_tensor.dim[2];
     default:
       return input_rdeg;
+  }
+}
+
+bool check_tensor_shape(type::TBOperatorType op, STensor const &input) {
+  switch (op) {
+    case type::TBOperatorType::TB_EXP_OP:
+      return true;
+    case type::TBOperatorType::TB_REDUCTION_0_OP:
+      return input.dim[0] != 1;
+    case type::TBOperatorType::TB_REDUCTION_1_OP:
+      return input.num_dims >= 2 && input.dim[1] != 1;
+    case type::TBOperatorType::TB_REDUCTION_2_OP:
+      return input.num_dims >= 3 && input.dim[2] != 1;
+    default:
+      assert(false && "Unsupported Operator");
+  }
+}
+
+bool check_tensor_shape(type::TBOperatorType op, STensor const &input1, STensor const &input2) {
+  switch (op) {
+  case type::TBOperatorType::TB_MATMUL_OP:
+    return input1.num_dims == 2 && input2.num_dims == 2 && input1.dim[1] == input2.dim[0];
+  case type::TBOperatorType::TB_DIV_OP:
+    return input1.num_dims == 2 && input2.num_dims == 2 && input2.dim[1] == 1;
+  default:
+    assert(false && "Unsupported Operator");
+  }
+}
+
+bool check_tensor_shape(type::KNOperatorType op, DTensor const &input) {
+  switch (op) {
+    case type::KNOperatorType::KN_REDUCTION_0_OP:
+      return input.dim[0] != 1;
+    case type::KNOperatorType::KN_REDUCTION_1_OP:
+      return input.num_dims >= 2 && input.dim[1] != 1;
+    case type::KNOperatorType::KN_REDUCTION_2_OP:
+      return input.num_dims >= 3 && input.dim[2] != 1;
+    default:
+      assert(false && "Unsupported Operator");
+  }
+}
+
+bool check_tensor_shape(type::KNOperatorType op, DTensor const &input1, DTensor const &input2) {
+  switch (op) {
+  case type::KNOperatorType::KN_MATMUL_OP:
+    return input1.num_dims == 2 && input2.num_dims == 2 && input1.dim[1] == input2.dim[0];
+  default:
+    assert(false && "Unsupported Operator");
   }
 }
 
@@ -173,7 +203,7 @@ bool KernelGraphGenerator::is_finished_graph(
     SearchContext<TBOperator, STensor> &c, threadblock::Graph const &g) {
   for (auto op : g.operators) {
     if (c.output_degree.at(op) == 0 &&
-        op->op_type != type::KNOperatorType::KN_OUTPUT_OP) {
+        op->op_type != type::TBOperatorType::TB_OUTPUT_OP) {
       return false;
     }
   }
@@ -203,7 +233,8 @@ void KernelGraphGenerator::generate_threadblock_graphs(
       type::TBOperatorType::TB_REDUCTION_1_OP,
       type::TBOperatorType::TB_REDUCTION_2_OP,
       type::TBOperatorType::TB_EXP_OP,
-      type::TBOperatorType::TB_DIV_OP};
+      type::TBOperatorType::TB_DIV_OP,
+      type::TBOperatorType::TB_OUTPUT_OP};
 
   for (type::TBOperatorType op_type : op_to_explore) {
     if (is_binary(op_type)) {
@@ -221,6 +252,9 @@ void KernelGraphGenerator::generate_threadblock_graphs(
           }
           STensor input1 = op1->output_tensors[0],
                   input2 = op2->output_tensors[0];
+          if (!check_tensor_shape(op_type, input1, input2)) {
+            continue;
+          }
           std::shared_ptr<AlgebraicPattern> pattern =
               get_pattern(op_type,
                           c.algebraic_pattern[input1],
@@ -272,17 +306,18 @@ void KernelGraphGenerator::generate_threadblock_graphs(
           continue;
         }
         STensor input = op->output_tensors[0];
+        if (!check_tensor_shape(op_type, input)) {
+          continue;
+        }
         std::shared_ptr<AlgebraicPattern> pattern =
             get_pattern(op_type, c.algebraic_pattern.at(input));
         if (!pattern->subpattern_to(*final_pattern)) {
           continue;
         }
-        std::optional<size_t> rdeg_ =
-            get_rdeg(op_type, c.rdeg.at(input), input);
-        if (!rdeg_ || rdeg_.value() > max_rdeg) {
+        size_t rdeg = get_rdeg(op_type, c.rdeg.at(input), input);
+        if (rdeg > max_rdeg) {
           continue;
         }
-        size_t rdeg = rdeg_.value();
 
         STensor output;
         threadblock::Graph ng = g;
@@ -369,6 +404,9 @@ void KernelGraphGenerator::generate_next_kernel(
         for (auto op2 : g.operators) {
           for (DTensor input1 : op1->output_tensors) {
             for (DTensor input2 : op2->output_tensors) {
+              if (!check_tensor_shape(op_type, input1, input2)) {
+                continue;
+              }
               size_t hash = get_operator_hash(input1, input2, op_type);
               if (contains(c.existing_op_hash, hash)) {
                 continue;
@@ -408,6 +446,9 @@ void KernelGraphGenerator::generate_next_kernel(
     } else if (is_unary(op_type)) {
       for (auto op : g.operators) {
         for (DTensor input : op->output_tensors) {
+          if (!check_tensor_shape(op_type, input)) {
+            continue;
+          }
           size_t hash = get_operator_hash(input, op_type);
           if (contains(c.existing_op_hash, hash)) {
             continue;
@@ -417,12 +458,10 @@ void KernelGraphGenerator::generate_next_kernel(
           if (!pattern->subpattern_to(*final_pattern)) {
             continue;
           }
-          std::optional<size_t> rdeg_ =
-              get_rdeg(op_type, c.rdeg.at(input), input);
-          if (!rdeg_ || rdeg_.value() > max_rdeg) {
+          size_t rdeg = get_rdeg(op_type, c.rdeg.at(input), input);
+          if (rdeg > max_rdeg) {
             continue;
           }
-          size_t rdeg = rdeg_.value();
 
           kernel::Graph ng = g;
           DTensor output;
@@ -537,9 +576,11 @@ void KernelGraphGenerator::generate_kernel_graphs() {
     if (op->op_type == type::KNOperatorType::KN_INPUT_OP) {
       int opid = g.operators.size();
       DTensor output_tensor = op->output_tensors[0];
-      DTensor input = g.new_input(to_dim_vector(output_tensor.num_dims, output_tensor.dim),
-                  output_tensor.data_type);
-      c.algebraic_pattern.insert({input, std::make_shared<Var>("v_" + std::to_string(opid))});
+      DTensor input =
+          g.new_input(to_dim_vector(output_tensor.num_dims, output_tensor.dim),
+                      output_tensor.data_type);
+      c.algebraic_pattern.insert(
+          {input, std::make_shared<Var>("v_" + std::to_string(opid))});
       c.rdeg.insert({input, 1});
     }
 
