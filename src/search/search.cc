@@ -166,14 +166,17 @@ bool check_tensor_shape(type::TBOperatorType op, STensor const &input) {
   }
 }
 
-bool check_tensor_shape(type::TBOperatorType op, STensor const &input1, STensor const &input2) {
+bool check_tensor_shape(type::TBOperatorType op,
+                        STensor const &input1,
+                        STensor const &input2) {
   switch (op) {
-  case type::TBOperatorType::TB_MATMUL_OP:
-    return input1.num_dims == 2 && input2.num_dims == 2 && input1.dim[1] == input2.dim[0];
-  case type::TBOperatorType::TB_DIV_OP:
-    return input1.num_dims == 2 && input2.num_dims == 2 && input2.dim[1] == 1;
-  default:
-    assert(false && "Unsupported Operator");
+    case type::TBOperatorType::TB_MATMUL_OP:
+      return input1.num_dims == 2 && input2.num_dims == 2 &&
+             input1.dim[1] == input2.dim[0];
+    case type::TBOperatorType::TB_DIV_OP:
+      return input1.num_dims == 2 && input2.num_dims == 2 && input2.dim[1] == 1;
+    default:
+      assert(false && "Unsupported Operator");
   }
 }
 
@@ -190,12 +193,15 @@ bool check_tensor_shape(type::KNOperatorType op, DTensor const &input) {
   }
 }
 
-bool check_tensor_shape(type::KNOperatorType op, DTensor const &input1, DTensor const &input2) {
+bool check_tensor_shape(type::KNOperatorType op,
+                        DTensor const &input1,
+                        DTensor const &input2) {
   switch (op) {
-  case type::KNOperatorType::KN_MATMUL_OP:
-    return input1.num_dims == 2 && input2.num_dims == 2 && input1.dim[1] == input2.dim[0];
-  default:
-    assert(false && "Unsupported Operator");
+    case type::KNOperatorType::KN_MATMUL_OP:
+      return input1.num_dims == 2 && input2.num_dims == 2 &&
+             input1.dim[1] == input2.dim[0];
+    default:
+      assert(false && "Unsupported Operator");
   }
 }
 
@@ -589,10 +595,14 @@ void KernelGraphGenerator::generate_kernel_graphs() {
     }
   }
 
-  std::vector<std::shared_ptr<AlgebraicPattern>> patterns =
+  std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> patterns =
       pattern_eval(computation_graph, c.algebraic_pattern);
-  int final_op_id /* TODO: determine the id of the global output*/;
-  final_pattern = patterns[final_op_id];
+  for (auto op : computation_graph.operators) {
+    if (op->op_type == type::KNOperatorType::KN_OUTPUT_OP) {
+      final_pattern = patterns.at(op->output_tensors[0]);
+      break;
+    }
+  }
 
   generate_next_kernel(c, g);
 }
@@ -601,6 +611,40 @@ KernelGraphGenerator::KernelGraphGenerator(
     kernel::Graph const &computation_graph)
     : computation_graph(computation_graph), final_pattern(nullptr),
       max_rdeg(0) {}
+
+std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> pattern_eval(
+    kernel::Graph const &g,
+    std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> const
+        &input_pattern) {
+  std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> patterns;
+  // Assume operators are in topological order
+  for (KNOperator *op : g.operators) {
+    switch (op->op_type) {
+      case type::KNOperatorType::KN_INPUT_OP:
+        patterns.insert(
+            {op->output_tensors[0], input_pattern.at(op->output_tensors[0])});
+        break;
+      case type::KNOperatorType::KN_OUTPUT_OP:
+        patterns.insert(
+            {op->output_tensors[0], patterns.at(op->input_tensors[0])});
+        break;
+      case type::KNOperatorType::KN_MATMUL_OP:
+        patterns.insert(
+            {op->output_tensors[0],
+             std::make_shared<Mul>(patterns.at(op->input_tensors[0]),
+                                   patterns.at(op->input_tensors[1]))});
+        break;
+      case type::KNOperatorType::KN_REDUCTION_0_OP:
+      case type::KNOperatorType::KN_REDUCTION_1_OP:
+      case type::KNOperatorType::KN_REDUCTION_2_OP:
+        patterns.insert(
+            {op->output_tensors[0], patterns.at(op->input_tensors[0])});
+        break;
+      default:
+        assert(false && "Unsupported computation graph operator");
+    }
+  }
+}
 
 } // namespace search
 } // namespace aso

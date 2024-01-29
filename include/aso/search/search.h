@@ -53,14 +53,9 @@ private:
                          threadblock::Graph const &g);
 };
 
-std::vector<std::shared_ptr<AlgebraicPattern>> pattern_eval(
+std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> pattern_eval(
     kernel::Graph const &g,
     std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> const
-        &input_pattern);
-
-std::vector<std::shared_ptr<AlgebraicPattern>> pattern_eval(
-    threadblock::Graph const &g,
-    std::unordered_map<STensor, std::shared_ptr<AlgebraicPattern>> const
         &input_pattern);
 
 bool verify(kernel::Graph const &g);
