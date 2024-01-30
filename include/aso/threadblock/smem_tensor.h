@@ -127,7 +127,7 @@ struct STensor {
   }
 
   CUTLASS_HOST_DEVICE
-  bool is_row_major() const {
+  bool is_column_major() const {
     if (num_dims != 2) {
       return false;
     }
@@ -139,7 +139,7 @@ struct STensor {
   }
 
   CUTLASS_HOST_DEVICE
-  bool is_column_major() const {
+  bool is_row_major() const {
     if (num_dims != 2) {
       return false;
     }

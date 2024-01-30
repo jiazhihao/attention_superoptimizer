@@ -87,7 +87,7 @@ struct DTensor {
     return num_elements * data_type_size;
   }
 
-  inline bool is_row_major() const {
+  inline bool is_column_major() const {
     if (num_dims != 2) {
       return false;
     }
@@ -98,7 +98,7 @@ struct DTensor {
     return true;
   }
 
-  inline bool is_column_major() const {
+  inline bool is_row_major() const {
     if (num_dims != 2) {
       return false;
     }

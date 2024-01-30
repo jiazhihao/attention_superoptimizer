@@ -13,32 +13,8 @@
  * limitations under the License.
  */
 
-#pragma once
-
-#include "aso/kernel/device_tensor.h"
-#include "aso/kernel/operator.h"
-#include "aso/threadblock/graph.h"
 #include "aso/threadblock/operator.h"
-#include <tuple>
-#include <vector_types.h>
 
 namespace aso {
-namespace kernel {
-
-class KNCustomizedOp : public aso::kernel::KNOperator {
-public:
-  KNCustomizedOp(std::vector<DTensor> const &inputs,
-                 aso::threadblock::ExecutionPlan const &plan);
-  KNCustomizedOp(std::vector<DTensor> const &inputs,
-                 aso::threadblock::Graph const &_graph);
-  ~KNCustomizedOp();
-  void run();
-  bool profile(ProfileResult &profile);
-
-public:
-  aso::threadblock::ExecutionPlan plan;
-  aso::threadblock::Graph bgraph;
-};
-
-} // namespace kernel
+namespace threadblock {} // namespace threadblock
 } // namespace aso

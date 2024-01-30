@@ -54,5 +54,43 @@ void Graph::free(std::vector<STensor> const &tensors) {
   }
 }
 
+KernelParams Graph::get_kernel_params() {
+  KernelParams params;
+  params.forloop_range = this->forloop_range;
+  params.num_operators = operators.size();
+  params.num_smem_inputs = 0;
+  params.num_smem_outputs = 0;
+  params.num_dmem_inputs = 0;
+  params.num_dmem_outputs = 0;
+
+  assert(params.num_operators <= KernelParams::MAX_NUM_OPERATORS);
+  for (size_t i = 0; i < operators.size(); i++) {
+    params.operator_types[i] = operators[i]->op_type;
+    params.operator_num_inputs[i] = operators[i]->input_tensors.size();
+    params.operator_num_outputs[i] = operators[i]->output_tensors.size();
+    for (int j = 0; j < params.operator_num_inputs[i]; j++) {
+      params.smem_inputs[params.num_smem_inputs++] =
+          operators[i]->input_tensors[j];
+      assert(params.num_smem_inputs <= KernelParams::MAX_TOTAL_SMEM_INPUTS);
+    }
+    for (int j = 0; j < params.operator_num_outputs[i]; j++) {
+      params.smem_outputs[params.num_smem_outputs++] =
+          operators[i]->output_tensors[j];
+      assert(params.num_smem_outputs <= KernelParams::MAX_TOTAL_SMEM_OUTPUTS);
+    }
+    if (operators[i]->op_type == aso::type::TB_INPUT_OP) {
+      TBInputOp *input_op = static_cast<TBInputOp *>(operators[i]);
+      params.dmem_inputs[params.num_dmem_inputs++] = input_op->dtensor;
+      assert(params.num_dmem_inputs <= KernelParams::MAX_NUM_DMEM_INPUTS);
+    }
+    if (operators[i]->op_type == aso::type::TB_OUTPUT_OP) {
+      TBOutputOp *output_op = static_cast<TBOutputOp *>(operators[i]);
+      params.dmem_outputs[params.num_dmem_outputs++] = output_op->dtensor;
+      assert(params.num_dmem_outputs <= KernelParams::MAX_NUM_DMEM_OUTPUTS);
+    }
+  }
+  return params;
+}
+
 } // namespace threadblock
 } // namespace aso
