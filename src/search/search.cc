@@ -205,6 +205,102 @@ bool check_tensor_shape(type::KNOperatorType op,
   }
 }
 
+std::vector<dim3> get_gird_dim_cand(std::vector<DTensor> const &tensors,
+                                    std::vector<int3> const &input_map) {
+  std::vector<dim3> results;
+  for (int x = 1;; x *= 2) {
+    for (int i = 0; i < tensors.size(); ++i) {
+      if (tensors[i].dim[input_map[i].x] % x != 0) {
+        return results;
+      }
+    }
+    for (int y = 1;; y *= 2) {
+      bool feasible = true;
+      for (int i = 0; i < tensors.size(); ++i) {
+        if (tensors[i].num_dims > 1 &&
+            tensors[i].dim[input_map[i].y] % y != 0) {
+          feasible = false;
+          break;
+        }
+      }
+      if (!feasible) {
+        break;
+      }
+      results.push_back(dim3(x, y));
+    }
+  }
+}
+
+std::vector<dim3> get_block_dim_cand(dim3 grid_dim) {
+  std::vector<dim3> results;
+  for (int x = 1; grid_dim.x % x == 0; x *= 2) {
+    results.push_back(dim3(x));
+  }
+  return results;
+}
+
+std::vector<std::vector<int3>>
+    get_input_map_cand(std::vector<DTensor> const &tensors) {
+  std::vector<std::vector<int3>> results;
+  for (DTensor const &tensor : tensors) {
+    switch (tensor.num_dims) {
+      case 1:
+        results.push_back({int3{0}});
+        break;
+      case 2:
+        results.push_back({int3{0, 1}, int3{1, 0}});
+        break;
+      default:
+        assert(false);
+    }
+  }
+  return results;
+}
+
+std::vector<int> get_forloop_range_cand(std::vector<DTensor> input_tensors,
+                                        std::vector<int3> input_map,
+                                        dim3 grid_dim,
+                                        dim3 block_dim,
+                                        int forloop_dim) {
+  std::vector<int> results;
+
+  for (int x = 1; ; x *= 2) {
+    for (int i = 0; i < input_tensors.size(); ++i) {
+      int dim;
+      switch (forloop_dim) {
+        case 0:
+          dim = input_tensors[i].dim[input_map[i].x];
+          assert(dim % grid_dim.x == 0);
+          dim /= grid_dim.x;
+          assert(dim % block_dim.x == 0);
+          dim /= block_dim.x;
+          break;
+        case 1:
+          dim = input_tensors[i].dim[input_map[i].y];
+          assert(dim % grid_dim.y == 0);
+          dim /= grid_dim.y;
+          assert(dim % block_dim.y == 0);
+          dim /= block_dim.y;
+          break;
+        case 2:
+          dim = input_tensors[i].dim[input_map[i].z];
+          assert(dim % grid_dim.z == 0);
+          dim /= grid_dim.z;
+          assert(dim % block_dim.z == 0);
+          dim /= block_dim.z;
+          break;        
+        default:
+          assert(false);
+      }
+      if (dim % x == 0) {
+        results.push_back(x);
+      } else {
+        return results;
+      }
+    }
+  }
+}
+
 bool KernelGraphGenerator::is_finished_graph(
     SearchContext<TBOperator, STensor> &c, threadblock::Graph const &g) {
   for (auto op : g.operators) {
@@ -369,22 +465,23 @@ void KernelGraphGenerator::generate_threadblock_graphs(
         STensor input = op->output_tensors[0];
 
         threadblock::Graph ng = g;
-        int3 output_map; /* TODO: determine the output_map */
-        ng.new_output(input, output_map);
+        for (int3 output_map : {int3{0, 1}, int3{1, 0}}) {
+          ng.new_output(input, output_map);
 
-        output_patterns.push_back(c.algebraic_pattern.at(input));
-        output_rdegs.push_back(c.rdeg.at(input));
-        c.output_degree[op]++;
-        generate_threadblock_graphs(c,
-                                    ng,
-                                    output_patterns,
-                                    output_rdegs,
-                                    result_graphs,
-                                    result_output_patterns,
-                                    result_output_rdegs);
-        output_patterns.pop_back();
-        output_rdegs.pop_back();
-        c.output_degree[op]--;
+          output_patterns.push_back(c.algebraic_pattern.at(input));
+          output_rdegs.push_back(c.rdeg.at(input));
+          c.output_degree[op]++;
+          generate_threadblock_graphs(c,
+                                      ng,
+                                      output_patterns,
+                                      output_rdegs,
+                                      result_graphs,
+                                      result_output_patterns,
+                                      result_output_rdegs);
+          output_patterns.pop_back();
+          output_rdegs.pop_back();
+          c.output_degree[op]--;
+        }
       }
     }
   }
@@ -512,59 +609,65 @@ void KernelGraphGenerator::generate_next_kernel(
       hash_combine(hash, type::KNOperatorType::KN_CUSTOMIZED_OP);
 
       if (input_tensors.size() >
-          kernel::KNCustomizedOp::Params::MAX_NUM_INPUTS) {
+          threadblock::KernelParams::MAX_NUM_DMEM_INPUTS) {
         continue;
       }
 
-      /*
-        TODO: decide the values for dim and forloop_range
-      */
-      for (dim3 block_dim : {dim3(1, 1, 1)}) {
-        dim3 grid_dim;
-        for (int forloop_range : {1}) {
+      for (std::vector<int3> const &input_map :
+           get_input_map_cand(input_tensors)) {
+        for (dim3 grid_dim : get_gird_dim_cand(input_tensors, input_map)) {
+          for (dim3 block_dim : get_block_dim_cand(grid_dim)) {
+            for (int forloop_dim = 0; forloop_dim < 1; ++forloop_dim) {
+              for (int forloop_range : get_forloop_range_cand(input_tensors,
+                                                              input_map,
+                                                              grid_dim,
+                                                              block_dim,
+                                                              forloop_dim)) {
+                SearchContext<TBOperator, STensor> nc;
+                threadblock::Graph ng(grid_dim, block_dim, forloop_range);
 
-          // TODO: enumerate input_map and forloop_dim
-          int forloop_dim = 0;
-          int3 input_map{0, 1, 2};
+                for (int i = 0; i < input_tensors.size(); ++i) {
+                  DTensor tensor = input_tensors[i];
+                  STensor output =
+                      ng.new_input(tensor, input_map[i], forloop_dim);
+                  nc.algebraic_pattern.insert(
+                      {output, c.algebraic_pattern.at(tensor)});
+                  nc.rdeg.insert({output, c.rdeg.at(tensor)});
+                }
 
-          SearchContext<TBOperator, STensor> nc;
-          threadblock::Graph ng(grid_dim, block_dim, forloop_range);
+                std::vector<threadblock::Graph> tbgs;
+                std::vector<std::vector<std::shared_ptr<AlgebraicPattern>>>
+                    output_patterns;
+                std::vector<std::vector<int>> output_rdegs;
+                generate_threadblock_graphs(
+                    nc, ng, {}, {}, tbgs, output_patterns, output_rdegs);
 
-          for (DTensor tensor : input_tensors) {
-            STensor output = ng.new_input(tensor, input_map, forloop_dim);
-            nc.algebraic_pattern.insert(
-                {output, c.algebraic_pattern.at(tensor)});
-            nc.rdeg.insert({output, c.rdeg.at(tensor)});
-          }
+                assert(tbgs.size() == output_patterns.size());
+                assert(tbgs.size() == output_rdegs.size());
 
-          std::vector<threadblock::Graph> tbgs;
-          std::vector<std::vector<std::shared_ptr<AlgebraicPattern>>>
-              output_patterns;
-          std::vector<std::vector<int>> output_rdegs;
-          generate_threadblock_graphs(
-              nc, ng, {}, {}, tbgs, output_patterns, output_rdegs);
-
-          assert(tbgs.size() == output_patterns.size());
-          assert(tbgs.size() == output_rdegs.size());
-
-          for (int i = 0; i < tbgs.size(); ++i) {
-            threadblock::Graph const &tbg = tbgs[i];
-            kernel::Graph ng = g;
-            std::vector<DTensor> outputs = ng.customized(input_tensors, tbg);
-            assert(outputs.size() == output_patterns[i].size());
-            for (int j = 0; j < outputs.size(); ++j) {
-              c.algebraic_pattern.insert({outputs[i], output_patterns[i][j]});
-              c.rdeg.insert({outputs[i], output_rdegs[i][j]});
-              c.existing_op_hash.insert(hash);
-              for (auto op : input_operators) {
-                c.output_degree[op]++;
-              }
-              generate_next_kernel(c, ng);
-              c.algebraic_pattern.erase(outputs[i]);
-              c.rdeg.erase(outputs[i]);
-              c.existing_op_hash.erase(hash);
-              for (auto op : input_operators) {
-                c.output_degree[op]--;
+                for (int i = 0; i < tbgs.size(); ++i) {
+                  threadblock::Graph const &tbg = tbgs[i];
+                  kernel::Graph ng = g;
+                  std::vector<DTensor> outputs =
+                      ng.customized(input_tensors, tbg);
+                  assert(outputs.size() == output_patterns[i].size());
+                  for (int j = 0; j < outputs.size(); ++j) {
+                    c.algebraic_pattern.insert(
+                        {outputs[i], output_patterns[i][j]});
+                    c.rdeg.insert({outputs[i], output_rdegs[i][j]});
+                    c.existing_op_hash.insert(hash);
+                    for (auto op : input_operators) {
+                      c.output_degree[op]++;
+                    }
+                    generate_next_kernel(c, ng);
+                    c.algebraic_pattern.erase(outputs[i]);
+                    c.rdeg.erase(outputs[i]);
+                    c.existing_op_hash.erase(hash);
+                    for (auto op : input_operators) {
+                      c.output_degree[op]--;
+                    }
+                  }
+                }
               }
             }
           }
