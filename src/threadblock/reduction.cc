@@ -39,7 +39,7 @@ TBReductionOp::TBReductionOp(Graph *bgraph, STensor const &input, int dim)
   this->op_type = type;
   STensor output = input;
   assert(output.num_dims > reduce_dim);
-  assert(output.is_column_major());
+  assert(output.is_row_major());
   output.dim[reduce_dim] = 1;
   for (int i = output.num_dims - 1; i >= 0; i--) {
     output.stride[i] = (i == output.num_dims - 1)

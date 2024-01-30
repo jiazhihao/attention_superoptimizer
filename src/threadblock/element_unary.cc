@@ -40,7 +40,9 @@ TBElementUnaryOp::TBElementUnaryOp(Graph *_graph,
   STensor output = input;
   output.owner_op = this;
   output.owner_ts_idx = 0;
-  output.smem_offset = bgraph->allocate(output);
+  // Note that we inplace the output by default
+  // output.smem_offset = bgraph->allocate(output);
+  output.smem_offset = input.smem_offset;
   assert(output_tensors.size() == 0);
   output_tensors.push_back(output);
 }
