@@ -43,6 +43,24 @@ KNOperator *Graph::create_customized_op(std::vector<DTensor> const &inputs,
   return op;
 }
 
+KNOperator *Graph::create_customized_op(std::vector<DTensor> const &inputs,
+                                        threadblock::Graph const &_graph) {
+  size_t output_size = 0;
+  for (threadblock::TBOperator *op : _graph.operators) {
+    if (op->op_type == type::TBOperatorType::TB_OUTPUT_OP) {
+      output_size += static_cast<threadblock::TBOutputOp *>(op)->dtensor.size();
+    }
+  }
+
+  DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
+  if (dmm->offset + output_size > dmm->total_size) {
+    return nullptr;
+  }
+  
+  KNCustomizedOp *op = new KNCustomizedOp(inputs, _graph);
+  return op;
+}
+
 KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
                                ExecutionPlan const &_plan)
     : KNOperator(aso::type::KN_CUSTOMIZED_OP, _inputs), plan(_plan),

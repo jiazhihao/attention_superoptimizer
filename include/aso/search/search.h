@@ -17,10 +17,14 @@ using threadblock::TBOperator;
 
 class KernelGraphGenerator {
 public:
-  KernelGraphGenerator(kernel::Graph const &computation_graph);
+  KernelGraphGenerator(kernel::Graph const &computation_graph,
+                       size_t device_mem_size,
+                       size_t shared_mem_size);
   void generate_kernel_graphs();
 
   kernel::Graph computation_graph;
+  size_t device_mem_size, shared_mem_size;
+
   std::vector<kernel::Graph> kernel_graph_candidates;
 
 private:
@@ -51,6 +55,8 @@ private:
 
   bool is_finished_graph(SearchContext<TBOperator, STensor> &c,
                          threadblock::Graph const &g);
+
+  bool memory_check(threadblock::Graph const &g);
 };
 
 std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> pattern_eval(

@@ -37,6 +37,20 @@ KNOperator *Graph::create_matmul_op(DTensor const &A, DTensor const &B) {
   if (A.dim[1] != B.dim[0]) {
     return nullptr;
   }
+  
+  DTensor C;
+  C.num_dims = 2;
+  C.dim[0] = A.dim[0];
+  C.dim[1] = B.dim[1];
+  C.stride[0] = C.dim[1];
+  C.stride[1] = 1;
+  C.data_type = A.data_type;
+
+  DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
+  if (dmm->offset + C.size() > dmm->total_size) {
+    return nullptr;
+  }
+
   KNMatmulOp *op = new KNMatmulOp(A, B);
   return op;
 }

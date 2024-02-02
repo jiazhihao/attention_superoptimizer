@@ -232,6 +232,7 @@ std::vector<dim3> get_gird_dim_cand(std::vector<DTensor> const &tensors,
 }
 
 std::vector<dim3> get_block_dim_cand(dim3 grid_dim) {
+  // 32, 64, 128
   std::vector<dim3> results;
   for (int x = 1; grid_dim.x % x == 0; x *= 2) {
     results.push_back(dim3(x));
@@ -264,7 +265,7 @@ std::vector<int> get_forloop_range_cand(std::vector<DTensor> input_tensors,
                                         int forloop_dim) {
   std::vector<int> results;
 
-  for (int x = 1; ; x *= 2) {
+  for (int x = 1;; x *= 2) {
     for (int i = 0; i < input_tensors.size(); ++i) {
       int dim;
       switch (forloop_dim) {
@@ -288,7 +289,7 @@ std::vector<int> get_forloop_range_cand(std::vector<DTensor> input_tensors,
           dim /= grid_dim.z;
           assert(dim % block_dim.z == 0);
           dim /= block_dim.z;
-          break;        
+          break;
         default:
           assert(false);
       }
@@ -366,11 +367,11 @@ void KernelGraphGenerator::generate_threadblock_graphs(
           }
           size_t rdeg = std::max(c.rdeg.at(input1), c.rdeg.at(input2));
 
-          STensor output;
           threadblock::Graph ng = g;
+          threadblock::TBOperator *new_op = nullptr;
           switch (op_type) {
             case type::TBOperatorType::TB_MATMUL_OP:
-              output = ng.matmul(input1, input2);
+              new_op = ng.create_matmul_op(input1, input2);
               break;
             case type::TBOperatorType::TB_DIV_OP:
               assert(false && "TBD");
@@ -378,6 +379,13 @@ void KernelGraphGenerator::generate_threadblock_graphs(
             default:
               assert(false && "Unsupported operator");
           }
+
+          if (!new_op) {
+            continue;
+          }
+
+          ng.operators.push_back(new_op);
+          STensor output = new_op->output_tensors[0];
 
           c.algebraic_pattern.insert({output, pattern});
           c.rdeg.insert({output, rdeg});
@@ -421,24 +429,26 @@ void KernelGraphGenerator::generate_threadblock_graphs(
           continue;
         }
 
-        STensor output;
         threadblock::Graph ng = g;
+        threadblock::TBOperator *new_op = nullptr;
         switch (op_type) {
           case type::TBOperatorType::TB_EXP_OP:
-            output = ng.exp(input);
+            new_op = ng.create_elementunary_op(input, op_type);
             break;
           case type::TBOperatorType::TB_REDUCTION_0_OP:
-            output = ng.reduction(input, 0);
-            break;
           case type::TBOperatorType::TB_REDUCTION_1_OP:
-            output = ng.reduction(input, 1);
-            break;
           case type::TBOperatorType::TB_REDUCTION_2_OP:
-            output = ng.reduction(input, 2);
+            new_op = ng.create_elementunary_op(input, op_type);
             break;
           default:
             assert(false && "Unsupported operator");
         }
+
+        if (!new_op) {
+          continue;
+        }
+        ng.operators.push_back(new_op);
+        STensor output = new_op->output_tensors[0];
 
         c.algebraic_pattern.insert({output, pattern});
         c.rdeg.insert({output, rdeg});
@@ -466,7 +476,11 @@ void KernelGraphGenerator::generate_threadblock_graphs(
 
         threadblock::Graph ng = g;
         for (int3 output_map : {int3{0, 1}, int3{1, 0}}) {
-          ng.new_output(input, output_map);
+          threadblock::TBOperator *new_op = ng.create_output_op(input, output_map);
+          if (!new_op) {
+            continue;
+          }
+          ng.operators.push_back(new_op);
 
           output_patterns.push_back(c.algebraic_pattern.at(input));
           output_rdegs.push_back(c.rdeg.at(input));
@@ -523,13 +537,19 @@ void KernelGraphGenerator::generate_next_kernel(
               }
               size_t rdeg = std::max(c.rdeg.at(input1), c.rdeg.at(input2));
               kernel::Graph ng = g;
-              DTensor output;
+              kernel::KNOperator *new_op = nullptr;
               switch (op_type) {
                 case type::KNOperatorType::KN_MATMUL_OP:
-                  output = ng.matmul(input1, input2);
+                  new_op = ng.create_matmul_op(input1, input2);
                 default:
                   assert(false && "Unsupported operator");
               }
+
+              if (!new_op) {
+                continue;
+              }
+              ng.operators.push_back(new_op);
+              DTensor output = new_op->output_tensors[0];
 
               c.algebraic_pattern.insert({output, pattern});
               c.rdeg.insert({output, rdeg});
@@ -567,7 +587,7 @@ void KernelGraphGenerator::generate_next_kernel(
           }
 
           kernel::Graph ng = g;
-          DTensor output;
+          kernel::KNOperator *new_op = nullptr;
           switch (op_type) {
             case type::KNOperatorType::KN_REDUCTION_0_OP:
             case type::KNOperatorType::KN_REDUCTION_1_OP:
@@ -577,6 +597,12 @@ void KernelGraphGenerator::generate_next_kernel(
             default:
               assert(false && "Unsupported operator");
           }
+
+          if (!new_op) {
+            continue;
+          }
+          ng.operators.push_back(new_op);
+          DTensor output = new_op->output_tensors[0];
 
           c.algebraic_pattern.insert({output, pattern});
           c.rdeg.insert({output, rdeg});
@@ -613,6 +639,7 @@ void KernelGraphGenerator::generate_next_kernel(
         continue;
       }
 
+      // FIXME: simply the search space
       for (std::vector<int3> const &input_map :
            get_input_map_cand(input_tensors)) {
         for (dim3 grid_dim : get_gird_dim_cand(input_tensors, input_map)) {
@@ -648,8 +675,12 @@ void KernelGraphGenerator::generate_next_kernel(
                 for (int i = 0; i < tbgs.size(); ++i) {
                   threadblock::Graph const &tbg = tbgs[i];
                   kernel::Graph ng = g;
-                  std::vector<DTensor> outputs =
-                      ng.customized(input_tensors, tbg);
+                  kernel::KNOperator *new_op = ng.create_customized_op(input_tensors, tbg);
+                  if (!new_op) {
+                    continue;
+                  }
+                  ng.operators.push_back(new_op);
+                  std::vector<DTensor> outputs = new_op->output_tensors;
                   assert(outputs.size() == output_patterns[i].size());
                   for (int j = 0; j < outputs.size(); ++j) {
                     c.algebraic_pattern.insert(
@@ -711,9 +742,11 @@ void KernelGraphGenerator::generate_kernel_graphs() {
 }
 
 KernelGraphGenerator::KernelGraphGenerator(
-    kernel::Graph const &computation_graph)
-    : computation_graph(computation_graph), final_pattern(nullptr),
-      max_rdeg(0) {}
+    kernel::Graph const &computation_graph,
+    size_t device_mem_size,
+    size_t shared_mem_size)
+    : computation_graph(computation_graph), device_mem_size(device_mem_size),
+      shared_mem_size(shared_mem_size), final_pattern(nullptr), max_rdeg(0) {}
 
 std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> pattern_eval(
     kernel::Graph const &g,

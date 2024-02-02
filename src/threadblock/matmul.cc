@@ -34,6 +34,18 @@ TBOperator *Graph::create_matmul_op(STensor const &A, STensor const &B) {
   if (A.dim[1] != B.dim[0]) {
     return nullptr;
   }
+
+  STensor C;
+  C.num_dims = 2;
+  C.dim[0] = A.dim[0];
+  C.dim[1] = B.dim[1];
+  C.stride[0] = C.dim[1];
+  C.stride[1] = 1;
+  C.data_type = A.data_type;
+  if (smem_offset + (off_t)C.size() > (off_t)MAX_SMEM_SIZE) {
+    return nullptr;
+  }
+
   TBMatmulOp *op = new TBMatmulOp(this, A, B);
   return op;
 }
