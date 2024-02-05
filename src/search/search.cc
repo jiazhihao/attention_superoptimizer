@@ -205,7 +205,11 @@ bool check_tensor_shape(type::KNOperatorType op,
   }
 }
 
-std::vector<dim3> get_gird_dim_cand(std::vector<DTensor> const &tensors,
+unsigned int get_num_threadblock(dim3 const &grid_dim) {
+  return grid_dim.x * grid_dim.y * grid_dim.z;
+}
+
+std::vector<dim3> get_grid_dim_cand(std::vector<DTensor> const &tensors,
                                     std::vector<int3> const &input_map) {
   std::vector<dim3> results;
   for (int x = 1;; x *= 2) {
@@ -231,44 +235,112 @@ std::vector<dim3> get_gird_dim_cand(std::vector<DTensor> const &tensors,
   }
 }
 
-std::vector<dim3> get_block_dim_cand(dim3 grid_dim) {
-  // 32, 64, 128
+std::vector<dim3> get_block_dim_cand(std::vector<DTensor> const &tensors,
+                                     std::vector<int3> const &input_map,
+                                     dim3 grid_dim) {
   std::vector<dim3> results;
-  for (int x = 1; grid_dim.x % x == 0; x *= 2) {
-    results.push_back(dim3(x));
-  }
-  return results;
-}
-
-std::vector<std::vector<int3>>
-    get_input_map_cand(std::vector<DTensor> const &tensors) {
-  std::vector<std::vector<int3>> results;
-  for (DTensor const &tensor : tensors) {
-    switch (tensor.num_dims) {
-      case 1:
-        results.push_back({int3{0}});
-        break;
-      case 2:
-        results.push_back({int3{0, 1}, int3{1, 0}});
-        break;
-      default:
-        assert(false);
+  for (int x : {32, 64, 128}) {
+    for (DTensor const &tensor : tensors) {
+      assert(tensor.size() % get_num_threadblock(grid_dim) == 0);
+      int block_size = tensor.size() / get_num_threadblock(grid_dim);
+      if (block_size % x == 0) {
+        results.push_back(dim3{x, 1, 1});
+      }
     }
   }
   return results;
 }
 
-std::vector<int> get_forloop_range_cand(std::vector<DTensor> input_tensors,
-                                        std::vector<int3> input_map,
-                                        dim3 grid_dim,
-                                        dim3 block_dim,
-                                        int forloop_dim) {
+bool is_all_replicate(std::vector<int3> const &input_maps) {
+  for (int3 const &input_map : input_maps) {
+    if (input_map.x != -1 || input_map.y != -1 || input_map.z != -1) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void generate_input_map_cand(int num_tensors,
+                             int3 input_map,
+                             std::vector<int3> cur,
+                             std::vector<std::vector<int3>> &results) {
+  if (cur.size() == num_tensors) {
+    if (!is_all_replicate(cur)) {
+      results.push_back(cur);
+    }
+    return;
+  }
+  cur.push_back(int3{-1, -1, -1});
+  generate_input_map_cand(num_tensors, input_map, cur, results);
+  cur.pop_back();
+  cur.push_back(int3{input_map.x, -1, -1});
+  generate_input_map_cand(num_tensors, input_map, cur, results);
+  cur.pop_back();
+  cur.push_back(int3{-1, input_map.y, -1});
+  generate_input_map_cand(num_tensors, input_map, cur, results);
+  cur.pop_back();
+  cur.push_back(int3{input_map.x, input_map.y, -1});
+  generate_input_map_cand(num_tensors, input_map, cur, results);
+  cur.pop_back();
+}
+
+std::vector<std::vector<int3>>
+    get_input_map_cand(std::vector<DTensor> const &tensors) {
+  std::vector<std::vector<int3>> results;
+  // Assume two-dimentional inputs
+  // TODO: There are invalid input maps, how to prune them out?
+  for (int3 input_map : {int3{0, 1, -1}, int3{1, 0, -1}}) {
+    generate_input_map_cand(tensors.size(), input_map, {}, results);
+  }
+  return results;
+}
+
+void generate_forloop_dim(int num_tensors,
+                          std::vector<int> cur,
+                          std::vector<std::vector<int>> &results) {
+  if (cur.size() == num_tensors) {
+    bool is_none = true;
+    for (int dim : cur) {
+      if (dim != -1) {
+        is_none = false;
+        break;
+      }
+    }
+    if (!is_none) {
+      results.push_back(cur);
+    }
+    return;
+  }
+
+  for (int dim = -1; dim <= 2; ++dim) {
+    cur.push_back(dim);
+    generate_forloop_dim(num_tensors, cur, results);
+    cur.pop_back();
+  }
+}
+
+std::vector<std::vector<int>>
+    get_forloop_dim_cand(std::vector<DTensor> const &input_tensers) {
+  std::vector<std::vector<int>> results;
+  generate_forloop_dim(input_tensers.size(), {}, results);
+  return results;
+}
+
+std::vector<int>
+    get_forloop_range_cand(std::vector<DTensor> const &input_tensors,
+                           std::vector<int3> const &input_map,
+                           dim3 grid_dim,
+                           dim3 block_dim,
+                           std::vector<int> const &forloop_dim) {
   std::vector<int> results;
 
   for (int x = 1;; x *= 2) {
     for (int i = 0; i < input_tensors.size(); ++i) {
+      if (forloop_dim[i] == -1) {
+        continue;
+      }
       int dim;
-      switch (forloop_dim) {
+      switch (forloop_dim[i]) {
         case 0:
           dim = input_tensors[i].dim[input_map[i].x];
           assert(dim % grid_dim.x == 0);
@@ -476,7 +548,8 @@ void KernelGraphGenerator::generate_threadblock_graphs(
 
         threadblock::Graph ng = g;
         for (int3 output_map : {int3{0, 1}, int3{1, 0}}) {
-          threadblock::TBOperator *new_op = ng.create_output_op(input, output_map);
+          threadblock::TBOperator *new_op =
+              ng.create_output_op(input, output_map);
           if (!new_op) {
             continue;
           }
@@ -639,12 +712,13 @@ void KernelGraphGenerator::generate_next_kernel(
         continue;
       }
 
-      // FIXME: simply the search space
+      // FIXME: simplify the search space
       for (std::vector<int3> const &input_map :
            get_input_map_cand(input_tensors)) {
-        for (dim3 grid_dim : get_gird_dim_cand(input_tensors, input_map)) {
-          for (dim3 block_dim : get_block_dim_cand(grid_dim)) {
-            for (int forloop_dim = 0; forloop_dim < 1; ++forloop_dim) {
+        for (dim3 grid_dim : get_grid_dim_cand(input_tensors, input_map)) {
+          for (dim3 block_dim :
+               get_block_dim_cand(input_tensors, input_map, grid_dim)) {
+            for (std::vector<int> const &forloop_dim : get_forloop_dim_cand(input_tensors)) {
               for (int forloop_range : get_forloop_range_cand(input_tensors,
                                                               input_map,
                                                               grid_dim,
@@ -656,7 +730,7 @@ void KernelGraphGenerator::generate_next_kernel(
                 for (int i = 0; i < input_tensors.size(); ++i) {
                   DTensor tensor = input_tensors[i];
                   STensor output =
-                      ng.new_input(tensor, input_map[i], forloop_dim);
+                      ng.new_input(tensor, input_map[i], forloop_dim[i]);
                   nc.algebraic_pattern.insert(
                       {output, c.algebraic_pattern.at(tensor)});
                   nc.rdeg.insert({output, c.rdeg.at(tensor)});
@@ -675,7 +749,8 @@ void KernelGraphGenerator::generate_next_kernel(
                 for (int i = 0; i < tbgs.size(); ++i) {
                   threadblock::Graph const &tbg = tbgs[i];
                   kernel::Graph ng = g;
-                  kernel::KNOperator *new_op = ng.create_customized_op(input_tensors, tbg);
+                  kernel::KNOperator *new_op =
+                      ng.create_customized_op(input_tensors, tbg);
                   if (!new_op) {
                     continue;
                   }
