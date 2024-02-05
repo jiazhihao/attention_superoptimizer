@@ -23,9 +23,13 @@ namespace aso {
 namespace type {
 
 typedef uint16_t FPType;
+const uint16_t FP_P = 227;
+const uint16_t FP_Q = 113;
+const uint16_t FP_PQ = 25651;
 
 enum DataType {
   DT_INT8,
+  DT_UINT16,
   DT_BFLOAT16,
   DT_FLOAT16,
   DT_FLOAT32,

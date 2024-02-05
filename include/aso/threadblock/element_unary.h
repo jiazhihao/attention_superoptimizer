@@ -21,6 +21,7 @@ namespace aso {
 namespace threadblock {
 
 using namespace cutlass;
+using namespace aso::type;
 
 class TBElementUnaryOp : public TBOperator {
 public:
@@ -28,6 +29,37 @@ public:
                    STensor const &_input,
                    aso::type::TBOperatorType _type);
   ~TBElementUnaryOp();
+};
+
+class TBElementUnaryFingerPrinter {
+public:
+  CUTLASS_DEVICE
+  TBElementUnaryFingerPrinter(aso::type::TBOperatorType type,
+                              FPType *exp_lookup_table,
+                              char *smem_buffer,
+                              STensor const &input,
+                              STensor const &output,
+                              int thread_id,
+                              int num_threads) {
+    // Assert inplace
+    assert(input.smem_offset == output.smem_offset);
+    FPType *ptr = (FPType *)(smem_buffer + input.smem_offset);
+    int num_elements = output.size();
+    int kIterations = (num_elements + num_threads - 1) / num_threads;
+    if (type == aso::type::TB_EXP_OP) {
+      for (int i = 0; i < kIterations; i++) {
+        int idx = i * num_threads + thread_id;
+        if (idx < num_elements) {
+          FPType input = ptr[idx];
+          FPType p_residual = input % FP_P;
+          FPType q_residual = input % FP_Q;
+          ptr[idx] = exp_lookup_table[q_residual] * FP_Q;
+        }
+      }
+    } else {
+      assert(false && "Unimplemented");
+    }
+  }
 };
 
 } // namespace threadblock

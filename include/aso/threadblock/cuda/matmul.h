@@ -40,6 +40,7 @@ namespace aso {
 namespace threadblock {
 
 using namespace cutlass;
+using namespace aso::type;
 
 template <typename ThreadblockShape,
           typename WarpShape,
@@ -457,6 +458,36 @@ public:
                       warp_id,
                       lane_id);
     executor.execute_kernel();
+  }
+};
+
+class TBMatmulFingerprinter {
+public:
+  CUTLASS_DEVICE
+  TBMatmulFingerprinter(char *smem_buffer,
+                        STensor const &A,
+                        STensor const &B,
+                        STensor const &C,
+                        int thread_id,
+                        int num_threads) {
+    FPType *A_ptr = (FPType *)(smem_buffer + A.smem_offset);
+    FPType *B_ptr = (FPType *)(smem_buffer + B.smem_offset);
+    FPType *C_ptr = (FPType *)(smem_buffer + C.smem_offset);
+    int num_elements = C.size();
+    int kK = A.dim[1];
+    for (int i = 0; i < (num_elements + num_threads - 1) / num_threads; i++) {
+      uint32_t result = 0;
+      int n = (i * num_threads + thread_id) / C.dim[1];
+      int m = (i * num_threads + thread_id) % C.dim[1];
+      if (n < C.dim[0]) {
+        for (int k = 0; k < kK; k++) {
+          uint32_t a_value = A_ptr[n * A.stride[0] + k * A.stride[1]];
+          uint32_t b_value = B_ptr[k * A.stride[0] + m * A.stride[1]];
+          result = (result + a_value * b_value) % FP_PQ;
+        }
+      }
+      C_ptr[n * C.stride[0] + m * C.stride[1]] = result;
+    }
   }
 };
 
