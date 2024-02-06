@@ -29,6 +29,21 @@ STensor Graph::reduction(STensor const &input, int dim) {
 
 TBOperator *Graph::create_reduction_op(STensor const &input, int dim) {
   TBOperator *op = new TBReductionOp(this, input, dim);
+
+  STensor output = input;
+  assert(output.num_dims > dim);
+  assert(output.is_row_major());
+  output.dim[dim] = 1;
+  for (int i = output.num_dims - 1; i >= 0; i--) {
+    output.stride[i] = (i == output.num_dims - 1)
+                           ? 1
+                           : output.stride[i + 1] * output.dim[i + 1];
+  }
+
+  if (smem_offset + (off_t)output.size() > (off_t)MAX_SMEM_SIZE) {
+    return nullptr;
+  }
+
   return op;
 }
 

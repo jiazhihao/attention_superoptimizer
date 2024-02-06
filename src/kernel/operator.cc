@@ -55,6 +55,20 @@ DTensor Graph::new_input(std::vector<int> const &dims,
 
 KNOperator *Graph::create_input_op(std::vector<int> const &dims,
                                    aso::type::DataType data_type) {
+  DTensor tensor;
+  tensor.num_dims = dims.size();
+  for (int i = tensor.num_dims - 1; i >= 0; i--) {
+    tensor.dim[i] = dims[i];
+    tensor.stride[i] = (i == tensor.num_dims - 1)
+                           ? 1
+                           : tensor.stride[i + 1] * tensor.dim[i + 1];
+  }
+  tensor.data_type = data_type;
+
+  DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
+  if (dmm->offset + tensor.size() > dmm->total_size) {
+    return nullptr;
+  }
   KNInputOp *op = new KNInputOp(dims, data_type);
   return op;
 }

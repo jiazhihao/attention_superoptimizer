@@ -31,6 +31,51 @@ STensor Graph::new_input(aso::kernel::DTensor const &dtensor,
 TBOperator *Graph::create_input_op(aso::kernel::DTensor const &dtensor,
                                    int3 input_map,
                                    int forloop_dim) {
+  STensor tensor;
+  tensor.num_dims = dtensor.num_dims;
+  tensor.data_type = dtensor.data_type;
+  for (int i = 0; i < tensor.num_dims; i++) {
+    tensor.dim[i] = dtensor.dim[i];
+  }
+
+  for (int d = 0; d < 3; d++) {
+    int dim_idx = -1;
+    int dim_div = 1;
+    if (d == 0 && grid_dim.x > 1) {
+      dim_idx = input_map.x;
+      dim_div = grid_dim.x;
+    }
+    if (d == 1 && grid_dim.y > 1) {
+      dim_idx = input_map.y;
+      dim_div = grid_dim.y;
+    }
+    if (d == 2 && grid_dim.z > 1) {
+      dim_idx = input_map.z;
+      dim_div = grid_dim.z;
+    }
+    if (dim_idx >= 0) {
+      assert(tensor.dim[dim_idx] > 0);
+      assert(tensor.dim[dim_idx] % dim_div == 0);
+      tensor.dim[dim_idx] /= dim_div;
+    }
+  }
+
+  if (forloop_dim >= 0) {
+    assert(tensor.dim[forloop_dim] > 0);
+    assert(tensor.dim[forloop_dim] % forloop_range == 0);
+    tensor.dim[forloop_dim] /= forloop_range;
+  }
+
+  for (int i = tensor.num_dims - 1; i >= 0; i--) {
+    tensor.stride[i] = (i == tensor.num_dims - 1)
+                           ? 1
+                           : tensor.stride[i + 1] * tensor.dim[i + 1];
+  }
+
+  if (smem_offset + (off_t)tensor.size() > (off_t)MAX_SMEM_SIZE) {
+    return nullptr;
+  }
+
   TBInputOp *op = new TBInputOp(this, dtensor, input_map, forloop_dim);
   return op;
 }

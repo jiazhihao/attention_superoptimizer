@@ -59,6 +59,7 @@ enum TBOperatorType {
   TB_REDUCTION_1_OP = 2005,
   TB_REDUCTION_2_OP = 2006,
   TB_EXP_OP = 2007,
+  TB_DIV_OP = 2008,
   TB_CUSTOMIZED_OP = 2999
 };
 
