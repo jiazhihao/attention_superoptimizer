@@ -48,7 +48,8 @@ KNOperator *Graph::create_customized_op(std::vector<DTensor> const &inputs,
   size_t output_size = 0;
   for (threadblock::TBOperator *op : _graph.operators) {
     if (op->op_type == type::TBOperatorType::TB_OUTPUT_OP) {
-      output_size += static_cast<threadblock::TBOutputOp *>(op)->dtensor.size();
+      output_size +=
+          static_cast<threadblock::TBOutputOp *>(op)->dtensor.data_size();
     }
   }
 
@@ -56,7 +57,7 @@ KNOperator *Graph::create_customized_op(std::vector<DTensor> const &inputs,
   if (dmm->offset + output_size > dmm->total_size) {
     return nullptr;
   }
-  
+
   KNCustomizedOp *op = new KNCustomizedOp(inputs, _graph);
   return op;
 }
@@ -130,7 +131,7 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         dtensor.owner_op = this;
         dtensor.owner_ts_idx = static_cast<int>(output_tensors.size());
         DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
-        dtensor.data_ptr = dmm->allocate(dtensor.size());
+        dmm->allocate(dtensor);
         output_tensors.push_back(dtensor);
       }
     }
@@ -185,7 +186,7 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         dtensor.owner_op = this;
         dtensor.owner_ts_idx = static_cast<int>(output_tensors.size());
         DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
-        dtensor.data_ptr = dmm->allocate(dtensor.size());
+        dmm->allocate(dtensor);
         output_tensors.push_back(dtensor);
         plan.output_map = output_op->output_map;
         break;
@@ -218,7 +219,7 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
 KNCustomizedOp::~KNCustomizedOp() {
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
   for (int i = output_tensors.size() - 1; i >= 0; i--) {
-    dmm->free(output_tensors[i].data_ptr);
+    dmm->free(output_tensors[i]);
   }
 }
 

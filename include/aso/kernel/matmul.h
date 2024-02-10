@@ -25,6 +25,7 @@ public:
   KNMatmulOp(DTensor const &A, DTensor const &B);
   ~KNMatmulOp();
   bool profile(ProfileResult &profile);
+  bool fingerprint(void);
 };
 
 class MatmulKey {

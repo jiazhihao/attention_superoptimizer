@@ -66,7 +66,7 @@ KNOperator *Graph::create_input_op(std::vector<int> const &dims,
   tensor.data_type = data_type;
 
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
-  if (dmm->offset + tensor.size() > dmm->total_size) {
+  if (dmm->offset + tensor.data_size() > dmm->total_size) {
     return nullptr;
   }
   KNInputOp *op = new KNInputOp(dims, data_type);
@@ -88,13 +88,13 @@ KNInputOp::KNInputOp(std::vector<int> const &dims,
   tensor.owner_op = this;
   tensor.owner_ts_idx = 0;
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
-  tensor.data_ptr = dmm->allocate(tensor.size());
+  dmm->allocate(tensor);
   output_tensors.push_back(tensor);
 }
 
 KNInputOp::~KNInputOp() {
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
-  dmm->free(output_tensors[0].data_ptr);
+  dmm->free(output_tensors[0]);
 }
 
 bool KNInputOp::profile(ProfileResult &profile) {

@@ -30,8 +30,8 @@ public:
   static DeviceMemoryManager *singleton;
   DeviceMemoryManager(void);
   ~DeviceMemoryManager(void);
-  void *allocate(size_t size_in_bytes);
-  void free(void *ptr);
+  bool allocate(DTensor &tensor, bool allocate_fingerprint = true);
+  bool free(DTensor &tensor);
 
 public:
   static DeviceMemoryManager *get_instance();

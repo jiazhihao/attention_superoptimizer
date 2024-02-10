@@ -37,7 +37,7 @@ KNOperator *Graph::create_matmul_op(DTensor const &A, DTensor const &B) {
   if (A.dim[1] != B.dim[0]) {
     return nullptr;
   }
-  
+
   DTensor C;
   C.num_dims = 2;
   C.dim[0] = A.dim[0];
@@ -47,7 +47,7 @@ KNOperator *Graph::create_matmul_op(DTensor const &A, DTensor const &B) {
   C.data_type = A.data_type;
 
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
-  if (dmm->offset + C.size() > dmm->total_size) {
+  if (dmm->offset + C.data_size() > dmm->total_size) {
     return nullptr;
   }
 
@@ -71,7 +71,7 @@ KNMatmulOp::KNMatmulOp(DTensor const &A, DTensor const &B)
   C.owner_op = this;
   C.owner_ts_idx = 0;
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
-  C.data_ptr = dmm->allocate(C.size());
+  dmm->allocate(C);
   assert(output_tensors.size() == 0);
   output_tensors.push_back(C);
 }
@@ -79,7 +79,7 @@ KNMatmulOp::KNMatmulOp(DTensor const &A, DTensor const &B)
 KNMatmulOp::~KNMatmulOp() {
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
   for (int i = output_tensors.size() - 1; i >= 0; i--) {
-    dmm->free(output_tensors[i].data_ptr);
+    dmm->free(output_tensors[i]);
   }
 }
 

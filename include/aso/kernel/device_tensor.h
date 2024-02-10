@@ -77,14 +77,24 @@ struct DTensor {
     return false;
   }
 
-  inline size_t size() const {
-    size_t num_elements = 1;
+  inline size_t num_elements() const {
+    size_t num = 1;
+    for (int i = 0; i < num_dims; i++) {
+      num *= dim[i];
+    }
+    return num;
+  }
+
+  inline size_t data_size() const {
     using namespace aso::type;
     size_t data_type_size = get_datatype_size(data_type);
-    for (int i = 0; i < num_dims; i++) {
-      num_elements *= dim[i];
-    }
-    return num_elements * data_type_size;
+    return num_elements() * data_type_size;
+  }
+
+  inline size_t fingerprint_size() const {
+    using namespace aso::type;
+    size_t data_type_size = sizeof(FPType);
+    return num_elements() * data_type_size;
   }
 
   inline bool is_column_major() const {
@@ -116,7 +126,10 @@ struct DTensor {
   // DTensor fields
   KNOperator *owner_op;
   int owner_ts_idx;
+  // pointer to data
   void *data_ptr;
+  // pointer to fingerprint
+  aso::type::FPType *fp_ptr;
 };
 
 } // namespace kernel

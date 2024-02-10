@@ -33,6 +33,7 @@ public:
              std::vector<DTensor> const &inputs);
   ~KNOperator();
   virtual bool profile(ProfileResult &result) = 0;
+  virtual bool fingerprint(void) = 0;
   aso::type::KNOperatorType op_type;
   std::vector<DTensor> input_tensors;
   std::vector<DTensor> output_tensors;
@@ -43,6 +44,7 @@ public:
   KNInputOp(std::vector<int> const &dims, aso::type::DataType data_type);
   ~KNInputOp();
   bool profile(ProfileResult &profile);
+  bool fingerprint(void);
 };
 
 } // namespace kernel

@@ -22,6 +22,7 @@ namespace aso {
 namespace threadblock {
 
 using namespace cutlass;
+using namespace aso::type;
 
 template <typename ElementType>
 class ElementUnaryExecutor {
@@ -49,28 +50,33 @@ public:
   }
 };
 
-class ElementUnaryFingerprinter {
-public:
-  aso::type::FPType *base_ptr;
-  aso::type::TBOperatorType op_type;
-  int kElements;
-
+class TBElementUnaryFingerPrinter {
 public:
   CUTLASS_DEVICE
-  ElementUnaryFingerprinter(aso::type::FPType *_base_ptr,
-                            aso::type::TBOperatorType _type,
-                            int _kElements)
-      : base_ptr(_base_ptr), op_type(_type), kElements(_kElements) {}
-
-  void CUTLASS_DEVICE compute_fingerprint(void) {
-    // extern __shared__ char smem_buffer[];
-    if (op_type == aso::type::TB_EXP_OP) {
-      for (int i = 0; i < kElements; i += blockDim.x) {
-        assert(false && "To Be Implemented");
-        // base_ptr[i] = cutlass::fast_exp(base_ptr[i]);
+  TBElementUnaryFingerPrinter(aso::type::TBOperatorType type,
+                              FPType *exp_lookup_table,
+                              char *smem_buffer,
+                              STensor const &input,
+                              STensor const &output,
+                              int thread_id,
+                              int num_threads) {
+    // Assert inplace
+    assert(input.smem_offset == output.smem_offset);
+    FPType *ptr = (FPType *)(smem_buffer + input.smem_offset);
+    int num_elements = output.size();
+    int kIterations = (num_elements + num_threads - 1) / num_threads;
+    if (type == aso::type::TB_EXP_OP) {
+      for (int i = 0; i < kIterations; i++) {
+        int idx = i * num_threads + thread_id;
+        if (idx < num_elements) {
+          FPType input = ptr[idx];
+          FPType p_residual = input % FP_P;
+          FPType q_residual = input % FP_Q;
+          ptr[idx] = exp_lookup_table[q_residual] * FP_Q;
+        }
       }
     } else {
-      assert(false && "Unsupported operator");
+      assert(false && "Unimplemented");
     }
   }
 };

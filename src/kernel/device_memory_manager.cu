@@ -35,22 +35,39 @@ DeviceMemoryManager::~DeviceMemoryManager() {
   checkCUDA(cublasDestroy(blas));
 }
 
-void *DeviceMemoryManager::allocate(size_t size_in_bytes) {
+bool DeviceMemoryManager::allocate(DTensor &tensor, bool allocate_fingerprint) {
   void *ret_ptr = base_ptr + offset;
-  offset += size_in_bytes;
+  offset += tensor.data_size();
+  tensor.data_ptr = ret_ptr;
+  allocated_tensors.push_back(std::make_pair(ret_ptr, tensor.data_size()));
+
+  if (allocate_fingerprint) {
+    ret_ptr = base_ptr + offset;
+    offset += tensor.fingerprint_size();
+    tensor.fp_ptr = (aso::type::FPType *)ret_ptr;
+    allocated_tensors.push_back(
+        std::make_pair(ret_ptr, tensor.fingerprint_size()));
+  }
   // Assert that we haven't used more than what we pre-allocated
   assert(offset <= total_size);
-  allocated_tensors.push_back(std::make_pair(ret_ptr, size_in_bytes));
-  return ret_ptr;
+
+  return true;
 }
 
-void DeviceMemoryManager::free(void *ptr) {
+bool DeviceMemoryManager::free(DTensor &tensor) {
   // Currently assume that tensors are freed in the reverse order
   // so ptr must be the last tensor we have created
+  if (tensor.fp_ptr != nullptr) {
+    assert(allocated_tensors.size() > 0);
+    assert(allocated_tensors.back().first == tensor.fp_ptr);
+    offset -= allocated_tensors.back().second;
+    allocated_tensors.pop_back();
+  }
   assert(allocated_tensors.size() > 0);
-  assert(allocated_tensors.back().first == ptr);
+  assert(allocated_tensors.back().first == tensor.data_ptr);
   offset -= allocated_tensors.back().second;
   allocated_tensors.pop_back();
+  return true;
 }
 
 DeviceMemoryManager *DeviceMemoryManager::get_instance() {

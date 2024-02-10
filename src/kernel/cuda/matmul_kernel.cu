@@ -23,6 +23,8 @@
 namespace aso {
 namespace kernel {
 
+using namespace aso::type;
+
 bool KNMatmulOp::profile(ProfileResult &result) {
   float alpha = 1.0f, beta = 0.0f;
   aso::kernel::DeviceMemoryManager *dmm =
@@ -30,9 +32,6 @@ bool KNMatmulOp::profile(ProfileResult &result) {
   void *A = input_tensors[0].data_ptr;
   void *B = input_tensors[1].data_ptr;
   void *C = output_tensors[0].data_ptr;
-  // checkCUDA(cudaMalloc(&A, input_tensors[0].size()));
-  // checkCUDA(cudaMalloc(&B, input_tensors[1].size()));
-  // checkCUDA(cudaMalloc(&C, output_tensors[0].size()));
   int row_A = input_tensors[0].dim[0];
   int column_A = input_tensors[0].dim[1];
   int row_B = input_tensors[1].dim[0];
@@ -101,6 +100,48 @@ bool KNMatmulOp::profile(ProfileResult &result) {
   result.run_time = runtime_ms / 16;
   checkCUDA(cudaEventDestroy(events[0]));
   checkCUDA(cudaEventDestroy(events[1]));
+  return true;
+}
+
+__global__ void compute_matmul_fingerprint(
+    DTensor const A, DTensor const B, DTensor const C, int m, int n, int k) {
+  int row_idx = (threadIdx.x + blockIdx.x * blockDim.x) / n;
+  int col_idx = (threadIdx.x + blockIdx.x * blockDim.x) % n;
+  if (row_idx < m) {
+    uint32_t result = 0;
+    int A_stride_0 = A.stride[0];
+    int A_stride_1 = A.stride[1];
+    int B_stride_0 = B.stride[0];
+    int B_stride_1 = B.stride[1];
+    for (int i = 0; i < k; i++) {
+      uint32_t A_value = A.fp_ptr[row_idx * A_stride_0 + k * A_stride_1];
+      uint32_t B_value = B.fp_ptr[k * B_stride_0 + col_idx * B_stride_1];
+      result = (result + A_value * B_value) % FP_PQ;
+    }
+    C.fp_ptr[row_idx * C.stride[0] + col_idx * C.stride[1]] = result;
+  }
+}
+
+bool KNMatmulOp::fingerprint(void) {
+  int row_A = input_tensors[0].dim[0];
+  int column_A = input_tensors[0].dim[1];
+  int row_B = input_tensors[1].dim[0];
+  int column_B = input_tensors[1].dim[1];
+  int row_C = output_tensors[0].dim[0];
+  int column_C = output_tensors[0].dim[1];
+  assert(column_A == row_B);
+  assert(row_C == row_A);
+  assert(column_C == column_B);
+  int const num_threads_per_blk = 1024;
+  int num_blocks =
+      (row_C * column_C + num_threads_per_blk - 1) / num_threads_per_blk;
+  compute_matmul_fingerprint<<<num_blocks, num_threads_per_blk>>>(
+      input_tensors[0],
+      input_tensors[1],
+      output_tensors[0],
+      row_C,
+      column_C,
+      row_B);
   return true;
 }
 

@@ -74,6 +74,13 @@ include_directories(deps/cutlass/include)
 #include_directories(deps/cutlass/tools/util/include)
 #include_directories(${ASO_INCLUDE_DIRS})
 
+#set Z3
+FetchContent_Declare(z3
+        GIT_REPOSITORY https://github.com/Z3Prover/z3
+        GIT_TAG        z3-4.12.1
+)
+FetchContent_MakeAvailable(z3)
+
 add_library(aso_runtime ${ASO_SRCS})
 
 set_target_properties(aso_runtime
