@@ -36,12 +36,13 @@ bool is_unary(type::KNOperatorType op) {
 
 std::shared_ptr<AlgebraicPattern>
     get_pattern(type::KNOperatorType op,
+                DTensor const &tensor,
                 std::shared_ptr<AlgebraicPattern> opd) {
   switch (op) {
     case type::KNOperatorType::KN_REDUCTION_0_OP:
     case type::KNOperatorType::KN_REDUCTION_1_OP:
     case type::KNOperatorType::KN_REDUCTION_2_OP:
-      return opd;
+      return std::make_shared<Red>(tensor.dim[0], opd);
     case type::KNOperatorType::KN_OUTPUT_OP:
       return opd;
     default:
@@ -51,6 +52,7 @@ std::shared_ptr<AlgebraicPattern>
 
 std::shared_ptr<AlgebraicPattern>
     get_pattern(type::TBOperatorType op,
+                STensor const &tensor,
                 std::shared_ptr<AlgebraicPattern> opd) {
   switch (op) {
     case type::TBOperatorType::TB_EXP_OP:
@@ -58,7 +60,7 @@ std::shared_ptr<AlgebraicPattern>
     case type::TBOperatorType::TB_REDUCTION_0_OP:
     case type::TBOperatorType::TB_REDUCTION_1_OP:
     case type::TBOperatorType::TB_REDUCTION_2_OP:
-      return opd;
+      return std::make_shared<Red>(tensor.dim[0], opd);
     case type::TBOperatorType::TB_OUTPUT_OP:
       return opd;
     default:
@@ -68,12 +70,15 @@ std::shared_ptr<AlgebraicPattern>
 
 std::shared_ptr<AlgebraicPattern>
     get_pattern(type::KNOperatorType op,
+                DTensor const &tensor_l,
+                DTensor const &tensor_r,
                 std::shared_ptr<AlgebraicPattern> lhs,
                 std::shared_ptr<AlgebraicPattern> rhs) {
 
   switch (op) {
     case type::KNOperatorType::KN_MATMUL_OP:
-      return std::make_shared<Mul>(lhs, rhs);
+      // FIXME: Correctly support batched matmul
+      return std::make_shared<Red>(tensor_l.dim[1], std::make_shared<Mul>(lhs, rhs));
     default:
       assert(false);
   }
@@ -81,12 +86,15 @@ std::shared_ptr<AlgebraicPattern>
 
 std::shared_ptr<AlgebraicPattern>
     get_pattern(type::TBOperatorType op,
+                STensor const &tensor_l,
+                STensor const &tensor_r,
                 std::shared_ptr<AlgebraicPattern> lhs,
                 std::shared_ptr<AlgebraicPattern> rhs) {
 
   switch (op) {
     case type::TBOperatorType::TB_MATMUL_OP:
-      return std::make_shared<Mul>(lhs, rhs);
+      // FIXME: Correctly support batched matmul
+      return std::make_shared<Red>(tensor_l.dim[1], std::make_shared<Mul>(lhs, rhs));
     case type::TBOperatorType::TB_DIV_OP:
       return std::make_shared<Div>(lhs, rhs);
     default:
