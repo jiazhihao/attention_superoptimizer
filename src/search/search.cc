@@ -31,16 +31,13 @@ void KernelGraphGenerator::generate_threadblock_graphs(
     SearchContext<TBOperator, STensor> &c,
     threadblock::Graph g,
     std::vector<std::shared_ptr<AlgebraicPattern>> output_patterns,
-    std::vector<int> output_rdegs,
     std::vector<threadblock::Graph> &result_graphs,
     std::vector<std::vector<std::shared_ptr<AlgebraicPattern>>>
-        &result_output_patterns,
-    std::vector<std::vector<int>> &result_output_rdegs) {
+        &result_output_patterns) {
 
   if (is_finished_graph(c, g)) {
     result_graphs.push_back(g);
     result_output_patterns.push_back(output_patterns);
-    result_output_rdegs.push_back(output_rdegs);
     return;
   }
 
@@ -74,12 +71,13 @@ void KernelGraphGenerator::generate_threadblock_graphs(
           }
           std::shared_ptr<AlgebraicPattern> pattern =
               get_pattern(op_type,
+                          input1,
+                          input2,
                           c.algebraic_pattern[input1],
                           c.algebraic_pattern[input2]);
           if (!pattern->subpattern_to(*final_pattern)) {
             continue;
           }
-          size_t rdeg = std::max(c.rdeg.at(input1), c.rdeg.at(input2));
 
           threadblock::Graph ng = g;
           threadblock::TBOperator *new_op = nullptr;
@@ -102,19 +100,15 @@ void KernelGraphGenerator::generate_threadblock_graphs(
           STensor output = new_op->output_tensors[0];
 
           c.algebraic_pattern.insert({output, pattern});
-          c.rdeg.insert({output, rdeg});
           c.existing_op_hash.insert(hash);
           c.output_degree[op1]++;
           c.output_degree[op2]++;
           generate_threadblock_graphs(c,
                                       ng,
                                       output_patterns,
-                                      output_rdegs,
                                       result_graphs,
-                                      result_output_patterns,
-                                      result_output_rdegs);
+                                      result_output_patterns);
           c.algebraic_pattern.erase(output);
-          c.rdeg.erase(output);
           c.existing_op_hash.erase(hash);
           c.output_degree[op1]--;
           c.output_degree[op2]--;
@@ -134,12 +128,8 @@ void KernelGraphGenerator::generate_threadblock_graphs(
           continue;
         }
         std::shared_ptr<AlgebraicPattern> pattern =
-            get_pattern(op_type, c.algebraic_pattern.at(input));
+            get_pattern(op_type, input, c.algebraic_pattern.at(input));
         if (!pattern->subpattern_to(*final_pattern)) {
-          continue;
-        }
-        size_t rdeg = get_rdeg(op_type, c.rdeg.at(input), input);
-        if (rdeg > max_rdeg) {
           continue;
         }
 
@@ -165,18 +155,14 @@ void KernelGraphGenerator::generate_threadblock_graphs(
         STensor output = new_op->output_tensors[0];
 
         c.algebraic_pattern.insert({output, pattern});
-        c.rdeg.insert({output, rdeg});
         c.existing_op_hash.insert(hash);
         c.output_degree[op]++;
         generate_threadblock_graphs(c,
                                     ng,
                                     output_patterns,
-                                    output_rdegs,
                                     result_graphs,
-                                    result_output_patterns,
-                                    result_output_rdegs);
+                                    result_output_patterns);
         c.algebraic_pattern.erase(output);
-        c.rdeg.erase(output);
         c.existing_op_hash.erase(hash);
         c.output_degree[op]--;
       }
@@ -187,9 +173,13 @@ void KernelGraphGenerator::generate_threadblock_graphs(
         }
 
         STensor input = op->output_tensors[0];
+        auto pattern = std::make_shared<Red>(g.forloop_range, c.algebraic_pattern.at(input));
+        if (!pattern->subpattern_to(*final_pattern)) {
+          continue;
+        }
 
         threadblock::Graph ng = g;
-        for (int3 output_map : {int3{0, 1}, int3{1, 0}}) {
+        for (int3 output_map : {int3{0, 1, -1}, int3{1, 0 -1}}) {
           threadblock::TBOperator *new_op =
               ng.create_output_op(input, output_map);
           if (!new_op) {
@@ -197,18 +187,14 @@ void KernelGraphGenerator::generate_threadblock_graphs(
           }
           ng.operators.push_back(new_op);
 
-          output_patterns.push_back(c.algebraic_pattern.at(input));
-          output_rdegs.push_back(c.rdeg.at(input));
+          output_patterns.push_back(pattern);
           c.output_degree[op]++;
           generate_threadblock_graphs(c,
                                       ng,
                                       output_patterns,
-                                      output_rdegs,
                                       result_graphs,
-                                      result_output_patterns,
-                                      result_output_rdegs);
+                                      result_output_patterns);
           output_patterns.pop_back();
-          output_rdegs.pop_back();
           c.output_degree[op]--;
         }
       }
@@ -245,12 +231,13 @@ void KernelGraphGenerator::generate_next_kernel(
               }
               std::shared_ptr<AlgebraicPattern> pattern =
                   get_pattern(op_type,
+                              input1,
+                              input2,
                               c.algebraic_pattern.at(input1),
                               c.algebraic_pattern.at(input2));
               if (!pattern->subpattern_to(*final_pattern)) {
                 continue;
               }
-              size_t rdeg = std::max(c.rdeg.at(input1), c.rdeg.at(input2));
               kernel::Graph ng = g;
               kernel::KNOperator *new_op = nullptr;
               switch (op_type) {
@@ -267,13 +254,11 @@ void KernelGraphGenerator::generate_next_kernel(
               DTensor output = new_op->output_tensors[0];
 
               c.algebraic_pattern.insert({output, pattern});
-              c.rdeg.insert({output, rdeg});
               c.existing_op_hash.insert(hash);
               c.output_degree[op1]++;
               c.output_degree[op2]++;
               generate_next_kernel(c, ng);
               c.algebraic_pattern.erase(output);
-              c.rdeg.erase(output);
               c.existing_op_hash.erase(hash);
               c.output_degree[op1]--;
               c.output_degree[op2]--;
@@ -292,12 +277,8 @@ void KernelGraphGenerator::generate_next_kernel(
             continue;
           }
           std::shared_ptr<AlgebraicPattern> pattern =
-              get_pattern(op_type, c.algebraic_pattern.at(input));
+              get_pattern(op_type, input, c.algebraic_pattern.at(input));
           if (!pattern->subpattern_to(*final_pattern)) {
-            continue;
-          }
-          size_t rdeg = get_rdeg(op_type, c.rdeg.at(input), input);
-          if (rdeg > max_rdeg) {
             continue;
           }
 
@@ -320,12 +301,10 @@ void KernelGraphGenerator::generate_next_kernel(
           DTensor output = new_op->output_tensors[0];
 
           c.algebraic_pattern.insert({output, pattern});
-          c.rdeg.insert({output, rdeg});
           c.existing_op_hash.insert(hash);
           c.output_degree[op]++;
           generate_next_kernel(c, ng);
           c.algebraic_pattern.erase(output);
-          c.rdeg.erase(output);
           c.existing_op_hash.erase(hash);
           c.output_degree[op]--;
         }
@@ -376,18 +355,15 @@ void KernelGraphGenerator::generate_next_kernel(
                       ng.new_input(tensor, input_map[i], forloop_dim[i]);
                   nc.algebraic_pattern.insert(
                       {output, c.algebraic_pattern.at(tensor)});
-                  nc.rdeg.insert({output, c.rdeg.at(tensor)});
                 }
 
                 std::vector<threadblock::Graph> tbgs;
                 std::vector<std::vector<std::shared_ptr<AlgebraicPattern>>>
                     output_patterns;
-                std::vector<std::vector<int>> output_rdegs;
                 generate_threadblock_graphs(
-                    nc, ng, {}, {}, tbgs, output_patterns, output_rdegs);
+                    nc, ng, {}, tbgs, output_patterns);
 
                 assert(tbgs.size() == output_patterns.size());
-                assert(tbgs.size() == output_rdegs.size());
 
                 for (int i = 0; i < tbgs.size(); ++i) {
                   threadblock::Graph const &tbg = tbgs[i];
@@ -403,14 +379,12 @@ void KernelGraphGenerator::generate_next_kernel(
                   for (int j = 0; j < outputs.size(); ++j) {
                     c.algebraic_pattern.insert(
                         {outputs[i], output_patterns[i][j]});
-                    c.rdeg.insert({outputs[i], output_rdegs[i][j]});
                     c.existing_op_hash.insert(hash);
                     for (auto op : input_operators) {
                       c.output_degree[op]++;
                     }
                     generate_next_kernel(c, ng);
                     c.algebraic_pattern.erase(outputs[i]);
-                    c.rdeg.erase(outputs[i]);
                     c.existing_op_hash.erase(hash);
                     for (auto op : input_operators) {
                       c.output_degree[op]--;
@@ -439,11 +413,6 @@ void KernelGraphGenerator::generate_kernel_graphs() {
                       output_tensor.data_type);
       c.algebraic_pattern.insert(
           {input, std::make_shared<Var>("v_" + std::to_string(opid))});
-      c.rdeg.insert({input, 1});
-    }
-
-    for (DTensor t : op->output_tensors) {
-      max_rdeg = std::max(max_rdeg, t.data_size());
     }
   }
 
@@ -464,7 +433,7 @@ KernelGraphGenerator::KernelGraphGenerator(
     size_t device_mem_size,
     size_t shared_mem_size)
     : computation_graph(computation_graph), device_mem_size(device_mem_size),
-      shared_mem_size(shared_mem_size), final_pattern(nullptr), max_rdeg(0) {}
+      shared_mem_size(shared_mem_size), final_pattern(nullptr) {}
 
 std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> pattern_eval(
     kernel::Graph const &g,

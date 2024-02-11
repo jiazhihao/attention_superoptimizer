@@ -28,15 +28,23 @@ bool is_unary(type::TBOperatorType op);
 bool is_binary(type::KNOperatorType op);
 bool is_unary(type::KNOperatorType op);
 std::shared_ptr<AlgebraicPattern>
-    get_pattern(type::KNOperatorType op, std::shared_ptr<AlgebraicPattern> opd);
+    get_pattern(type::KNOperatorType op,
+                DTensor const &tensor,
+                std::shared_ptr<AlgebraicPattern> opd);
 std::shared_ptr<AlgebraicPattern>
-    get_pattern(type::TBOperatorType op, std::shared_ptr<AlgebraicPattern> opd);
+    get_pattern(type::TBOperatorType op,
+                STensor const &tensor,
+                std::shared_ptr<AlgebraicPattern> opd);
 std::shared_ptr<AlgebraicPattern>
     get_pattern(type::KNOperatorType op,
+                DTensor const &input1,
+                DTensor const &input2,
                 std::shared_ptr<AlgebraicPattern> lhs,
                 std::shared_ptr<AlgebraicPattern> rhs);
 std::shared_ptr<AlgebraicPattern>
     get_pattern(type::TBOperatorType op,
+                STensor const &input1,
+                STensor const &input2,
                 std::shared_ptr<AlgebraicPattern> lhs,
                 std::shared_ptr<AlgebraicPattern> rhs);
 

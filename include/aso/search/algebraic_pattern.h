@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <z3++.h>
+#include "z3++.h"
 
 namespace aso {
 namespace search {
@@ -57,6 +57,15 @@ public:
   z3::expr to_z3(z3::context &c) const override;
   std::string to_string() const override;
   std::shared_ptr<AlgebraicPattern> exponent;
+};
+
+class Red : public AlgebraicPattern {
+public:
+  Red(int k, std::shared_ptr<AlgebraicPattern> summand);
+  z3::expr to_z3(z3::context &c) const override;
+  std::string to_string() const override;
+  int k;
+  std::shared_ptr<AlgebraicPattern> summand;
 };
 
 } // namespace search
