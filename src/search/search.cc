@@ -443,7 +443,7 @@ void KernelGraphGenerator::generate_kernel_graphs() {
     }
 
     for (DTensor t : op->output_tensors) {
-      max_rdeg = std::max(max_rdeg, t.size());
+      max_rdeg = std::max(max_rdeg, t.data_size());
     }
   }
 

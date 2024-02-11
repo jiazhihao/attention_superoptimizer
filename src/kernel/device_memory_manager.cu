@@ -19,6 +19,8 @@
 namespace aso {
 namespace kernel {
 
+using namespace aso::type;
+
 DeviceMemoryManager *DeviceMemoryManager::singleton = nullptr;
 
 DeviceMemoryManager::DeviceMemoryManager() {
@@ -28,6 +30,22 @@ DeviceMemoryManager::DeviceMemoryManager() {
   checkCUDA(cudaMalloc(&base_ptr, total_size));
   checkCUDA(cublasCreate(&blas));
   checkCUDA(cublasSetMathMode(blas, CUBLAS_TENSOR_OP_MATH));
+  // fingerprint related fields
+  exp_lookup_table = (FPType *)base_ptr;
+  offset += sizeof(FPType) * FP_Q;
+  // check PQ relations
+  assert(FP_Q < FP_P);
+  assert((FP_P - 1) % FP_Q == 0);
+  FPType exp_table[FP_Q];
+  exp_table[0] = 1;
+  for (int i = 1; i < FP_Q; i++) {
+    exp_table[i] = (exp_table[i - 1] * FP_Q) % FP_P;
+  }
+  assert((exp_table[FP_Q - 1] * FP_Q) % FP_P == 1);
+  cudaMemcpy(exp_lookup_table,
+             exp_table,
+             sizeof(FPType) * FP_Q,
+             cudaMemcpyHostToDevice);
 }
 
 DeviceMemoryManager::~DeviceMemoryManager() {

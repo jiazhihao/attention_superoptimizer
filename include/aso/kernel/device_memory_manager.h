@@ -42,6 +42,8 @@ public:
   off_t offset;
   size_t total_size;
   std::vector<std::pair<void *, size_t>> allocated_tensors;
+  // fingerprint related fields
+  aso::type::FPType *exp_lookup_table;
 
 public:
   cublasHandle_t blas;

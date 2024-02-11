@@ -25,6 +25,9 @@ int main(int argc, char **argv) {
     plan.forloop_range = 16;
     graph.customized({Q, K, V}, plan);
   }
+  for (auto const &op : graph.operators) {
+    op->fingerprint();
+  }
   ProfileResult result;
   graph.operators.back()->profile(result);
   return 0;

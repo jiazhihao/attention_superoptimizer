@@ -39,8 +39,8 @@ std::vector<dim3> get_block_dim_cand(std::vector<DTensor> const &tensors,
   std::vector<dim3> results;
   for (int x : {32, 64, 128}) {
     for (DTensor const &tensor : tensors) {
-      assert(tensor.size() % get_num_threadblock(grid_dim) == 0);
-      int block_size = tensor.size() / get_num_threadblock(grid_dim);
+      assert(tensor.data_size() % get_num_threadblock(grid_dim) == 0);
+      int block_size = tensor.data_size() / get_num_threadblock(grid_dim);
       if (block_size % x == 0) {
         results.push_back(dim3{x, 1, 1});
       }

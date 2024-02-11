@@ -75,11 +75,18 @@ include_directories(deps/cutlass/include)
 #include_directories(${ASO_INCLUDE_DIRS})
 
 #set Z3
-FetchContent_Declare(z3
-        GIT_REPOSITORY https://github.com/Z3Prover/z3
-        GIT_TAG        z3-4.12.1
-)
-FetchContent_MakeAvailable(z3)
+find_package(Z3 REQUIRED)
+message(STATUS "Z3_FOUND: ${Z3_FOUND}")
+message(STATUS "Found Z3 ${Z3_VERSION_STRING}")
+message(STATUS "Z3_DIR: ${Z3_DIR}")
+include_directories(${Z3_CXX_INCLUDE_DIRS})
+#target_link_libraries(aso_runtime PUBLIC ${Z3_LIBRARIES})
+list(APPEND ASO_LINK_LIBS ${Z3_LIBRARIES})
+
+#add_subdirectory(deps/z3 z3 EXCLUDE_FROM_ALL)
+#include_directories(deps/z3/src/api/c++)
+#include_directories(deps/z3/src/api)
+#list(APPEND ASO_LINK_LIBS z3)
 
 add_library(aso_runtime ${ASO_SRCS})
 
