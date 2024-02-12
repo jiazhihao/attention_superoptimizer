@@ -69,9 +69,8 @@ endif()
 #set CUTLASS
 set(CUTLASS_DIR ${PROJECT_SOURCE_DIR}/deps/cutlass)
 include_directories(deps/cutlass/include)
+include_directories(deps/cutlass/tools/util/include)
 
-#include_directories(deps/cutlass/include)
-#include_directories(deps/cutlass/tools/util/include)
 #include_directories(${ASO_INCLUDE_DIRS})
 
 #set Z3
@@ -118,3 +117,18 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
   target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
 endif()
+
+# GTest
+enable_testing()
+find_package(GTest)
+if(NOT GTest_FOUND)
+  include(FetchContent)
+  FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+  )
+  FetchContent_MakeAvailable(googletest)
+endif()
+include_directories(${GTEST_INCLUDE_DIRS})
+
+add_subdirectory(tests)

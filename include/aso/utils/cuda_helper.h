@@ -18,6 +18,7 @@
 #include "aso/type.h"
 #include <cublas_v2.h>
 #include <cudnn.h>
+#include <cutlass/cutlass.h>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -60,6 +61,33 @@ namespace aso {
       FatalError(_error.str());                                                \
     }                                                                          \
   } while (0)
+
+template <typename T>
+CUTLASS_DEVICE T warp_uniform(T value) {
+  struct {
+    union {
+      T value;
+      uint32_t asInt;
+    };
+  } p;
+  p.value = value;
+  p.asInt = __shfl_sync(0xffffffff, (unsigned)p.asInt, 0);
+  return p.value;
+}
+
+template <typename T>
+CUTLASS_DEVICE T* warp_uniform(T* ptr) {
+  struct {
+    union {
+      T* ptr;
+      uint32_t asInt[2];
+    };
+  } p;
+  p.ptr = ptr;
+  p.asInt[0] = warp_uniform(p.asInt[0]);
+  p.asInt[1] = warp_uniform(p.asInt[1]);
+  return p.ptr;
+}
 
 namespace utils {
 
