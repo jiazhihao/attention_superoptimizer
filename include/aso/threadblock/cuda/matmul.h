@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include "aso/threadblock/smem_tensor.h"
+
 #include "cutlass/aligned_buffer.h"
 #include "cutlass/cutlass.h"
 #include "cutlass/gemm_coord.h"
@@ -351,12 +353,12 @@ public:
 
     int warp_idx_mn = warp_idx % (warp_count_m * warp_count_n);
     int warp_idx_k = warp_idx / (warp_count_m * warp_count_n);
-    printf("warp_idx(%d) warp_count_m(%d) warp_count_n(%d) m(%d) n(%d)\n",
-           warp_idx,
-           warp_count_m,
-           warp_count_n,
-           m,
-           n);
+    // printf("warp_idx(%d) warp_count_m(%d) warp_count_n(%d) m(%d) n(%d)\n",
+    // warp_idx,
+    // warp_count_m,
+    // warp_count_n,
+    // m,
+    // n);
     // Currently assume that we don't parittion over k within a threadblock
     // we do it across threadblocks
     assert(warp_idx_k == 0);
@@ -444,6 +446,7 @@ public:
                                       half_t,
                                       layout::RowMajor,
                                       layout::ColumnMajor>;
+    assert(A.is_row_major() && B.is_column_major() && "Layouts: mismatch between inputs and Executor.");
     half_t *A_ptr = (half_t *)(smem_buffer + A.smem_offset);
     half_t *B_ptr = (half_t *)(smem_buffer + B.smem_offset);
     half_t *C_ptr = (half_t *)(smem_buffer + C.smem_offset);
