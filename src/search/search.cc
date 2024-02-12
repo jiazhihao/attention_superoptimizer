@@ -27,6 +27,21 @@ bool KernelGraphGenerator::is_finished_graph(
   return true;
 }
 
+std::vector<std::vector<DTensor>> get_input_cand(std::vector<DTensor> const &all_inputs) {
+  assert(all_inputs.size() <= threadblock::KernelParams::MAX_NUM_DMEM_INPUTS);
+  std::vector<std::vector<DTensor>> results;
+  for (int bitmap = 1; bitmap < (1 << all_inputs.size()); ++bitmap) {
+    std::vector<DTensor> inputs;
+    for (size_t i = 0; i < all_inputs.size(); ++i) {
+      if ((bitmap >> i) & 1) {
+        inputs.push_back(all_inputs[i]);
+      }
+    }
+    results.push_back(inputs);
+  }
+  return results;
+}
+
 void KernelGraphGenerator::generate_threadblock_graphs(
     SearchContext<TBOperator, STensor> &c,
     threadblock::Graph g,
@@ -310,9 +325,8 @@ void KernelGraphGenerator::generate_next_kernel(
         }
       }
     } else if (op_type == type::KNOperatorType::KN_CUSTOMIZED_OP) {
-      std::vector<DTensor> input_tensors;
+      std::vector<DTensor> all_input_tensors;
       std::vector<KNOperator *> input_operators;
-      size_t hash = 0;
 
       for (auto op : g.operators) {
         if (op->op_type == type::KNOperatorType::KN_OUTPUT_OP ||
@@ -320,74 +334,81 @@ void KernelGraphGenerator::generate_next_kernel(
           continue;
         }
         input_operators.push_back(op);
-        hash_combine(hash, op);
         for (DTensor tensor : op->output_tensors) {
-          input_tensors.push_back(tensor);
+          all_input_tensors.push_back(tensor);
         }
       }
 
-      hash_combine(hash, type::KNOperatorType::KN_CUSTOMIZED_OP);
-
-      if (input_tensors.size() >
+      if (all_input_tensors.size() >
           threadblock::KernelParams::MAX_NUM_DMEM_INPUTS) {
         continue;
       }
 
       // FIXME: simplify the search space
-      for (std::vector<int3> const &input_map :
-           get_input_map_cand(input_tensors)) {
-        for (dim3 grid_dim : get_grid_dim_cand(input_tensors, input_map)) {
-          for (dim3 block_dim :
-               get_block_dim_cand(input_tensors, input_map, grid_dim)) {
-            for (std::vector<int> const &forloop_dim :
-                 get_forloop_dim_cand(input_tensors)) {
-              for (int forloop_range : get_forloop_range_cand(input_tensors,
-                                                              input_map,
-                                                              grid_dim,
-                                                              block_dim,
-                                                              forloop_dim)) {
-                SearchContext<TBOperator, STensor> nc;
-                threadblock::Graph ng(grid_dim, block_dim, forloop_range);
+      for (auto const &input_tensors : get_input_cand(all_input_tensors)) {
+        size_t hash = 0;
+        for (auto const &input : input_tensors) {
+          hash_combine(hash, input);
+        }
+        hash_combine(hash, type::KNOperatorType::KN_CUSTOMIZED_OP);
+        if (contains(c.existing_op_hash, hash)) {
+          continue;
+        }
+        for (std::vector<int3> const &input_map :
+            get_input_map_cand(input_tensors)) {
+          for (dim3 grid_dim : get_grid_dim_cand(input_tensors, input_map)) {
+            for (dim3 block_dim :
+                get_block_dim_cand(input_tensors, input_map, grid_dim)) {
+              for (std::vector<int> const &forloop_dim :
+                  get_forloop_dim_cand(input_tensors)) {
+                for (int forloop_range : get_forloop_range_cand(input_tensors,
+                                                                input_map,
+                                                                grid_dim,
+                                                                block_dim,
+                                                                forloop_dim)) {
+                  SearchContext<TBOperator, STensor> nc;
+                  threadblock::Graph ng(grid_dim, block_dim, forloop_range);
 
-                for (int i = 0; i < input_tensors.size(); ++i) {
-                  DTensor tensor = input_tensors[i];
-                  STensor output =
-                      ng.new_input(tensor, input_map[i], forloop_dim[i]);
-                  nc.algebraic_pattern.insert(
-                      {output, c.algebraic_pattern.at(tensor)});
-                }
-
-                std::vector<threadblock::Graph> tbgs;
-                std::vector<std::vector<std::shared_ptr<AlgebraicPattern>>>
-                    output_patterns;
-                generate_threadblock_graphs(
-                    nc, ng, {}, tbgs, output_patterns);
-
-                assert(tbgs.size() == output_patterns.size());
-
-                for (int i = 0; i < tbgs.size(); ++i) {
-                  threadblock::Graph const &tbg = tbgs[i];
-                  kernel::Graph ng = g;
-                  kernel::KNOperator *new_op =
-                      ng.create_customized_op(input_tensors, tbg);
-                  if (!new_op) {
-                    continue;
+                  for (size_t i = 0; i < input_tensors.size(); ++i) {
+                    DTensor tensor = input_tensors[i];
+                    STensor output =
+                        ng.new_input(tensor, input_map[i], forloop_dim[i]);
+                    nc.algebraic_pattern.insert(
+                        {output, c.algebraic_pattern.at(tensor)});
                   }
-                  ng.operators.push_back(new_op);
-                  std::vector<DTensor> outputs = new_op->output_tensors;
-                  assert(outputs.size() == output_patterns[i].size());
-                  for (int j = 0; j < outputs.size(); ++j) {
-                    c.algebraic_pattern.insert(
-                        {outputs[i], output_patterns[i][j]});
-                    c.existing_op_hash.insert(hash);
-                    for (auto op : input_operators) {
-                      c.output_degree[op]++;
+
+                  std::vector<threadblock::Graph> tbgs;
+                  std::vector<std::vector<std::shared_ptr<AlgebraicPattern>>>
+                      output_patterns;
+                  generate_threadblock_graphs(
+                      nc, ng, {}, tbgs, output_patterns);
+
+                  assert(tbgs.size() == output_patterns.size());
+
+                  for (size_t i = 0; i < tbgs.size(); ++i) {
+                    threadblock::Graph const &tbg = tbgs[i];
+                    kernel::Graph ng = g;
+                    kernel::KNOperator *new_op =
+                        ng.create_customized_op(input_tensors, tbg);
+                    if (!new_op) {
+                      continue;
                     }
-                    generate_next_kernel(c, ng);
-                    c.algebraic_pattern.erase(outputs[i]);
-                    c.existing_op_hash.erase(hash);
-                    for (auto op : input_operators) {
-                      c.output_degree[op]--;
+                    ng.operators.push_back(new_op);
+                    std::vector<DTensor> outputs = new_op->output_tensors;
+                    assert(outputs.size() == output_patterns[i].size());
+                    for (size_t j = 0; j < outputs.size(); ++j) {
+                      c.algebraic_pattern.insert(
+                          {outputs[i], output_patterns[i][j]});
+                      c.existing_op_hash.insert(hash);
+                      for (auto op : input_operators) {
+                        c.output_degree[op]++;
+                      }
+                      generate_next_kernel(c, ng);
+                      c.algebraic_pattern.erase(outputs[i]);
+                      c.existing_op_hash.erase(hash);
+                      for (auto op : input_operators) {
+                        c.output_degree[op]--;
+                      }
                     }
                   }
                 }
@@ -467,6 +488,7 @@ std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> pattern_eval(
         assert(false && "Unsupported computation graph operator");
     }
   }
+  return patterns;
 }
 
 } // namespace search
