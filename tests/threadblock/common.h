@@ -21,9 +21,17 @@ static_assert(std::is_same_v<Element, cutlass::half_t>, "Only f16.");
   STensor tensor;
   tensor.num_dims = Layout::kRank;
   tensor.data_type = type::DT_FLOAT16;
+  int contig_dim = -1;
+  if constexpr (std::is_same_v<Layout, cutlass::layout::RowMajor>) {
+    contig_dim = 1;
+  } else if constexpr (std::is_same_v<Layout, cutlass::layout::ColumnMajor>) {
+    contig_dim = 0;
+  } else {
+    static_assert(std::is_same_v<Element, void>, "Unsupported layout.");
+  }
   for (int i = 0; i < tensor.num_dims; i++) {
     tensor.dim[i] = host_tensor.extent()[i];
-    tensor.stride[i] = host_tensor.stride(i);
+    tensor.stride[i] = i == contig_dim ? 1 : host_tensor.stride(i - (i > contig_dim));
   }
   tensor.owner_op = nullptr;
   tensor.owner_ts_idx = -1;

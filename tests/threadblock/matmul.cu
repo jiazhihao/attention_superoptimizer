@@ -35,7 +35,7 @@ __global__ void launch_matmul_kernel(
 TEST(threadblock_tests, matmul) {
   Graph bgraph = create_single_graph(128);
 
-  constexpr int m = 16, n = 16, k = 32;
+  constexpr int m = 64, n = 64, k = 64;
 
   cutlass::HostTensor<cutlass::half_t, cutlass::layout::RowMajor>
     A(cutlass::MatrixCoord(m, k)),
