@@ -27,7 +27,8 @@ bool KernelGraphGenerator::is_finished_graph(
   return true;
 }
 
-std::vector<std::vector<DTensor>> get_input_cand(std::vector<DTensor> const &all_inputs) {
+std::vector<std::vector<DTensor>>
+    get_input_cand(std::vector<DTensor> const &all_inputs) {
   assert(all_inputs.size() <= threadblock::KernelParams::MAX_NUM_DMEM_INPUTS);
   std::vector<std::vector<DTensor>> results;
   for (int bitmap = 1; bitmap < (1 << all_inputs.size()); ++bitmap) {
@@ -118,11 +119,8 @@ void KernelGraphGenerator::generate_threadblock_graphs(
           c.existing_op_hash.insert(hash);
           c.output_degree[op1]++;
           c.output_degree[op2]++;
-          generate_threadblock_graphs(c,
-                                      ng,
-                                      output_patterns,
-                                      result_graphs,
-                                      result_output_patterns);
+          generate_threadblock_graphs(
+              c, ng, output_patterns, result_graphs, result_output_patterns);
           c.algebraic_pattern.erase(output);
           c.existing_op_hash.erase(hash);
           c.output_degree[op1]--;
@@ -172,11 +170,8 @@ void KernelGraphGenerator::generate_threadblock_graphs(
         c.algebraic_pattern.insert({output, pattern});
         c.existing_op_hash.insert(hash);
         c.output_degree[op]++;
-        generate_threadblock_graphs(c,
-                                    ng,
-                                    output_patterns,
-                                    result_graphs,
-                                    result_output_patterns);
+        generate_threadblock_graphs(
+            c, ng, output_patterns, result_graphs, result_output_patterns);
         c.algebraic_pattern.erase(output);
         c.existing_op_hash.erase(hash);
         c.output_degree[op]--;
@@ -188,13 +183,14 @@ void KernelGraphGenerator::generate_threadblock_graphs(
         }
 
         STensor input = op->output_tensors[0];
-        auto pattern = std::make_shared<Red>(g.forloop_range, c.algebraic_pattern.at(input));
+        auto pattern = std::make_shared<Red>(g.forloop_range,
+                                             c.algebraic_pattern.at(input));
         if (!pattern->subpattern_to(*final_pattern)) {
           continue;
         }
 
         threadblock::Graph ng = g;
-        for (int3 output_map : {int3{0, 1, -1}, int3{1, 0 -1}}) {
+        for (int3 output_map : {int3{0, 1, -1}, int3{1, 0 - 1}}) {
           threadblock::TBOperator *new_op =
               ng.create_output_op(input, output_map);
           if (!new_op) {
@@ -204,11 +200,8 @@ void KernelGraphGenerator::generate_threadblock_graphs(
 
           output_patterns.push_back(pattern);
           c.output_degree[op]++;
-          generate_threadblock_graphs(c,
-                                      ng,
-                                      output_patterns,
-                                      result_graphs,
-                                      result_output_patterns);
+          generate_threadblock_graphs(
+              c, ng, output_patterns, result_graphs, result_output_patterns);
           output_patterns.pop_back();
           c.output_degree[op]--;
         }
@@ -355,12 +348,12 @@ void KernelGraphGenerator::generate_next_kernel(
           continue;
         }
         for (std::vector<int3> const &input_map :
-            get_input_map_cand(input_tensors)) {
+             get_input_map_cand(input_tensors)) {
           for (dim3 grid_dim : get_grid_dim_cand(input_tensors, input_map)) {
             for (dim3 block_dim :
-                get_block_dim_cand(input_tensors, input_map, grid_dim)) {
+                 get_block_dim_cand(input_tensors, input_map, grid_dim)) {
               for (std::vector<int> const &forloop_dim :
-                  get_forloop_dim_cand(input_tensors)) {
+                   get_forloop_dim_cand(input_tensors)) {
                 for (int forloop_range : get_forloop_range_cand(input_tensors,
                                                                 input_map,
                                                                 grid_dim,
@@ -489,6 +482,11 @@ std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> pattern_eval(
     }
   }
   return patterns;
+}
+
+bool verify(kernel::Graph const &g) {
+  assert(false && "TBD");
+  return true;
 }
 
 } // namespace search

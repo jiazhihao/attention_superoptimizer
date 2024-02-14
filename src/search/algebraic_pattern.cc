@@ -1,10 +1,12 @@
 #include "aso/search/algebraic_pattern.h"
+#include <iostream>
 #include <vector>
 
 namespace aso {
 namespace search {
 
-z3::expr_vector to_expr_vector(z3::context &c, std::vector<z3::expr> const &_vec) {
+z3::expr_vector to_expr_vector(z3::context &c,
+                               std::vector<z3::expr> const &_vec) {
   z3::expr_vector vec(c);
   for (auto const &e : _vec) {
     vec.push_back(e);
@@ -15,14 +17,14 @@ z3::expr_vector to_expr_vector(z3::context &c, std::vector<z3::expr> const &_vec
 bool AlgebraicPattern::subpattern_to(AlgebraicPattern const &other) const {
   z3::context c;
 
-  z3::sort P = c.uninterpreted_sort("Pattern");
+  z3::sort P = c.uninterpreted_sort("P");
   z3::sort I = c.int_sort();
 
   z3::func_decl add = z3::function("add", P, P, P);
   z3::func_decl mul = z3::function("mul", P, P, P);
   z3::func_decl div = z3::function("div", P, P, P);
   z3::func_decl exp = z3::function("exp", P, P);
-  z3::func_decl red = z3::function("red", I, P);
+  z3::func_decl red = z3::function("red", I, P, P);
 
   z3::func_decl subpattern = z3::partial_order(P, 0);
 
@@ -65,11 +67,13 @@ bool AlgebraicPattern::subpattern_to(AlgebraicPattern const &other) const {
 
   s.add(forall(x, x == red(1, x)));
   s.add(forall(x, i1, i2, red(i1, red(i2, x)) == red(i1 * i2, x)));
-  s.add(forall(to_expr_vector(c, {x, y, i, i1, i2}), red(i, add(red(i1, x), red(i2, y))) == add(red(i * i1, x), red(i * i2, y))));
+  s.add(forall(to_expr_vector(c, {x, y, i, i1, i2}),
+               red(i, add(red(i1, x), red(i2, y))) ==
+                   add(red(i * i1, x), red(i * i2, y))));
   s.add(forall(x, y, i, red(i, mul(x, y)) == mul(red(i, x), y)));
   s.add(forall(x, y, i, red(i, div(x, y)) == div(red(i, x), y)));
 
-  s.add(to_z3(c) != other.to_z3(c));
+  s.add(!subpattern(to_z3(c), other.to_z3(c)));
 
   return s.check() == z3::unsat;
 }
@@ -139,12 +143,17 @@ std::string Exp::to_string() const {
   return "e^" + exponent->to_string();
 }
 
-Red::Red(int k, std::shared_ptr<AlgebraicPattern> summand) : k(k), summand(summand) {}
+Red::Red(int k, std::shared_ptr<AlgebraicPattern> summand)
+    : k(k), summand(summand) {}
 
 z3::expr Red::to_z3(z3::context &c) const {
   z3::sort P = c.uninterpreted_sort("P");
   z3::func_decl red = z3::function("red", c.int_sort(), P);
   return red(k, summand->to_z3(c));
+}
+
+std::string Red::to_string() const {
+  return "r(" + std::to_string(k) + ", " + summand->to_string() + ")";
 }
 
 } // namespace search
