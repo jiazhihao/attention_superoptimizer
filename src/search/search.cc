@@ -461,21 +461,29 @@ std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> pattern_eval(
         patterns.insert(
             {op->output_tensors[0], input_pattern.at(op->output_tensors[0])});
         break;
-      case type::KNOperatorType::KN_OUTPUT_OP:
-        patterns.insert(
-            {op->output_tensors[0], patterns.at(op->input_tensors[0])});
-        break;
       case type::KNOperatorType::KN_MATMUL_OP:
         patterns.insert(
             {op->output_tensors[0],
-             std::make_shared<Mul>(patterns.at(op->input_tensors[0]),
-                                   patterns.at(op->input_tensors[1]))});
+             std::make_shared<Red>(
+                 op->input_tensors[0].dim[1],
+                 std::make_shared<Mul>(patterns.at(op->input_tensors[0]),
+                                       patterns.at(op->input_tensors[1])))});
         break;
       case type::KNOperatorType::KN_REDUCTION_0_OP:
+        patterns.insert(
+            {op->output_tensors[0],
+             std::make_shared<Red>(op->input_tensors[0].dim[0],
+                                   patterns.at(op->input_tensors[0]))});
       case type::KNOperatorType::KN_REDUCTION_1_OP:
+        patterns.insert(
+            {op->output_tensors[0],
+             std::make_shared<Red>(op->input_tensors[0].dim[1],
+                                   patterns.at(op->input_tensors[0]))});
       case type::KNOperatorType::KN_REDUCTION_2_OP:
         patterns.insert(
-            {op->output_tensors[0], patterns.at(op->input_tensors[0])});
+            {op->output_tensors[0],
+             std::make_shared<Red>(op->input_tensors[0].dim[2],
+                                   patterns.at(op->input_tensors[0]))});
         break;
       default:
         assert(false && "Unsupported computation graph operator");

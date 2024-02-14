@@ -28,20 +28,12 @@ bool AlgebraicPattern::subpattern_to(AlgebraicPattern const &other) const {
 
   z3::func_decl subpattern = z3::partial_order(P, 0);
 
-  z3::expr q = c.constant("q", P);
-  z3::expr k = c.constant("k", P);
-  z3::expr v = c.constant("v", P);
-
   z3::solver s(c);
 
   z3::params p(c);
   p.set("mbqi", true);
   p.set("timeout", 10u);
   s.set(p);
-
-  s.add(q != k);
-  s.add(q != v);
-  s.add(k != v);
 
   z3::expr x = c.constant("x", P);
   z3::expr y = c.constant("y", P);
@@ -148,7 +140,7 @@ Red::Red(int k, std::shared_ptr<AlgebraicPattern> summand)
 
 z3::expr Red::to_z3(z3::context &c) const {
   z3::sort P = c.uninterpreted_sort("P");
-  z3::func_decl red = z3::function("red", c.int_sort(), P);
+  z3::func_decl red = z3::function("red", c.int_sort(), P, P);
   return red(k, summand->to_z3(c));
 }
 
