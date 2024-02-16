@@ -1,9 +1,12 @@
 #include "aso/search/algebraic_pattern.h"
 #include <iostream>
 #include <vector>
+#include <cmath>
 
 namespace aso {
 namespace search {
+
+std::unordered_set<std::string> AlgebraicPattern::all_variables;
 
 z3::expr_vector to_expr_vector(z3::context &c,
                                std::vector<z3::expr> const &_vec) {
@@ -42,6 +45,20 @@ bool AlgebraicPattern::subpattern_to(AlgebraicPattern const &other) const {
   z3::expr i1 = c.int_const("i1");
   z3::expr i2 = c.int_const("i2");
 
+  z3::expr pattern1 = to_z3(c), pattern2 = other.to_z3(c);
+
+  for (std::string const &name1 : all_variables) {
+    for (std::string const &name2 : all_variables) {
+      if (name1 < name2) {
+        z3::expr v1 = c.constant(name1.data(), P);
+        z3::expr v2 = c.constant(name2.data(), P);
+        s.add(v1 != v2);
+        s.add(!subpattern(v1, v2));
+        s.add(!subpattern(v2, v1));
+      }
+    }
+  }
+
   s.add(forall(x, y, add(x, y) == add(y, x)));
   s.add(forall(x, y, mul(x, y) == mul(y, x)));
   s.add(forall(x, y, z, add(add(x, y), z) == add(x, add(y, z))));
@@ -57,15 +74,19 @@ bool AlgebraicPattern::subpattern_to(AlgebraicPattern const &other) const {
   s.add(forall(x, subpattern(x, exp(x))));
   s.add(forall(x, i, subpattern(x, red(i, x))));
 
-  s.add(forall(x, x == red(1, x)));
-  s.add(forall(x, i1, i2, red(i1, red(i2, x)) == red(i1 * i2, x)));
+  s.add(forall(x, x == red(0, x)));
+  s.add(forall(x, i1, i2, red(i1, red(i2, x)) == red(i1 + i2, x)));
   s.add(forall(to_expr_vector(c, {x, y, i, i1, i2}),
                red(i, add(red(i1, x), red(i2, y))) ==
-                   add(red(i * i1, x), red(i * i2, y))));
+                   add(red(i + i1, x), red(i + i2, y))));
   s.add(forall(x, y, i, red(i, mul(x, y)) == mul(red(i, x), y)));
   s.add(forall(x, y, i, red(i, div(x, y)) == div(red(i, x), y)));
 
-  s.add(!subpattern(to_z3(c), other.to_z3(c)));
+  // Lemmas
+  s.add(forall(x, i1, i2, implies(i1 <= i2, subpattern(red(i1, x), red(i2, x)))));
+
+  // Theorem to prove
+  s.add(!subpattern(pattern1, pattern2));
 
   return s.check() == z3::unsat;
 }
@@ -74,6 +95,7 @@ Var::Var(std::string const &name) : name(name) {}
 
 z3::expr Var::to_z3(z3::context &c) const {
   z3::sort P = c.uninterpreted_sort("P");
+  all_variables.insert(name);
   return c.constant(name.data(), P);
 }
 
@@ -135,17 +157,17 @@ std::string Exp::to_string() const {
   return "e^" + exponent->to_string();
 }
 
-Red::Red(int k, std::shared_ptr<AlgebraicPattern> summand)
-    : k(k), summand(summand) {}
+Red::Red(int red_deg, std::shared_ptr<AlgebraicPattern> summand)
+    : red_deg_log(std::ceil(std::log2(red_deg))), summand(summand) {}
 
 z3::expr Red::to_z3(z3::context &c) const {
   z3::sort P = c.uninterpreted_sort("P");
   z3::func_decl red = z3::function("red", c.int_sort(), P, P);
-  return red(k, summand->to_z3(c));
+  return red(red_deg_log, summand->to_z3(c));
 }
 
 std::string Red::to_string() const {
-  return "r(" + std::to_string(k) + ", " + summand->to_string() + ")";
+  return "r(" + std::to_string(red_deg_log) + ", " + summand->to_string() + ")";
 }
 
 } // namespace search

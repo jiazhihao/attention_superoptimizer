@@ -9,8 +9,11 @@ using namespace search;
 
 TEST(algebraic_expression, basic) {
   kernel::Graph graph;
-  kernel::DTensor Q = graph.new_input({64, 4096}, aso::type::DT_FLOAT16);
-  kernel::DTensor K = graph.new_input({4096, 16384}, aso::type::DT_FLOAT16);
+
+  int red_dim = 4096;
+
+  kernel::DTensor Q = graph.new_input({64, red_dim}, aso::type::DT_FLOAT16);
+  kernel::DTensor K = graph.new_input({red_dim, 16384}, aso::type::DT_FLOAT16);
 
   std::shared_ptr<AlgebraicPattern> Q_pattern = std::make_shared<Var>("q");
   std::shared_ptr<AlgebraicPattern> K_pattern = std::make_shared<Var>("k");
@@ -30,9 +33,10 @@ TEST(algebraic_expression, basic) {
     std::shared_ptr<AlgebraicPattern> another_pattern =
         std::make_shared<Mul>(K_pattern, std::make_shared<Exp>(Q_pattern));
     std::shared_ptr<AlgebraicPattern> V_pattern = std::make_shared<Var>("v");
-    std::shared_ptr<AlgebraicPattern> larger_pattern = std::make_shared<Red>(4, std::make_shared<Red>(1024, mul_pattern));
-    std::shared_ptr<AlgebraicPattern> larger_pattern2 = std::make_shared<Red>(2, std::make_shared<Red>(4096, mul_pattern));
-    std::shared_ptr<AlgebraicPattern> larger_pattern3 = std::make_shared<Red>(4096*2, mul_pattern);
+    std::shared_ptr<AlgebraicPattern> larger_pattern = std::make_shared<Red>(4, std::make_shared<Red>(red_dim / 2, mul_pattern));
+    std::shared_ptr<AlgebraicPattern> larger_pattern2 = std::make_shared<Red>(2, std::make_shared<Red>(red_dim, mul_pattern));
+    std::shared_ptr<AlgebraicPattern> larger_pattern3 = std::make_shared<Red>(red_dim * 2, mul_pattern);
+    std::shared_ptr<AlgebraicPattern> exp_pattern = std::make_shared<Exp>(V_pattern);
 
     EXPECT_TRUE(output_pattern->subpattern_to(*target_pattern));
     EXPECT_TRUE(target_pattern->subpattern_to(*output_pattern));
@@ -44,5 +48,6 @@ TEST(algebraic_expression, basic) {
     EXPECT_FALSE(output_pattern->subpattern_to(*another_pattern));
     EXPECT_FALSE(Q_pattern->subpattern_to(*V_pattern));
     EXPECT_FALSE(V_pattern->subpattern_to(*output_pattern));
+    EXPECT_FALSE(exp_pattern->subpattern_to(*another_pattern));
   }
 }
