@@ -11,14 +11,14 @@ std::vector<dim3> get_grid_dim_cand(std::vector<DTensor> const &tensors,
                                     std::vector<int3> const &input_map) {
   std::vector<dim3> results;
   for (int x = 1;; x *= 2) {
-    for (int i = 0; i < tensors.size(); ++i) {
+    for (size_t i = 0; i < tensors.size(); ++i) {
       if (tensors[i].dim[input_map[i].x] % x != 0) {
         return results;
       }
     }
     for (int y = 1;; y *= 2) {
       bool feasible = true;
-      for (int i = 0; i < tensors.size(); ++i) {
+      for (size_t i = 0; i < tensors.size(); ++i) {
         if (tensors[i].num_dims > 1 &&
             tensors[i].dim[input_map[i].y] % y != 0) {
           feasible = false;
@@ -37,7 +37,7 @@ std::vector<dim3> get_block_dim_cand(std::vector<DTensor> const &tensors,
                                      std::vector<int3> const &input_map,
                                      dim3 grid_dim) {
   std::vector<dim3> results;
-  for (int x : {32, 64, 128}) {
+  for (unsigned int x : {32, 64, 128}) {
     for (DTensor const &tensor : tensors) {
       assert(tensor.data_size() % get_num_threadblock(grid_dim) == 0);
       int block_size = tensor.data_size() / get_num_threadblock(grid_dim);
@@ -62,7 +62,7 @@ void generate_input_map_cand(int num_tensors,
                              int3 input_map,
                              std::vector<int3> cur,
                              std::vector<std::vector<int3>> &results) {
-  if (cur.size() == num_tensors) {
+  if (static_cast<int>(cur.size()) == num_tensors) {
     if (!is_all_replicate(cur)) {
       results.push_back(cur);
     }
@@ -96,7 +96,7 @@ std::vector<std::vector<int3>>
 void generate_forloop_dim(int num_tensors,
                           std::vector<int> cur,
                           std::vector<std::vector<int>> &results) {
-  if (cur.size() == num_tensors) {
+  if (static_cast<int>(cur.size()) == num_tensors) {
     bool is_none = true;
     for (int dim : cur) {
       if (dim != -1) {
@@ -133,7 +133,7 @@ std::vector<int>
   std::vector<int> results;
 
   for (int x = 1;; x *= 2) {
-    for (int i = 0; i < input_tensors.size(); ++i) {
+    for (size_t i = 0; i < input_tensors.size(); ++i) {
       if (forloop_dim[i] == -1) {
         continue;
       }

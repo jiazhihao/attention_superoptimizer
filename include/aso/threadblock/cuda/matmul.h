@@ -446,7 +446,9 @@ public:
                                       half_t,
                                       layout::RowMajor,
                                       layout::ColumnMajor>;
-    assert(A.is_row_major() && B.is_column_major() && "Layouts: mismatch between inputs and Executor.");
+    assert(A.layout == STensor::ROW_MAJOR &&
+           B.layout == STensor::COLUMN_MAJOR &&
+           "Layouts: mismatch between inputs and Executor.");
     half_t *A_ptr = (half_t *)(smem_buffer + A.smem_offset);
     half_t *B_ptr = (half_t *)(smem_buffer + B.smem_offset);
     half_t *C_ptr = (half_t *)(smem_buffer + C.smem_offset);

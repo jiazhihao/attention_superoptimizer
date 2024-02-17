@@ -103,11 +103,8 @@ void KernelGraphGenerator::generate_threadblock_graphs(
           c.existing_op_hash.insert(hash);
           c.output_degree[op1]++;
           c.output_degree[op2]++;
-          generate_threadblock_graphs(c,
-                                      ng,
-                                      output_patterns,
-                                      result_graphs,
-                                      result_output_patterns);
+          generate_threadblock_graphs(
+              c, ng, output_patterns, result_graphs, result_output_patterns);
           c.algebraic_pattern.erase(output);
           c.existing_op_hash.erase(hash);
           c.output_degree[op1]--;
@@ -157,11 +154,8 @@ void KernelGraphGenerator::generate_threadblock_graphs(
         c.algebraic_pattern.insert({output, pattern});
         c.existing_op_hash.insert(hash);
         c.output_degree[op]++;
-        generate_threadblock_graphs(c,
-                                    ng,
-                                    output_patterns,
-                                    result_graphs,
-                                    result_output_patterns);
+        generate_threadblock_graphs(
+            c, ng, output_patterns, result_graphs, result_output_patterns);
         c.algebraic_pattern.erase(output);
         c.existing_op_hash.erase(hash);
         c.output_degree[op]--;
@@ -173,13 +167,14 @@ void KernelGraphGenerator::generate_threadblock_graphs(
         }
 
         STensor input = op->output_tensors[0];
-        auto pattern = std::make_shared<Red>(g.forloop_range, c.algebraic_pattern.at(input));
+        auto pattern = std::make_shared<Red>(g.forloop_range,
+                                             c.algebraic_pattern.at(input));
         if (!pattern->subpattern_to(*final_pattern)) {
           continue;
         }
 
         threadblock::Graph ng = g;
-        for (int3 output_map : {int3{0, 1, -1}, int3{1, 0 -1}}) {
+        for (int3 output_map : {int3{0, 1, -1}, int3{1, 0 - 1}}) {
           threadblock::TBOperator *new_op =
               ng.create_output_op(input, output_map);
           if (!new_op) {
@@ -189,11 +184,8 @@ void KernelGraphGenerator::generate_threadblock_graphs(
 
           output_patterns.push_back(pattern);
           c.output_degree[op]++;
-          generate_threadblock_graphs(c,
-                                      ng,
-                                      output_patterns,
-                                      result_graphs,
-                                      result_output_patterns);
+          generate_threadblock_graphs(
+              c, ng, output_patterns, result_graphs, result_output_patterns);
           output_patterns.pop_back();
           c.output_degree[op]--;
         }
@@ -349,7 +341,7 @@ void KernelGraphGenerator::generate_next_kernel(
                 SearchContext<TBOperator, STensor> nc;
                 threadblock::Graph ng(grid_dim, block_dim, forloop_range);
 
-                for (int i = 0; i < input_tensors.size(); ++i) {
+                for (size_t i = 0; i < input_tensors.size(); ++i) {
                   DTensor tensor = input_tensors[i];
                   STensor output =
                       ng.new_input(tensor, input_map[i], forloop_dim[i]);
@@ -360,12 +352,11 @@ void KernelGraphGenerator::generate_next_kernel(
                 std::vector<threadblock::Graph> tbgs;
                 std::vector<std::vector<std::shared_ptr<AlgebraicPattern>>>
                     output_patterns;
-                generate_threadblock_graphs(
-                    nc, ng, {}, tbgs, output_patterns);
+                generate_threadblock_graphs(nc, ng, {}, tbgs, output_patterns);
 
                 assert(tbgs.size() == output_patterns.size());
 
-                for (int i = 0; i < tbgs.size(); ++i) {
+                for (size_t i = 0; i < tbgs.size(); ++i) {
                   threadblock::Graph const &tbg = tbgs[i];
                   kernel::Graph ng = g;
                   kernel::KNOperator *new_op =
@@ -376,7 +367,7 @@ void KernelGraphGenerator::generate_next_kernel(
                   ng.operators.push_back(new_op);
                   std::vector<DTensor> outputs = new_op->output_tensors;
                   assert(outputs.size() == output_patterns[i].size());
-                  for (int j = 0; j < outputs.size(); ++j) {
+                  for (size_t j = 0; j < outputs.size(); ++j) {
                     c.algebraic_pattern.insert(
                         {outputs[i], output_patterns[i][j]});
                     c.existing_op_hash.insert(hash);
@@ -467,6 +458,7 @@ std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> pattern_eval(
         assert(false && "Unsupported computation graph operator");
     }
   }
+  return patterns;
 }
 
 } // namespace search

@@ -70,7 +70,7 @@ public:
         int idx = i * num_threads + thread_id;
         if (idx < num_elements) {
           FPType input = ptr[idx];
-          FPType p_residual = input % FP_P;
+          // FPType p_residual = input % FP_P;
           FPType q_residual = input % FP_Q;
           ptr[idx] = exp_lookup_table[q_residual] * FP_Q;
         }
