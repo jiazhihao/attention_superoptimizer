@@ -126,31 +126,14 @@ struct STensor {
     return num_elements * data_type_size;
   }
 
-  CUTLASS_HOST_DEVICE
-  bool is_column_major() const {
-    if (num_dims != 2) {
-      return false;
-    }
-    if (stride[0] > 1) {
-      return false;
-    }
-    assert(stride[0] == 1 && stride[1] == dim[0]);
-    return true;
-  }
-
-  CUTLASS_HOST_DEVICE
-  bool is_row_major() const {
-    if (num_dims != 2) {
-      return false;
-    }
-    if (stride[1] > 1) {
-      return false;
-    }
-    assert(stride[1] == 1 && stride[0] == dim[1]);
-    return true;
-  }
-
+  enum STensorLayout {
+    ROW_MAJOR,
+    COLUMN_MAJOR,
+    ROW_MAJOR_TENSOROP_MULTIPLICAND,
+    COLUMN_MAJOR_TENSOROP_MULTIPLICAND,
+  };
   aso::type::DataType data_type;
+  STensorLayout layout;
   int num_dims;
   int dim[MAX_TENSOR_DIMS];
   int stride[MAX_TENSOR_DIMS];

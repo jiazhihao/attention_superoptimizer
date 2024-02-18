@@ -76,10 +76,10 @@ CUTLASS_DEVICE T warp_uniform(T value) {
 }
 
 template <typename T>
-CUTLASS_DEVICE T* warp_uniform(T* ptr) {
+CUTLASS_DEVICE T *warp_uniform(T *ptr) {
   struct {
     union {
-      T* ptr;
+      T *ptr;
       uint32_t asInt[2];
     };
   } p;

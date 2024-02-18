@@ -1,7 +1,7 @@
 #pragma once
 
-#include <memory>
 #include "z3++.h"
+#include <memory>
 
 namespace aso {
 namespace search {

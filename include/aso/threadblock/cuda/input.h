@@ -128,7 +128,7 @@ public:
     assert(dtensor.stride[1] == 1);
     assert(dtensor.stride[0] == dtensor.dim[1]);
     MatrixCoord extent({dtensor.dim[0], dtensor.dim[1]});
-    if (stensor.is_row_major()) {
+    if (stensor.layout == STensor::ROW_MAJOR) {
       if (stensor.dim[0] == 64 && stensor.dim[1] == 64) {
         int const kRow = 64;
         int const kColumn = 64;
@@ -144,7 +144,7 @@ public:
             threadblock_offset);
         loader.execute_kernel();
       }
-    } else if (stensor.is_column_major()) {
+    } else {
       assert(false && "To be implemented");
     }
   }

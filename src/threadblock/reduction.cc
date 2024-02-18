@@ -32,7 +32,7 @@ TBOperator *Graph::create_reduction_op(STensor const &input, int dim) {
 
   STensor output = input;
   assert(output.num_dims > dim);
-  assert(output.is_row_major());
+  assert(output.layout == STensor::ROW_MAJOR);
   output.dim[dim] = 1;
   for (int i = output.num_dims - 1; i >= 0; i--) {
     output.stride[i] = (i == output.num_dims - 1)
@@ -54,7 +54,7 @@ TBReductionOp::TBReductionOp(Graph *bgraph, STensor const &input, int dim)
   this->op_type = type;
   STensor output = input;
   assert(output.num_dims > reduce_dim);
-  assert(output.is_row_major());
+  assert(output.layout == STensor::ROW_MAJOR);
   output.dim[reduce_dim] = 1;
   for (int i = output.num_dims - 1; i >= 0; i--) {
     output.stride[i] = (i == output.num_dims - 1)

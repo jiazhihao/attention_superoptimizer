@@ -174,8 +174,8 @@ __global__ void
               params.smem_outputs[smem_output_idx];
           // Assert inline
           assert(input.smem_offset == output.smem_offset);
-          cutlass::half_t *input_ptr =
-              (cutlass::half_t *)(smem_buffer + input.smem_offset);
+          // cutlass::half_t *input_ptr =
+          //     (cutlass::half_t *)(smem_buffer + input.smem_offset);
           aso::threadblock::TBElementUnaryFingerPrinter fp(
               params.operator_types[op],
               exp_lookup_table /*lookup_table*/,
@@ -249,6 +249,7 @@ bool KNCustomizedOp::fingerprint(void) {
                                      smem_size>>>(params,
                                                   dmm->exp_lookup_table);
   checkCUDA(cudaDeviceSynchronize());
+  return true;
 }
 
 } // namespace kernel

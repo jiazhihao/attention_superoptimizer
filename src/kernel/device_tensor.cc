@@ -22,6 +22,7 @@ namespace kernel {
 
 DTensor::DTensor() {
   data_type = aso::type::DT_UNKNOWN;
+  layout = ROW_MAJOR;
   num_dims = 0;
   for (int i = 0; i < MAX_TENSOR_DIMS; i++) {
     dim[i] = 0;
