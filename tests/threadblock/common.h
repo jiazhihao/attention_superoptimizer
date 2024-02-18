@@ -6,7 +6,8 @@
 #include "cutlass/util/tensor_view_io.h"
 #include <random>
 
-// All functions in this file is for convenience and assumes there is only 1 threadblock.
+// All functions in this file is for convenience and assumes there is only 1
+// threadblock.
 
 namespace aso {
 namespace threadblock {
@@ -16,8 +17,10 @@ inline Graph create_single_graph(unsigned int num_threads) {
 }
 
 template <typename Element, typename Layout>
-inline STensor allocate_stensor(Graph &bgraph, cutlass::HostTensor<Element, Layout> const &host_tensor) {
-static_assert(std::is_same_v<Element, cutlass::half_t>, "Only f16.");
+inline STensor
+    allocate_stensor(Graph &bgraph,
+                     cutlass::HostTensor<Element, Layout> const &host_tensor) {
+  static_assert(std::is_same_v<Element, cutlass::half_t>, "Only f16.");
   STensor tensor;
   tensor.num_dims = Layout::kRank;
   tensor.data_type = type::DT_FLOAT16;
@@ -31,7 +34,8 @@ static_assert(std::is_same_v<Element, cutlass::half_t>, "Only f16.");
   }
   for (int i = 0; i < tensor.num_dims; i++) {
     tensor.dim[i] = host_tensor.extent()[i];
-    tensor.stride[i] = i == contig_dim ? 1 : host_tensor.stride(i - (i > contig_dim));
+    tensor.stride[i] =
+        i == contig_dim ? 1 : host_tensor.stride(i - (i > contig_dim));
   }
   tensor.owner_op = nullptr;
   tensor.owner_ts_idx = -1;
@@ -40,7 +44,9 @@ static_assert(std::is_same_v<Element, cutlass::half_t>, "Only f16.");
 }
 
 CUTLASS_DEVICE
-void copy_global_to_shared(char *smem_buffer, STensor const &tensor, void *g_ptr_) {
+void copy_global_to_shared(char *smem_buffer,
+                           STensor const &tensor,
+                           void *g_ptr_) {
   // Only the first thread copies. TODO: make all threads copy.
   if (cutlass::thread0()) {
     char *s_ptr = smem_buffer + tensor.smem_offset;
@@ -53,7 +59,9 @@ void copy_global_to_shared(char *smem_buffer, STensor const &tensor, void *g_ptr
   __syncthreads();
 }
 CUTLASS_DEVICE
-void copy_shared_to_global(char *smem_buffer, STensor const &tensor, void *g_ptr_) {
+void copy_shared_to_global(char *smem_buffer,
+                           STensor const &tensor,
+                           void *g_ptr_) {
   if (cutlass::thread0()) {
     char *s_ptr = smem_buffer + tensor.smem_offset;
     char *g_ptr = reinterpret_cast<char *>(g_ptr_);
@@ -65,7 +73,8 @@ void copy_shared_to_global(char *smem_buffer, STensor const &tensor, void *g_ptr
 }
 
 template <typename Element, typename Layout>
-void random_fill_tensor(cutlass::HostTensor<Element, Layout> &host_tensor, size_t seed) {
+void random_fill_tensor(cutlass::HostTensor<Element, Layout> &host_tensor,
+                        size_t seed) {
   std::mt19937_64 gen(seed);
   std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
   size_t size = host_tensor.size();

@@ -96,30 +96,12 @@ struct DTensor {
     size_t data_type_size = sizeof(FPType);
     return num_elements() * data_type_size;
   }
-
-  inline bool is_column_major() const {
-    if (num_dims != 2) {
-      return false;
-    }
-    if (stride[0] > 1) {
-      return false;
-    }
-    assert(stride[0] == 1 && stride[1] == dim[0]);
-    return true;
-  }
-
-  inline bool is_row_major() const {
-    if (num_dims != 2) {
-      return false;
-    }
-    if (stride[1] > 1) {
-      return false;
-    }
-    assert(stride[1] == 1 && stride[0] == dim[1]);
-    return true;
-  }
-
+  enum DTensorLayout {
+    ROW_MAJOR,
+    COLUMN_MAJOR,
+  };
   aso::type::DataType data_type;
+  DTensorLayout layout;
   int num_dims;
   int dim[MAX_TENSOR_DIMS];
   int stride[MAX_TENSOR_DIMS];

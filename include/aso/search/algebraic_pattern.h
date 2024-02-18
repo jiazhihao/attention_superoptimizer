@@ -1,8 +1,8 @@
 #pragma once
 
+#include "z3++.h"
 #include <memory>
 #include <unordered_set>
-#include "z3++.h"
 
 namespace aso {
 namespace search {

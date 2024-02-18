@@ -74,11 +74,19 @@ bool AlgebraicPattern::subpattern_to(AlgebraicPattern const &other) const {
   s.add(forall(x, subpattern(x, exp(x))));
   s.add(forall(x, i, subpattern(x, red(i, x))));
 
+<<<<<<< HEAD
   s.add(forall(x, x == red(0, x)));
   s.add(forall(x, i1, i2, red(i1, red(i2, x)) == red(i1 + i2, x)));
   s.add(forall(to_expr_vector(c, {x, y, i, i1, i2}),
                red(i, add(red(i1, x), red(i2, y))) ==
                    add(red(i + i1, x), red(i + i2, y))));
+=======
+  s.add(forall(x, x == red(1, x)));
+  s.add(forall(x, i1, i2, red(i1, red(i2, x)) == red(i1 * i2, x)));
+  s.add(forall(to_expr_vector(c, {x, y, i, i1, i2}),
+               red(i, add(red(i1, x), red(i2, y))) ==
+                   add(red(i * i1, x), red(i * i2, y))));
+>>>>>>> upstream/main
   s.add(forall(x, y, i, red(i, mul(x, y)) == mul(red(i, x), y)));
   s.add(forall(x, y, i, red(i, div(x, y)) == div(red(i, x), y)));
 
@@ -157,8 +165,13 @@ std::string Exp::to_string() const {
   return "e^" + exponent->to_string();
 }
 
+<<<<<<< HEAD
 Red::Red(int red_deg, std::shared_ptr<AlgebraicPattern> summand)
     : red_deg_log(std::ceil(std::log2(red_deg))), summand(summand) {}
+=======
+Red::Red(int k, std::shared_ptr<AlgebraicPattern> summand)
+    : k(k), summand(summand) {}
+>>>>>>> upstream/main
 
 z3::expr Red::to_z3(z3::context &c) const {
   z3::sort P = c.uninterpreted_sort("P");

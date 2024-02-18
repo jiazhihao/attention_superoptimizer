@@ -490,11 +490,14 @@ std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> pattern_eval(
     }
   }
   return patterns;
+<<<<<<< HEAD
 }
 
 bool verify(kernel::Graph const &g) {
   assert(false && "TBD");
   return true;
+=======
+>>>>>>> upstream/main
 }
 
 } // namespace search

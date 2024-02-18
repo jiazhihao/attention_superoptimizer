@@ -119,17 +119,20 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
 endif()
 
-# GTest
-enable_testing()
-find_package(GTest)
-if(NOT GTest_FOUND)
-  include(FetchContent)
-  FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
-  )
-  FetchContent_MakeAvailable(googletest)
-endif()
-include_directories(${GTEST_INCLUDE_DIRS})
+option(ASO_BUILD_UNIT_TEST "build unit tests" OFF)
 
-add_subdirectory(tests)
+# GTest
+if (ASO_BUILD_UNIT_TEST)
+  enable_testing()
+  find_package(GTest)
+  if(NOT GTest_FOUND)
+    include(FetchContent)
+    FetchContent_Declare(
+      googletest
+      URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+    )
+    FetchContent_MakeAvailable(googletest)
+  endif()
+  include_directories(${GTEST_INCLUDE_DIRS})
+  add_subdirectory(tests)
+endif()
