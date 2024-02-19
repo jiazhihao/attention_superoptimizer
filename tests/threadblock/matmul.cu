@@ -47,7 +47,8 @@ TEST(threadblock_tests, matmul) {
 
   random_fill_tensor(A, 'A');
   random_fill_tensor(B, 'B');
-  random_fill_tensor(C_ours, 'C');
+  // random_fill_tensor(C_ours, 'C');
+  zero_fill_tensor(C_ours);
 
   // Copy C_ours into C_ref because we do accumulation.
   cutlass::device_memory::copy_device_to_device(
@@ -60,6 +61,8 @@ TEST(threadblock_tests, matmul) {
   int smem_size = 48 * 1024; // 48 KB
   launch_matmul_kernel<<<bgraph.grid_dim, bgraph.block_dim, smem_size>>>(
       A_s, A.device_data(), B_s, B.device_data(), C_s, C_ours.device_data());
+
+  cudaDeviceSynchronize();
 
   A.sync_host();
   B.sync_host();
@@ -77,15 +80,19 @@ TEST(threadblock_tests, matmul) {
   gemm_ref(
       {m, n, k}, 1.0_hf, A.host_ref(), B.host_ref(), 1.0_hf, C_ref.host_ref());
 
-  if (!cutlass::reference::host::TensorEquals(C_ref.host_view(),
-                                              C_ours.host_view())) {
+  if (!cutlass::reference::host::TensorRelativelyEquals(
+          C_ref.host_view(), C_ours.host_view(), 0.2_hf, 0.1_hf)) {
     char const *filename = "errors_matmul.csv";
     std::cerr << "Error - Our kernel differs from reference. Wrote computed "
                  "and reference results to '"
               << filename << "'" << std::endl;
     std::ofstream file(filename);
+    // file << "\n\nA =\n" << A.host_view() << std::endl;
+    // file << "\n\nB =\n" << B.host_view() << std::endl;
     file << "\n\nOurs =\n" << C_ours.host_view() << std::endl;
     file << "\n\nReference =\n" << C_ref.host_view() << std::endl;
+    file.close();
+    ASSERT_TRUE(false && "Our kernel differs from reference");
   }
 }
 
