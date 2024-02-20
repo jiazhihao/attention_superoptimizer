@@ -461,5 +461,9 @@ std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> pattern_eval(
   return patterns;
 }
 
+bool verify(kernel::Graph const &g) {
+  assert(false && "TBD");
+  return true;
+}
 } // namespace search
 } // namespace aso

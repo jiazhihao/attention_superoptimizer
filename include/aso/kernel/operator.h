@@ -37,6 +37,8 @@ public:
   aso::type::KNOperatorType op_type;
   std::vector<DTensor> input_tensors;
   std::vector<DTensor> output_tensors;
+
+  virtual operator json() const = 0;
 };
 
 class KNInputOp : public KNOperator {
@@ -45,6 +47,8 @@ public:
   ~KNInputOp();
   bool profile(ProfileResult &profile);
   bool fingerprint(void);
+
+  operator json() const override;
 };
 
 } // namespace kernel

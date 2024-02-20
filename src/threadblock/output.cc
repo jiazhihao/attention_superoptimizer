@@ -70,5 +70,12 @@ TBOutputOp::TBOutputOp(Graph *_graph, STensor const &stensor, int3 _output_map)
 
 TBOutputOp::~TBOutputOp() {}
 
+TBOutputOp::operator json() const {
+  return json{{"op_type", op_type},
+              {"input_tensors", input_tensors},
+              {"output_tensors", output_tensors},
+              {"dtensor", dtensor},
+              {"output_map", output_map}};
+}
 } // namespace threadblock
 } // namespace aso

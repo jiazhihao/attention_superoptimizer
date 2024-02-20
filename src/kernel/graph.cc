@@ -28,5 +28,13 @@ size_t Graph::pair_hash::operator()(std::pair<int, int> const &p) const {
   return h1;
 }
 
+Graph::operator json() const {
+  json j;
+  for (KNOperator* const op : operators) {
+    j.push_back(json(*op));
+  }
+  return j;
+}
+
 } // namespace kernel
 } // namespace aso

@@ -223,5 +223,9 @@ KNCustomizedOp::~KNCustomizedOp() {
   }
 }
 
+KNCustomizedOp::operator json() const {
+  return bgraph;
+}
+
 } // namespace kernel
 } // namespace aso

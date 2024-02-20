@@ -38,6 +38,8 @@ public:
              std::vector<STensor> const &inputs);
   ~TBOperator();
 
+  virtual operator json() const = 0;
+
 public:
   Graph *bgraph;
   aso::type::TBOperatorType op_type;
@@ -53,6 +55,8 @@ public:
             int forloop_dim);
   ~TBInputOp();
 
+  operator json() const override;
+
 public:
   aso::kernel::DTensor dtensor;
   int3 input_map;
@@ -63,6 +67,8 @@ class TBOutputOp : public TBOperator {
 public:
   TBOutputOp(Graph *_graph, STensor const &stensor, int3 output_map);
   ~TBOutputOp();
+
+  operator json() const override;
 
 public:
   aso::kernel::DTensor dtensor;

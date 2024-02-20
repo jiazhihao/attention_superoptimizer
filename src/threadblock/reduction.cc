@@ -71,5 +71,11 @@ TBReductionOp::~TBReductionOp() {
   bgraph->free(output_tensors[0]);
 }
 
+TBReductionOp::operator json() const {
+  return json{{"op_type", op_type},
+              {"input_tensors", input_tensors},
+              {"output_tensors", output_tensors},
+              {"reduce_dim", reduce_dim}};
+}
 } // namespace threadblock
 } // namespace aso

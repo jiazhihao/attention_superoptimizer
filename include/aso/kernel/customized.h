@@ -36,6 +36,8 @@ public:
   void run(void);
   bool fingerprint(void);
 
+  operator json() const override;
+
 public:
   aso::threadblock::ExecutionPlan plan;
   aso::threadblock::Graph bgraph;

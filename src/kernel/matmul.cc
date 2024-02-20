@@ -83,6 +83,12 @@ KNMatmulOp::~KNMatmulOp() {
   }
 }
 
+KNMatmulOp::operator json() const {
+  return json{{"op_type", op_type},
+              {"input_tensors", input_tensors},
+              {"output_tensors", output_tensors}};
+}
+
 MatmulKey::MatmulKey(DTensor const &A, DTensor const &B)
     : operand_a(A), operand_b(B) {}
 
