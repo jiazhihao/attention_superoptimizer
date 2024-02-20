@@ -500,5 +500,9 @@ bool verify(kernel::Graph const &g) {
 >>>>>>> upstream/main
 }
 
+bool verify(kernel::Graph const &g) {
+  assert(false && "TBD");
+  return true;
+}
 } // namespace search
 } // namespace aso

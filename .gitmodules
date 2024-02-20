@@ -4,3 +4,6 @@
 [submodule "deps/z3"]
 	path = deps/z3
 	url = https://github.com/Z3Prover/z3.git
+[submodule "deps/json"]
+	path = deps/json
+	url = https://github.com/nlohmann/json.git

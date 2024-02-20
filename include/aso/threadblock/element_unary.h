@@ -28,6 +28,8 @@ public:
                    STensor const &_input,
                    aso::type::TBOperatorType _type);
   ~TBElementUnaryOp();
+
+  operator json() const override;
 };
 
 } // namespace threadblock
