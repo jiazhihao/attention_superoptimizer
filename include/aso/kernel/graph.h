@@ -55,6 +55,8 @@ public:
   // std::unordered_map<std::pair<int, int>, std::pair<int, int>, pair_hash>
   // edges; std::vector<std::vector<SrcEdge>> edges;
   // aso::kernel::OperatorFactory *operator_factory;
+
+  operator json() const;
 };
 
 } // namespace kernel

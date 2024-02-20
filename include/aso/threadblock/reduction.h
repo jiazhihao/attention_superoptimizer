@@ -27,6 +27,8 @@ public:
   TBReductionOp(Graph *graph, STensor const &_input, int reduce_dim);
   ~TBReductionOp();
 
+  operator json() const override;
+
 public:
   int reduce_dim;
 };

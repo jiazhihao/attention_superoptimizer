@@ -90,6 +90,8 @@ public:
 
   KernelParams get_kernel_params();
 
+  operator json() const;
+
 public:
   dim3 grid_dim, block_dim;
   int forloop_range;

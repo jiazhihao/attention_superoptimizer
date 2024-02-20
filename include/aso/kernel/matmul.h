@@ -26,6 +26,8 @@ public:
   ~KNMatmulOp();
   bool profile(ProfileResult &profile);
   bool fingerprint(void);
+  
+  operator json() const override;
 };
 
 class MatmulKey {

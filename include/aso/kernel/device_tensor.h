@@ -16,6 +16,7 @@
 #pragma once
 
 #include "aso/type.h"
+#include "aso/utils/json_utils.h"
 #include <cstddef>
 #include <functional>
 
@@ -113,6 +114,9 @@ struct DTensor {
   // pointer to fingerprint
   aso::type::FPType *fp_ptr;
 };
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
+    DTensor, data_type, layout, num_dims, dim, stride)
 
 } // namespace kernel
 } // namespace aso

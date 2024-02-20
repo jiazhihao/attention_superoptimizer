@@ -51,5 +51,11 @@ TBElementUnaryOp::~TBElementUnaryOp() {
   bgraph->free(output_tensors);
 }
 
+TBElementUnaryOp::operator json() const {
+  return json{{"op_type", op_type},
+              {"input_tensors", input_tensors},
+              {"output_tensors", output_tensors}};
+}
+
 } // namespace threadblock
 } // namespace aso

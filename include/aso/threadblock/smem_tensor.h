@@ -16,6 +16,7 @@
 #pragma once
 
 #include "aso/type.h"
+#include "aso/utils/json_utils.h"
 #include "cutlass/cutlass.h"
 #include <cstddef>
 #include <functional>
@@ -142,6 +143,9 @@ struct STensor {
   int owner_ts_idx;
   off_t smem_offset;
 };
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
+    STensor, data_type, layout, num_dims, dim, stride)
 
 } // namespace threadblock
 } // namespace aso

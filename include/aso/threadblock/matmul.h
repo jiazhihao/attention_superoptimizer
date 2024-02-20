@@ -24,6 +24,8 @@ class TBMatmulOp : public aso::threadblock::TBOperator {
 public:
   TBMatmulOp(Graph *_graph, STensor const &A, STensor const &B);
   ~TBMatmulOp();
+
+  operator json() const override;
 };
 
 } // namespace threadblock

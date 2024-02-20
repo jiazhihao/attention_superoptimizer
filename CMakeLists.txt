@@ -83,6 +83,9 @@ include_directories(${Z3_CXX_INCLUDE_DIRS})
 #target_link_libraries(aso_runtime PUBLIC ${Z3_LIBRARIES})
 list(APPEND ASO_LINK_LIBS ${Z3_LIBRARIES})
 
+add_subdirectory(deps/json)
+list(APPEND ASO_LINK_LIBS nlohmann_json::nlohmann_json)
+
 #add_subdirectory(deps/z3 z3 EXCLUDE_FROM_ALL)
 #include_directories(deps/z3/src/api/c++)
 #include_directories(deps/z3/src/api)

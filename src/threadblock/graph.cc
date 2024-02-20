@@ -90,5 +90,17 @@ KernelParams Graph::get_kernel_params() {
   return params;
 }
 
+Graph::operator json() const {
+  json j = {{"grid_dim", grid_dim},
+            {"block_dim", block_dim},
+            {"forloop_range", forloop_range},
+            {"operators", {}},
+            {"smem_offset", smem_offset}};
+  for (TBOperator *const op : operators) {
+    j["operators"].push_back(*op);
+  }
+  return j;
+}
+
 } // namespace threadblock
 } // namespace aso
