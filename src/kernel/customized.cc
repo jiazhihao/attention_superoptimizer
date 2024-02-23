@@ -68,10 +68,14 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
       bgraph(_plan.grid_dim, _plan.block_dim, _plan.forloop_range) {
   assert(_inputs.size() == plan.input_map.size());
   assert(plan.forloop_dim.size() == plan.input_map.size());
+  assert(plan.input_smem_layouts.size() == plan.input_map.size());
   // Step 1: computing input shapes
   // Step 1: creating a stensor for each input
   for (size_t i = 0; i < input_tensors.size(); i++) {
-    bgraph.new_input(input_tensors[i], plan.input_map[i], plan.forloop_dim[i]);
+    bgraph.new_input(input_tensors[i],
+                     plan.input_map[i],
+                     plan.forloop_dim[i],
+                     plan.input_smem_layouts[i]);
   }
 
   auto const &ops = plan.ops;
@@ -171,8 +175,10 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         assert(my_inputs.size() == 0);
         aso::threadblock::TBInputOp *input_op =
             static_cast<aso::threadblock::TBInputOp *>(op);
-        bgraph.new_input(
-            input_op->dtensor, input_op->input_map, input_op->forloop_dim);
+        bgraph.new_input(input_op->dtensor,
+                         input_op->input_map,
+                         input_op->forloop_dim,
+                         input_op->smem_layout);
         plan.input_map.push_back(input_op->input_map);
         plan.forloop_dim.push_back(input_op->forloop_dim);
         break;

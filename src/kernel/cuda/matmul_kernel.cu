@@ -51,20 +51,20 @@ bool KNMatmulOp::profile(ProfileResult &result) {
   cublasComputeType_t compute_type = CUBLAS_COMPUTE_16F;
   cublasOperation_t trans_A = CUBLAS_OP_N;
   cublasOperation_t trans_B = CUBLAS_OP_N;
-  if (input_tensors[0].layout == DTensor::COLUMN_MAJOR) {
+  if (input_tensors[0].layout == DTensor::ColumnMajor) {
     trans_A = CUBLAS_OP_T;
   } else {
-    assert(input_tensors[0].layout == DTensor::ROW_MAJOR);
+    assert(input_tensors[0].layout == DTensor::RowMajor);
   }
-  if (input_tensors[1].layout == DTensor::COLUMN_MAJOR) {
+  if (input_tensors[1].layout == DTensor::ColumnMajor) {
     trans_B = CUBLAS_OP_T;
   } else {
-    assert(input_tensors[1].layout == DTensor::ROW_MAJOR);
+    assert(input_tensors[1].layout == DTensor::RowMajor);
   }
   // Currently assume C must be in row major;
-  assert(output_tensors[0].layout == DTensor::ROW_MAJOR);
-  int lda = input_tensors[0].layout == DTensor::ROW_MAJOR ? row_A : column_A;
-  int ldb = input_tensors[1].layout == DTensor::ROW_MAJOR ? row_B : column_B;
+  assert(output_tensors[0].layout == DTensor::RowMajor);
+  int lda = input_tensors[0].layout == DTensor::RowMajor ? row_A : column_A;
+  int ldb = input_tensors[1].layout == DTensor::RowMajor ? row_B : column_B;
   int ldc = row_C;
 
   checkCUDA(cudaDeviceSynchronize());

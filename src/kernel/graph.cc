@@ -30,7 +30,7 @@ size_t Graph::pair_hash::operator()(std::pair<int, int> const &p) const {
 
 Graph::operator json() const {
   json j;
-  for (KNOperator* const op : operators) {
+  for (KNOperator *const op : operators) {
     j.push_back(json(*op));
   }
   return j;

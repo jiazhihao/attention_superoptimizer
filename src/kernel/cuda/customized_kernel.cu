@@ -16,7 +16,7 @@
 #include "aso/kernel/customized.h"
 #include "aso/kernel/device_memory_manager.h"
 #include "aso/threadblock/cuda/element_unary.h"
-#include "aso/threadblock/cuda/input.h"
+#include "aso/threadblock/cuda/input_loader.h"
 #include "aso/threadblock/cuda/matmul.h"
 #include "aso/threadblock/cuda/reduction.h"
 #include "aso/threadblock/graph.h"
@@ -33,7 +33,7 @@ __global__ void
   // 1
   assert(blockDim.y == 1);
   assert(blockDim.z == 1);
-  if (threadIdx.x == 0) {
+  if (false && threadIdx.x == 0) {
     printf("threadIdx(%d) blockIdx(%d %d %d)\n",
            threadIdx.x,
            blockIdx.x,
@@ -126,7 +126,7 @@ __global__ void
   // 1
   assert(blockDim.y == 1);
   assert(blockDim.z == 1);
-  if (threadIdx.x == 0) {
+  if (false && threadIdx.x == 0) {
     printf("threadIdx(%d) blockIdx(%d %d %d)\n",
            threadIdx.x,
            blockIdx.x,
@@ -232,6 +232,7 @@ bool KNCustomizedOp::profile(ProfileResult &result) {
   checkCUDA(cudaEventSynchronize(events[1]));
   checkCUDA(cudaEventElapsedTime(&runtime_ms, events[0], events[1]));
   result.run_time = runtime_ms / 16;
+  printf("KNCustomizedOp: runtime(%.8lfms)\n", result.run_time);
   checkCUDA(cudaEventDestroy(events[0]));
   checkCUDA(cudaEventDestroy(events[1]));
   return true;

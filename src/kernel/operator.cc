@@ -103,7 +103,9 @@ bool KNInputOp::profile(ProfileResult &profile) {
 }
 
 KNInputOp::operator json() const {
-  return json{{"op_type", op_type}, {"input_tensors", input_tensors}, {"output_tensors", output_tensors}};
+  return json{{"op_type", op_type},
+              {"input_tensors", input_tensors},
+              {"output_tensors", output_tensors}};
 }
 
 } // namespace kernel

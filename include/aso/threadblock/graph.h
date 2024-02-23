@@ -48,9 +48,12 @@ public:
   std::vector<
       std::pair<aso::type::TBOperatorType, std::vector<std::pair<int, int>>>>
       ops;
+  // input-related fields
   std::vector<int3> input_map;
-  int3 output_map; // assume that all output must use the same map
   std::vector<int> forloop_dim;
+  std::vector<aso::threadblock::STensor::STensorLayout> input_smem_layouts;
+  // output-related fields
+  int3 output_map; // assume that all output must use the same map
   int forloop_range;
   dim3 grid_dim, block_dim;
 };
@@ -66,10 +69,12 @@ public:
   // input operator
   STensor new_input(aso::kernel::DTensor const &dtensor,
                     int3 input_map,
-                    int forloop_dim);
+                    int forloop_dim,
+                    aso::threadblock::STensor::STensorLayout layout);
   TBOperator *create_input_op(aso::kernel::DTensor const &dtensor,
                               int3 input_map,
-                              int forloop_dim);
+                              int forloop_dim,
+                              aso::threadblock::STensor::STensorLayout layout);
   // output operator
   aso::kernel::DTensor new_output(STensor const &stensor, int3 output_map);
   TBOperator *create_output_op(STensor const &stensor, int3 output_map);

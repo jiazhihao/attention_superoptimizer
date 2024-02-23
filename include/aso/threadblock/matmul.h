@@ -23,8 +23,8 @@ namespace threadblock {
 class TBMatmulOp : public aso::threadblock::TBOperator {
 public:
   TBMatmulOp(Graph *_graph, STensor const &A, STensor const &B);
+  static bool compitble_layouts(STensor const &A, STensor const &B);
   ~TBMatmulOp();
-
   operator json() const override;
 };
 

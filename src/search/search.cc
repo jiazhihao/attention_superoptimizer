@@ -343,8 +343,10 @@ void KernelGraphGenerator::generate_next_kernel(
 
                 for (size_t i = 0; i < input_tensors.size(); ++i) {
                   DTensor tensor = input_tensors[i];
-                  STensor output =
-                      ng.new_input(tensor, input_map[i], forloop_dim[i]);
+                  STensor output = ng.new_input(tensor,
+                                                input_map[i],
+                                                forloop_dim[i],
+                                                threadblock::STensor::RowMajor);
                   nc.algebraic_pattern.insert(
                       {output, c.algebraic_pattern.at(tensor)});
                 }

@@ -26,6 +26,9 @@
 #include "cutlass/transform/threadblock/predicated_tile_iterator.h"
 #include "cutlass/transform/threadblock/predicated_tile_iterator_2dthreadtile.h"
 #include "cutlass/transform/threadblock/predicated_vector_access_iterator.h"
+#include "cutlass/transform/threadblock/regular_tile_access_iterator_pitch_linear.h"
+#include "cutlass/transform/threadblock/regular_tile_access_iterator_tensor_op.h"
+#include "cutlass/transform/threadblock/regular_tile_access_iterator_tensor_op_sm80.h"
 #include "cutlass/transform/threadblock/vector_iterator.h"
 #include "cutlass/transform/warp/vector_fragment_iterator.h"
 
@@ -37,6 +40,7 @@
 #include "cutlass/gemm/threadblock/default_mma_core_sm70.h"
 #include "cutlass/gemm/threadblock/default_mma_core_sm75.h"
 #include "cutlass/gemm/threadblock/default_mma_core_sm80.h"
+#include "cutlass/gemm/warp/mma_tensor_op_tile_iterator.h"
 
 namespace aso {
 namespace threadblock {
@@ -463,7 +467,7 @@ public:
       ++warp_tile_iterator_A;
       ++warp_tile_iterator_B;
 
-      if (_lane_idx == 0) {
+      if (false && _lane_idx == 0) {
         printf("warp_idx(%d) warp_mma_k(%d) lane_idx(%d) got A = %f, B = %f\n",
                _warp_idx,
                warp_mma_k,
@@ -503,15 +507,18 @@ public:
     using InstructionShape = gemm::GemmShape<16, 8, 16>;
     // TODO: consider cutlass' RowMajorTensorOpMultiplicandCrosswise
     // layout
+    // using SmemLayoutA = layout::RowMajorTensorOpMultiplicandCrosswise<16,
+    // 32>; using SmemLayoutB =
+    // layout::ColumnMajorTensorOpMultiplicandCrosswise<16, 32>;
     using Executor = MatmulExecutorV2<WarpShape,
                                       InstructionShape,
                                       half_t,
                                       layout::RowMajor,
                                       layout::ColumnMajor,
                                       layout::RowMajor>;
-    assert(A.layout == STensor::ROW_MAJOR &&
-           B.layout == STensor::COLUMN_MAJOR &&
-           "Layouts: mismatch between inputs and Executor.");
+    // assert(A.layout == STensor::ROW_MAJOR &&
+    //        B.layout == STensor::COLUMN_MAJOR &&
+    //        "Layouts: mismatch between inputs and Executor.");
     half_t *A_ptr = (half_t *)(smem_buffer + A.smem_offset);
     half_t *B_ptr = (half_t *)(smem_buffer + B.smem_offset);
     half_t *C_ptr = (half_t *)(smem_buffer + C.smem_offset);

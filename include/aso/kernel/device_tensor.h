@@ -98,8 +98,8 @@ struct DTensor {
     return num_elements() * data_type_size;
   }
   enum DTensorLayout {
-    ROW_MAJOR,
-    COLUMN_MAJOR,
+    RowMajor,
+    ColumnMajor,
   };
   aso::type::DataType data_type;
   DTensorLayout layout;

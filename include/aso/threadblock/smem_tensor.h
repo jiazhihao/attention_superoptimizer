@@ -128,10 +128,14 @@ struct STensor {
   }
 
   enum STensorLayout {
-    ROW_MAJOR,
-    COLUMN_MAJOR,
-    ROW_MAJOR_TENSOROP_MULTIPLICAND,
-    COLUMN_MAJOR_TENSOROP_MULTIPLICAND,
+    RowMajor,
+    ColumnMajor,
+    RowMajorTensorOpMultiplicand_Crosswise16,
+    RowMajorTensorOpMultiplicand_Crosswise32,
+    RowMajorTensorOpMultiplicand_Crosswise64,
+    ColumnMajorTensorOpMultiplicand_Crosswise16,
+    ColumnMajorTensorOpMultiplicand_Crosswise32,
+    ColumnMajorTensorOpMultiplicand_Crosswise64,
   };
   aso::type::DataType data_type;
   STensorLayout layout;
