@@ -22,7 +22,7 @@ namespace threadblock {
 STensor Graph::new_input(aso::kernel::DTensor const &dtensor,
                          int3 input_map,
                          int forloop_dim,
-                         STensor::STensorLayout layout) {
+                         aso::layout::SmemLayout layout) {
   TBOperator *op = create_input_op(dtensor, input_map, forloop_dim, layout);
   assert(op != nullptr);
   operators.push_back(op);
@@ -32,7 +32,7 @@ STensor Graph::new_input(aso::kernel::DTensor const &dtensor,
 TBOperator *Graph::create_input_op(aso::kernel::DTensor const &dtensor,
                                    int3 input_map,
                                    int forloop_dim,
-                                   STensor::STensorLayout layout) {
+                                   aso::layout::SmemLayout layout) {
   STensor tensor;
   tensor.num_dims = dtensor.num_dims;
   tensor.data_type = dtensor.data_type;
@@ -86,9 +86,9 @@ TBInputOp::TBInputOp(Graph *_graph,
                      aso::kernel::DTensor const &_dtensor,
                      int3 _input_map,
                      int _forloop_dim,
-                     aso::threadblock::STensor::STensorLayout _layout)
+                     aso::layout::SmemLayout _layout)
     : TBOperator(_graph, aso::type::TB_INPUT_OP), dtensor(_dtensor),
-      input_map(_input_map), forloop_dim(_forloop_dim), smem_layout(_layout) {
+      input_map(_input_map), forloop_dim(_forloop_dim) {
   STensor tensor;
   tensor.layout = _layout;
   tensor.num_dims = dtensor.num_dims;

@@ -51,7 +51,7 @@ public:
   // input-related fields
   std::vector<int3> input_map;
   std::vector<int> forloop_dim;
-  std::vector<aso::threadblock::STensor::STensorLayout> input_smem_layouts;
+  std::vector<aso::layout::SmemLayout> input_smem_layouts;
   // output-related fields
   int3 output_map; // assume that all output must use the same map
   int forloop_range;
@@ -70,11 +70,11 @@ public:
   STensor new_input(aso::kernel::DTensor const &dtensor,
                     int3 input_map,
                     int forloop_dim,
-                    aso::threadblock::STensor::STensorLayout layout);
+                    aso::layout::SmemLayout layout);
   TBOperator *create_input_op(aso::kernel::DTensor const &dtensor,
                               int3 input_map,
                               int forloop_dim,
-                              aso::threadblock::STensor::STensorLayout layout);
+                              aso::layout::SmemLayout layout);
   // output operator
   aso::kernel::DTensor new_output(STensor const &stensor, int3 output_map);
   TBOperator *create_output_op(STensor const &stensor, int3 output_map);

@@ -26,6 +26,7 @@ namespace std {
 size_t hash<aso::threadblock::STensor>::operator()(
     aso::threadblock::STensor const &tensor) const {
   size_t ret = hash<int>()((tensor.data_type));
+  hash_combine(ret, tensor.layout);
   hash_combine(ret, tensor.num_dims);
   for (int i = 0; i < tensor.num_dims; i++) {
     hash_combine(ret, tensor.dim[i]);

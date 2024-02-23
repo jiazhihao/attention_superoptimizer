@@ -22,7 +22,7 @@ namespace kernel {
 
 DTensor::DTensor() {
   data_type = aso::type::DT_UNKNOWN;
-  layout = RowMajor;
+  layout = aso::layout::DmemUnknownLayout;
   num_dims = 0;
   for (int i = 0; i < MAX_TENSOR_DIMS; i++) {
     dim[i] = 0;
@@ -54,6 +54,7 @@ namespace std {
 size_t hash<aso::kernel::DTensor>::operator()(
     aso::kernel::DTensor const &tensor) const {
   size_t ret = hash<int>()((tensor.data_type));
+  hash_combine(ret, tensor.layout);
   hash_combine(ret, tensor.num_dims);
   for (int i = 0; i < tensor.num_dims; i++) {
     hash_combine(ret, tensor.dim[i]);

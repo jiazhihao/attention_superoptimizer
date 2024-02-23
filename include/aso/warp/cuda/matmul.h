@@ -55,10 +55,10 @@ public:
                                                InstructionShape,
                                                ElementType,
                                                WarpFragmentC,
-                                               layout::RowMajor>;
+                                               cutlass::layout::RowMajor>;
   // Create an epilogue
   // Iterator to store to shared-memory
-  using SmemAccumulatorLayout = layout::RowMajor;
+  using SmemAccumulatorLayout = cutlass::layout::RowMajor;
   using SmemIteratorD =
       typename epilogue::warp::TileIteratorTensorOp<WarpShape,
                                                     InstructionShape,

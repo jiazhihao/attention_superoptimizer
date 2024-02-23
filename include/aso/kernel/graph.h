@@ -35,9 +35,11 @@ public:
   Graph(void);
   // input operator
   DTensor new_input(std::vector<int> const &dims,
-                    aso::type::DataType data_type);
+                    aso::type::DataType data_type,
+                    aso::layout::DmemLayout layout);
   KNOperator *create_input_op(std::vector<int> const &dims,
-                              aso::type::DataType data_type);
+                              aso::type::DataType data_type,
+                              aso::layout::DmemLayout layout);
   // matmul operator
   DTensor matmul(DTensor const &A, DTensor const &B);
   KNOperator *create_matmul_op(DTensor const &A, DTensor const &B);

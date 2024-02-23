@@ -346,7 +346,7 @@ void KernelGraphGenerator::generate_next_kernel(
                   STensor output = ng.new_input(tensor,
                                                 input_map[i],
                                                 forloop_dim[i],
-                                                threadblock::STensor::RowMajor);
+                                                layout::SmemRowMajor);
                   nc.algebraic_pattern.insert(
                       {output, c.algebraic_pattern.at(tensor)});
                 }
@@ -403,7 +403,8 @@ void KernelGraphGenerator::generate_kernel_graphs() {
       DTensor output_tensor = op->output_tensors[0];
       DTensor input =
           g.new_input(to_dim_vector(output_tensor.num_dims, output_tensor.dim),
-                      output_tensor.data_type);
+                      output_tensor.data_type,
+                      layout::DmemRowMajor);
       c.algebraic_pattern.insert(
           {input, std::make_shared<Var>("v_" + std::to_string(opid))});
     }

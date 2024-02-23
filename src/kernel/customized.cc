@@ -178,7 +178,7 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         bgraph.new_input(input_op->dtensor,
                          input_op->input_map,
                          input_op->forloop_dim,
-                         input_op->smem_layout);
+                         input_op->output_tensors[0].layout);
         plan.input_map.push_back(input_op->input_map);
         plan.forloop_dim.push_back(input_op->forloop_dim);
         break;

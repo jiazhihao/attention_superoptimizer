@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "aso/layout.h"
 #include "aso/type.h"
 #include "aso/utils/json_utils.h"
 #include "cutlass/cutlass.h"
@@ -127,18 +128,8 @@ struct STensor {
     return num_elements * data_type_size;
   }
 
-  enum STensorLayout {
-    RowMajor,
-    ColumnMajor,
-    RowMajorTensorOpMultiplicand_Crosswise16,
-    RowMajorTensorOpMultiplicand_Crosswise32,
-    RowMajorTensorOpMultiplicand_Crosswise64,
-    ColumnMajorTensorOpMultiplicand_Crosswise16,
-    ColumnMajorTensorOpMultiplicand_Crosswise32,
-    ColumnMajorTensorOpMultiplicand_Crosswise64,
-  };
   aso::type::DataType data_type;
-  STensorLayout layout;
+  aso::layout::SmemLayout layout;
   int num_dims;
   int dim[MAX_TENSOR_DIMS];
   int stride[MAX_TENSOR_DIMS];

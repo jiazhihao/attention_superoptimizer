@@ -53,7 +53,7 @@ public:
             aso::kernel::DTensor const &dtensor,
             int3 input_map,
             int forloop_dim,
-            aso::threadblock::STensor::STensorLayout slayout);
+            aso::layout::SmemLayout layout);
   ~TBInputOp();
 
   operator json() const override;
@@ -62,7 +62,6 @@ public:
   aso::kernel::DTensor dtensor;
   int3 input_map;
   int forloop_dim;
-  STensor::STensorLayout smem_layout;
 };
 
 class TBOutputOp : public TBOperator {

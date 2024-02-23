@@ -5,9 +5,12 @@ using namespace aso;
 
 int main(int argc, char **argv) {
   kernel::Graph graph;
-  kernel::DTensor Q = graph.new_input({64, 4096}, aso::type::DT_FLOAT16);
-  kernel::DTensor K = graph.new_input({16384, 4096}, aso::type::DT_FLOAT16);
-  kernel::DTensor V = graph.new_input({16384, 4096}, aso::type::DT_FLOAT16);
+  kernel::DTensor Q =
+      graph.new_input({64, 4096}, type::DT_FLOAT16, layout::DmemRowMajor);
+  kernel::DTensor K =
+      graph.new_input({16384, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+  kernel::DTensor V =
+      graph.new_input({16384, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
 
   {
     threadblock::ExecutionPlan plan;
@@ -18,6 +21,11 @@ int main(int argc, char **argv) {
     plan.input_map.push_back({1, -1, -1});
     plan.input_map.push_back({1, 0, -1});
     plan.input_map.push_back({1, 0, -1});
+    plan.input_smem_layouts = {
+        layout::SmemRowMajorTensorOpMultiplicand_Crosswise64,
+        layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64,
+        layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64,
+    };
     plan.output_map = {1, 0, -1};
     plan.forloop_dim = {-1, 0, 0};
     plan.grid_dim = {64, 16, 1};
@@ -25,9 +33,9 @@ int main(int argc, char **argv) {
     plan.forloop_range = 16;
     graph.customized({Q, K, V}, plan);
   }
-  for (auto const &op : graph.operators) {
-    op->fingerprint();
-  }
+  // for (auto const &op : graph.operators) {
+  //   op->fingerprint();
+  // }
   ProfileResult result;
   graph.operators.back()->profile(result);
   return 0;

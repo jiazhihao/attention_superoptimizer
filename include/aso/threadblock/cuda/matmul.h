@@ -162,7 +162,7 @@ public:
                                                  ElementType,
                                                  LayoutB,
                                                  ElementType,
-                                                 layout::RowMajor,
+                                                 cutlass::layout::RowMajor,
                                                  arch::OpClassTensorOp,
                                                  2 /*kStages*/,
                                                  arch::OpMultiplyAdd>;
@@ -176,10 +176,10 @@ public:
                                                InstructionShape,
                                                ElementType,
                                                WarpFragmentC,
-                                               layout::RowMajor>;
+                                               cutlass::layout::RowMajor>;
   // Create an epilogue
   // Iterator to store to shared-memory
-  using SmemAccumulatorLayout = layout::RowMajor;
+  using SmemAccumulatorLayout = cutlass::layout::RowMajor;
   using SmemIteratorD =
       typename epilogue::warp::TileIteratorTensorOp<WarpShape,
                                                     InstructionShape,
@@ -513,9 +513,9 @@ public:
     using Executor = MatmulExecutorV2<WarpShape,
                                       InstructionShape,
                                       half_t,
-                                      layout::RowMajor,
-                                      layout::ColumnMajor,
-                                      layout::RowMajor>;
+                                      cutlass::layout::RowMajor,
+                                      cutlass::layout::ColumnMajor,
+                                      cutlass::layout::RowMajor>;
     // assert(A.layout == STensor::ROW_MAJOR &&
     //        B.layout == STensor::COLUMN_MAJOR &&
     //        "Layouts: mismatch between inputs and Executor.");

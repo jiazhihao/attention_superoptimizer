@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "aso/layout.h"
 #include "aso/type.h"
 #include "aso/utils/json_utils.h"
 #include <cstddef>
@@ -31,6 +32,9 @@ struct DTensor {
   DTensor(void);
   inline bool operator==(DTensor const &b) const {
     if (data_type != b.data_type) {
+      return false;
+    }
+    if (layout != b.layout) {
       return false;
     }
     if (num_dims != b.num_dims) {
@@ -55,6 +59,9 @@ struct DTensor {
   }
   inline bool operator!=(DTensor const &b) const {
     if (data_type != b.data_type) {
+      return true;
+    }
+    if (layout != b.layout) {
       return true;
     }
     if (num_dims != b.num_dims) {
@@ -97,12 +104,8 @@ struct DTensor {
     size_t data_type_size = sizeof(FPType);
     return num_elements() * data_type_size;
   }
-  enum DTensorLayout {
-    RowMajor,
-    ColumnMajor,
-  };
   aso::type::DataType data_type;
-  DTensorLayout layout;
+  aso::layout::DmemLayout layout;
   int num_dims;
   int dim[MAX_TENSOR_DIMS];
   int stride[MAX_TENSOR_DIMS];

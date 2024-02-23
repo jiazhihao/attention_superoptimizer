@@ -57,6 +57,7 @@ TBMatmulOp::TBMatmulOp(Graph *_graph, STensor const &A, STensor const &B)
   assert(B.num_dims == 2);
   // Currently only support row-major output
   // to be consistent with cutlass
+  C.layout = aso::layout::SmemRowMajor;
   C.num_dims = 2;
   C.dim[0] = A.dim[0];
   C.dim[1] = B.dim[1];
