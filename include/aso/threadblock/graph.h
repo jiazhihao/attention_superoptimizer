@@ -44,6 +44,8 @@ struct KernelParams {
   // mappings between input dtensors and stensors
   int3 input_map[MAX_NUM_DMEM_INPUTS];
   int forloop_dim[MAX_NUM_DMEM_INPUTS];
+  // mappings between output dtensors and their stensors
+  int3 output_map;
 };
 
 class ExecutionPlan {

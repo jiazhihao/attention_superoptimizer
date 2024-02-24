@@ -85,6 +85,7 @@ KernelParams Graph::get_kernel_params() {
     }
     if (operators[i]->op_type == aso::type::TB_OUTPUT_OP) {
       TBOutputOp *output_op = static_cast<TBOutputOp *>(operators[i]);
+      params.output_map = output_op->output_map;
       params.dmem_outputs[params.num_dmem_outputs++] = output_op->dtensor;
       assert(params.num_dmem_outputs <= KernelParams::MAX_NUM_DMEM_OUTPUTS);
     }

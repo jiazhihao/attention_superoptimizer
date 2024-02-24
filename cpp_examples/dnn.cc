@@ -21,9 +21,9 @@ int main(int argc, char **argv) {
     plan.input_map.push_back({1, 0, -1});
     plan.input_map.push_back({1, 0, -1});
     plan.input_smem_layouts = {
-        //layout::SmemRowMajor,
-        //layout::SmemColumnMajor,
-        //layout::SmemColumnMajor,
+        // layout::SmemRowMajor,
+        // layout::SmemColumnMajor,
+        // layout::SmemColumnMajor,
         layout::SmemRowMajorTensorOpMultiplicand_Crosswise64,
         layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64,
         layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64,
