@@ -11,7 +11,6 @@ int main(int argc, char **argv) {
       graph.new_input({16384, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
   kernel::DTensor V =
       graph.new_input({16384, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
-
   {
     threadblock::ExecutionPlan plan;
     plan.ops.push_back({aso::type::TB_MATMUL_OP, {{0, 0}, {1, 0}}});
@@ -22,6 +21,9 @@ int main(int argc, char **argv) {
     plan.input_map.push_back({1, 0, -1});
     plan.input_map.push_back({1, 0, -1});
     plan.input_smem_layouts = {
+        //layout::SmemRowMajor,
+        //layout::SmemColumnMajor,
+        //layout::SmemColumnMajor,
         layout::SmemRowMajorTensorOpMultiplicand_Crosswise64,
         layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64,
         layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64,
@@ -37,6 +39,8 @@ int main(int argc, char **argv) {
   //   op->fingerprint();
   // }
   ProfileResult result;
-  graph.operators.back()->profile(result);
+  for (auto const &op : graph.operators) {
+    op->profile(result);
+  }
   return 0;
 }

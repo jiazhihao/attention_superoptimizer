@@ -48,17 +48,44 @@ __global__ void
     for (int op = 0; op < params.num_operators; op++) {
       switch (params.operator_types[op]) {
         case aso::type::TB_INPUT_OP: {
+          int3 input_map = params.input_map[dmem_input_idx];
+          int forloop_dim = params.forloop_dim[dmem_input_idx];
+          aso::kernel::DTensor dtensor = params.dmem_inputs[dmem_input_idx];
+          aso::threadblock::STensor stensor =
+              params.smem_outputs[smem_output_idx];
+          assert(dtensor.num_dims == 2);
+          assert(stensor.num_dims == 2);
+          int3 row_stride = {input_map.x == 0 ? stensor.dim[0] : 0,
+                             input_map.y == 0 ? stensor.dim[0] : 0,
+                             input_map.z == 0 ? stensor.dim[0] : 0};
+          int3 column_stride = {input_map.x == 1 ? stensor.dim[1] : 0,
+                                input_map.y == 1 ? stensor.dim[1] : 0,
+                                input_map.z == 1 ? stensor.dim[1] : 0};
+          int tb_offset_row = blockIdx.x * row_stride.x +
+                              blockIdx.y * row_stride.y +
+                              blockIdx.z * row_stride.z;
+          int tb_offset_column = blockIdx.x * column_stride.x +
+                                 blockIdx.y * column_stride.y +
+                                 blockIdx.z * column_stride.z;
+          if (forloop_dim == 0) {
+            tb_offset_row += i * (dtensor.dim[0] / params.forloop_range);
+          }
+          if (forloop_dim == 1) {
+            tb_offset_column += i * (dtensor.dim[i] / params.forloop_range);
+          }
           // FIXME: use cutlass prologue for loading data into shared memory
           // examples/13_two_tensor_op_fusion/threadblock/
           // b2b_mma_pipelined_smem_accumulator.h prologue iterators
-          cutlass::MatrixCoord threadblock_offset = {0, 0};
-          aso::threadblock::GenericInputLoader loader(
-              smem_buffer,
-              params.dmem_inputs[dmem_input_idx++],
-              params.smem_outputs[smem_output_idx],
-              threadIdx.x,
-              blockDim.x,
-              threadblock_offset);
+          cutlass::MatrixCoord threadblock_offset = {tb_offset_row,
+                                                     tb_offset_column};
+          aso::threadblock::GenericInputLoader loader(smem_buffer,
+                                                      dtensor,
+                                                      stensor,
+                                                      threadIdx.x,
+                                                      blockDim.x,
+                                                      threadblock_offset);
+          __syncthreads();
+          dmem_input_idx++;
           break;
         }
         case aso::type::TB_OUTPUT_OP: {

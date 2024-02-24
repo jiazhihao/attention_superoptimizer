@@ -102,11 +102,6 @@ KNInputOp::~KNInputOp() {
   dmm->free(output_tensors[0]);
 }
 
-bool KNInputOp::profile(ProfileResult &profile) {
-  profile.run_time = 0.0f;
-  return true;
-}
-
 KNInputOp::operator json() const {
   return json{{"op_type", op_type},
               {"input_tensors", input_tensors},

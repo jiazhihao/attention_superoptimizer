@@ -41,6 +41,9 @@ struct KernelParams {
   int num_dmem_inputs, num_dmem_outputs;
   aso::kernel::DTensor dmem_inputs[MAX_NUM_DMEM_INPUTS];
   aso::kernel::DTensor dmem_outputs[MAX_NUM_DMEM_INPUTS];
+  // mappings between input dtensors and stensors
+  int3 input_map[MAX_NUM_DMEM_INPUTS];
+  int forloop_dim[MAX_NUM_DMEM_INPUTS];
 };
 
 class ExecutionPlan {

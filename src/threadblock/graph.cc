@@ -78,6 +78,8 @@ KernelParams Graph::get_kernel_params() {
     }
     if (operators[i]->op_type == aso::type::TB_INPUT_OP) {
       TBInputOp *input_op = static_cast<TBInputOp *>(operators[i]);
+      params.input_map[params.num_dmem_inputs] = input_op->input_map;
+      params.forloop_dim[params.num_dmem_inputs] = input_op->forloop_dim;
       params.dmem_inputs[params.num_dmem_inputs++] = input_op->dtensor;
       assert(params.num_dmem_inputs <= KernelParams::MAX_NUM_DMEM_INPUTS);
     }

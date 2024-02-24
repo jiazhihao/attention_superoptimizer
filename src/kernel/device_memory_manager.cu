@@ -25,14 +25,15 @@ DeviceMemoryManager *DeviceMemoryManager::singleton = nullptr;
 
 DeviceMemoryManager::DeviceMemoryManager() {
   // preallocate 10 GB of device memory
-  total_size = (size_t)10 * 1024 * 1024 * 1024;
+  total_size = (size_t)1 * 1024 * 1024 * 1024;
   offset = 0;
   checkCUDA(cudaMalloc(&base_ptr, total_size));
   checkCUDA(cublasCreate(&blas));
   checkCUDA(cublasSetMathMode(blas, CUBLAS_TENSOR_OP_MATH));
   // fingerprint related fields
   exp_lookup_table = (FPType *)base_ptr;
-  offset += sizeof(FPType) * FP_Q;
+  // make future tensors 16 bytes aligned
+  offset += (sizeof(FPType) * FP_Q + 15) / 16 * 16;
   // check PQ relations
   assert(FP_Q < FP_P);
   assert((FP_P - 1) % FP_Q == 0);
@@ -54,17 +55,23 @@ DeviceMemoryManager::~DeviceMemoryManager() {
 }
 
 bool DeviceMemoryManager::allocate(DTensor &tensor, bool allocate_fingerprint) {
+  // assert that the start of the tensor is 16 bytes aligned
+  assert(offset % 16 == 0);
   void *ret_ptr = base_ptr + offset;
-  offset += tensor.data_size();
+  size_t tensor_size = tensor.data_size();
+  // make tensor_size a multiplier of 16
+  tensor_size = (tensor_size + 15) / 16 * 16;
+  offset += tensor_size;
   tensor.data_ptr = ret_ptr;
-  allocated_tensors.push_back(std::make_pair(ret_ptr, tensor.data_size()));
+  allocated_tensors.push_back(std::make_pair(ret_ptr, tensor_size));
 
   if (allocate_fingerprint) {
     ret_ptr = base_ptr + offset;
-    offset += tensor.fingerprint_size();
+    size_t tensor_size = tensor.fingerprint_size();
+    tensor_size = (tensor_size + 15) / 16 * 16;
+    offset += tensor_size;
     tensor.fp_ptr = (aso::type::FPType *)ret_ptr;
-    allocated_tensors.push_back(
-        std::make_pair(ret_ptr, tensor.fingerprint_size()));
+    allocated_tensors.push_back(std::make_pair(ret_ptr, tensor_size));
   }
   // Assert that we haven't used more than what we pre-allocated
   assert(offset <= total_size);
