@@ -237,12 +237,12 @@ __global__ void
           // b2b_mma_pipelined_smem_accumulator.h prologue iterators
           cutlass::MatrixCoord threadblock_offset = {tb_offset_row,
                                                      tb_offset_column};
-          aso::threadblock::GenericInputLoader loader(smem_buffer,
-                                                      dtensor,
-                                                      stensor,
-                                                      threadIdx.x,
-                                                      blockDim.x,
-                                                      threadblock_offset);
+          aso::threadblock::TBInputLoaderFingerprinter fp(smem_buffer,
+                                                          dtensor,
+                                                          stensor,
+                                                          threadIdx.x,
+                                                          blockDim.x,
+                                                          threadblock_offset);
           __syncthreads();
           dmem_input_idx++;
           break;

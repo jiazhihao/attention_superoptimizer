@@ -545,23 +545,25 @@ public:
                         STensor const &C,
                         int thread_id,
                         int num_threads) {
+    // Note that we assume all tensors are in row-major layouts
+    // when computing fingerprints
     FPType *A_ptr = (FPType *)(smem_buffer + A.smem_offset);
     FPType *B_ptr = (FPType *)(smem_buffer + B.smem_offset);
     FPType *C_ptr = (FPType *)(smem_buffer + C.smem_offset);
-    int num_elements = C.size();
-    int kK = A.dim[1];
-    for (int i = 0; i < (num_elements + num_threads - 1) / num_threads; i++) {
+    int num_elements = (int)C.num_elements();
+    int c_column = C.dim[C.num_dims-1];
+    int a_column = A.dim[A.num_dims-1];
+    int b_column = B.dim[B.num_dims-1];
+    for (int i = thread_id; i < num_elements; i+= num_threads) {
       uint32_t result = 0;
-      int n = (i * num_threads + thread_id) / C.dim[1];
-      int m = (i * num_threads + thread_id) % C.dim[1];
-      if (n < C.dim[0]) {
-        for (int k = 0; k < kK; k++) {
-          uint32_t a_value = A_ptr[n * A.stride[0] + k * A.stride[1]];
-          uint32_t b_value = B_ptr[k * A.stride[0] + m * A.stride[1]];
-          result = (result + a_value * b_value) % FP_PQ;
-        }
+      int n = i / c_row;
+      int m = i % c_row;
+      for (int k = 0; k < a_column; k++) {
+        uint32_t a_value = A_ptr[n * a_column + k];
+        uint32_t b_value = B_ptr[k * b_column + m];
+        result = (result + a_value * b_value) % FP_PQ;
       }
-      C_ptr[n * C.stride[0] + m * C.stride[1]] = result;
+      C_ptr[i] = result;
     }
   }
 };

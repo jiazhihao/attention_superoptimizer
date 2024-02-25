@@ -128,6 +128,15 @@ struct STensor {
     return num_elements * data_type_size;
   }
 
+  CUTLASS_HOST_DEVICE
+  size_t num_elements() const {
+    size_t num_elements = 1;
+    for (int i = 0; i < num_dims; i++) {
+      num_elements *= dim[i];
+    }
+    return num_elements;
+  }
+
   aso::type::DataType data_type;
   aso::layout::SmemLayout layout;
   int num_dims;

@@ -331,5 +331,27 @@ public:
   }
 };
 
+class TBOutputSaverFingerprinter {
+public:
+  CUTLASS_DEVICE
+  TBOutputSaverFingerprinter(char *smem_buffer,
+                             aso::kernel::DTensor const &dtensor,
+                             aso::threadblock::STensor const &stensor,
+                             int thread_id,
+                             int num_threads,
+                             MatrixCoord threadblock_offset) {
+    aso::type::FPType* smem_ptr = (aso::type::FPType*)(stensor.smem_offset + smem_buffer);
+    int num_elements = (int)stensor.num_elements();
+    int smem_num_column = stensor.dim[stensor.num_dims-1];
+    int dmem_num_column = dtensor.dim[dtensor.num_dims-1];
+    for (int idx = thread_id; idx < num_elements; idx += num_threads) {
+      int dmem_row_idx = threadblock_offset.row() + idx / smem_num_column;
+      int dmem_column_idx = threadblock_offset.column() + idx % smem_num_column;
+      assert(dmem_column_idx < dmem_num_column);
+      dtensor.fp_ptr[dmem_row_idx * dmem_num_column + dmem_column_idx] = smem_ptr[idx];
+    }
+  }
+};
+
 } // namespace threadblock
 } // namespace aso

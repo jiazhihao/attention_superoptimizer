@@ -35,12 +35,12 @@ int main(int argc, char **argv) {
     plan.forloop_range = 16;
     graph.customized({Q, K, V}, plan);
   }
-  // for (auto const &op : graph.operators) {
-  //   op->fingerprint();
-  // }
-  ProfileResult result;
   for (auto const &op : graph.operators) {
-    op->profile(result);
+    op->fingerprint();
   }
+  //ProfileResult result;
+  //for (auto const &op : graph.operators) {
+  //  op->profile(result);
+  //}
   return 0;
 }
