@@ -63,17 +63,13 @@ public:
     // Assert inplace
     assert(input.smem_offset == output.smem_offset);
     FPType *ptr = (FPType *)(smem_buffer + input.smem_offset);
-    int num_elements = output.size();
-    int kIterations = (num_elements + num_threads - 1) / num_threads;
+    int num_elements = output.num_elements();
     if (type == aso::type::TB_EXP_OP) {
-      for (int i = 0; i < kIterations; i++) {
-        int idx = i * num_threads + thread_id;
-        if (idx < num_elements) {
-          FPType input = ptr[idx];
-          // FPType p_residual = input % FP_P;
-          FPType q_residual = input % FP_Q;
-          ptr[idx] = exp_lookup_table[q_residual] * FP_Q;
-        }
+      for (int i = thread_id; i < num_elements; i+= num_threads) {
+        FPType input = ptr[i];
+        // FPType p_residual = input % FP_P;
+        FPType q_residual = input % FP_Q;
+        ptr[i] = exp_lookup_table[q_residual] * FP_Q;
       }
     } else {
       assert(false && "Unimplemented");

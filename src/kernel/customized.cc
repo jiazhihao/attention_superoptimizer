@@ -136,6 +136,12 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         dtensor.owner_ts_idx = static_cast<int>(output_tensors.size());
         DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
         dmm->allocate(dtensor);
+        // Update dtensor saved by the output operator
+        {
+          assert(bgraph.operators.back()->op_type == aso::type::TB_OUTPUT_OP);
+          aso::threadblock::TBOutputOp *output = static_cast<aso::threadblock::TBOutputOp*>(bgraph.operators.back());
+          output->dtensor = dtensor;
+        }
         output_tensors.push_back(dtensor);
       }
     }

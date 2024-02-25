@@ -347,7 +347,7 @@ public:
                              int thread_id,
                              int num_threads,
                              MatrixCoord threadblock_offset) {
-    aso::type::FPType* smem_ptr = (aso::type::FPType*)(stensor.smem_offset + smem_buffer);
+    aso::type::FPType* smem_ptr = (aso::type::FPType*)(smem_buffer + stensor.smem_offset);
     int num_elements = (int)stensor.num_elements();
     int smem_num_column = stensor.dim[stensor.num_dims-1];
     int dmem_num_column = dtensor.dim[dtensor.num_dims-1];
@@ -356,6 +356,10 @@ public:
       int dmem_column_idx = threadblock_offset.column() + idx % smem_num_column;
       assert(dmem_column_idx < dmem_num_column);
       smem_ptr[idx] = dtensor.fp_ptr[dmem_row_idx * dmem_num_column + dmem_column_idx];
+      //if (thread_id == 0) {
+      //  printf("fp_ptr(%p) smem_offset(%d) idx(%d) blc(%d %d %d) val(%d) dmem_row_idx(%d) dmem_column_idx(%d) smem_num_column(%d) dmem_num_column(%d)\n",
+      //      dtensor.fp_ptr, (int)stensor.smem_offset, idx, blockIdx.x, blockIdx.y, blockIdx.z, (int)smem_ptr[idx], dmem_row_idx, dmem_column_idx, smem_num_column, dmem_num_column);
+      //}
     }
   }
 };

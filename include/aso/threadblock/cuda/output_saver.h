@@ -348,6 +348,10 @@ public:
       int dmem_row_idx = threadblock_offset.row() + idx / smem_num_column;
       int dmem_column_idx = threadblock_offset.column() + idx % smem_num_column;
       assert(dmem_column_idx < dmem_num_column);
+      //if (thread_id == 0) {
+      //  printf("output:fp_ptr(%p) idx(%d) blc(%d %d %d) val(%d) dmem_row_idx(%d) dmem_column_idx(%d) smem_num_column(%d) dmem_num_column(%d)\n",
+      //      dtensor.fp_ptr, idx, blockIdx.x, blockIdx.y, blockIdx.z, (int)smem_ptr[idx], dmem_row_idx, dmem_column_idx, smem_num_column, dmem_num_column);
+      //}
       dtensor.fp_ptr[dmem_row_idx * dmem_num_column + dmem_column_idx] = smem_ptr[idx];
     }
   }

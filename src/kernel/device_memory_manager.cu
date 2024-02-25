@@ -66,6 +66,7 @@ bool DeviceMemoryManager::allocate(DTensor &tensor, bool allocate_fingerprint) {
   allocated_tensors.push_back(std::make_pair(ret_ptr, tensor_size));
 
   if (allocate_fingerprint) {
+    assert(offset % 16 == 0);
     ret_ptr = base_ptr + offset;
     size_t tensor_size = tensor.fingerprint_size();
     tensor_size = (tensor_size + 15) / 16 * 16;

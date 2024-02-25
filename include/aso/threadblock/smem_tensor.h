@@ -40,7 +40,7 @@ struct STensor {
     }
     owner_op = nullptr;
     owner_ts_idx = -1000;
-    smem_offset = 0;
+    smem_offset = 128;
   }
 
   CUTLASS_HOST_DEVICE
@@ -145,7 +145,7 @@ struct STensor {
   // STensor fields
   TBOperator *owner_op;
   int owner_ts_idx;
-  off_t smem_offset;
+  int smem_offset;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(

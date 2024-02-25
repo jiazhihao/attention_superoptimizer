@@ -108,6 +108,7 @@ __global__ void
               thread_idx,
               warp_idx,
               lane_idx);
+          __syncthreads();
           break;
         }
         case aso::type::TB_EXP_OP: {
@@ -212,6 +213,9 @@ __global__ void
           aso::kernel::DTensor dtensor = params.dmem_inputs[dmem_input_idx];
           aso::threadblock::STensor stensor =
               params.smem_outputs[smem_output_idx];
+          if (threadIdx.x == 0 && blockIdx.x == 0 && blockIdx.y == 0) {
+            printf("op(%d) num_ops(%d) smem_output_idx(%d) stensor.smem_offset(%d)\n", op,params.num_operators, smem_output_idx, (int)stensor.smem_offset);
+          }
           assert(dtensor.num_dims == 2);
           assert(stensor.num_dims == 2);
           int3 row_stride = {input_map.x == 0 ? stensor.dim[0] : 0,
@@ -260,6 +264,7 @@ __global__ void
               params.smem_outputs[smem_output_idx],
               threadIdx.x,
               blockDim.x);
+          __syncthreads();
           break;
         }
         case aso::type::TB_EXP_OP: {
@@ -327,12 +332,12 @@ __global__ void
       // b2b_mma_pipelined_smem_accumulator.h prologue iterators
       cutlass::MatrixCoord threadblock_offset = {tb_offset_row,
                                                  tb_offset_column};
-      aso::threadblock::GenericOutputSaver saver(smem_buffer,
-                                                 dtensor,
-                                                 stensor,
-                                                 threadIdx.x,
-                                                 blockDim.x,
-                                                 threadblock_offset);
+      aso::threadblock::TBOutputSaverFingerprinter fp(smem_buffer,
+                                                   dtensor,
+                                                   stensor,
+                                                   threadIdx.x,
+                                                   blockDim.x,
+                                                   threadblock_offset);
       __syncthreads();
       dmem_output_idx++;
     }
@@ -373,6 +378,9 @@ bool KNCustomizedOp::profile(ProfileResult &result) {
 bool KNCustomizedOp::fingerprint(void) {
   int smem_size = 48 * 1024; // 48 KB
   aso::threadblock::KernelParams params = bgraph.get_kernel_params();
+  for (int i = 0; i < params.num_smem_outputs; i++) {
+    printf("params.smem_outputs[%d].smem_offset = %d\n", i, params.smem_outputs[i].smem_offset);
+  }
   assert(bgraph.smem_offset <= smem_size);
   aso::kernel::DeviceMemoryManager *dmm =
       aso::kernel::DeviceMemoryManager::get_instance();

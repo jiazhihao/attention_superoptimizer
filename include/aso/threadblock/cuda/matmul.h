@@ -556,12 +556,15 @@ public:
     int b_column = B.dim[B.num_dims-1];
     for (int i = thread_id; i < num_elements; i+= num_threads) {
       uint32_t result = 0;
-      int n = i / c_row;
-      int m = i % c_row;
+      int n = i / c_column;
+      int m = i % c_column;
       for (int k = 0; k < a_column; k++) {
         uint32_t a_value = A_ptr[n * a_column + k];
         uint32_t b_value = B_ptr[k * b_column + m];
         result = (result + a_value * b_value) % FP_PQ;
+        //if (thread_id == 0) {
+        //  printf("i(%d) block(%d %d %d) B.smem_offset(%d) result(%d) a_value(%d) b_value(%d) n(%d) m(%d) k(%d) a_column(%d) b_column(%d) c_column(%d)\n", i, blockIdx.x, blockIdx.y, blockIdx.z, (int)B.smem_offset, (int)result, (int)a_value, (int)b_value, n, m, k, a_column, b_column, c_column);
+        //}
       }
       C_ptr[i] = result;
     }

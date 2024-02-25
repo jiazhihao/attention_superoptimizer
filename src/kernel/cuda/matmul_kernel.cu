@@ -109,16 +109,12 @@ __global__ void compute_matmul_fingerprint(
   int col_idx = (threadIdx.x + blockIdx.x * blockDim.x) % n;
   if (row_idx < m) {
     uint32_t result = 0;
-    int A_stride_0 = A.stride[0];
-    int A_stride_1 = A.stride[1];
-    int B_stride_0 = B.stride[0];
-    int B_stride_1 = B.stride[1];
     for (int i = 0; i < k; i++) {
-      uint32_t A_value = A.fp_ptr[row_idx * A_stride_0 + k * A_stride_1];
-      uint32_t B_value = B.fp_ptr[k * B_stride_0 + col_idx * B_stride_1];
+      uint32_t A_value = A.fp_ptr[row_idx * k + i];
+      uint32_t B_value = B.fp_ptr[i * n + col_idx];
       result = (result + A_value * B_value) % FP_PQ;
     }
-    C.fp_ptr[row_idx * C.stride[0] + col_idx * C.stride[1]] = result;
+    C.fp_ptr[threadIdx.x + blockIdx.x * blockDim.x] = result;
   }
 }
 
