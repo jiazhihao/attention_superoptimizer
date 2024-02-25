@@ -567,9 +567,15 @@ public:
         uint32_t a_value = A_ptr[m * a_k_size + k];
         uint32_t b_value = B_ptr[k * b_n_size + n];
         result = (result + a_value * b_value) % FP_PQ;
-        //if (thread_id == 0) {
-        //  printf("i(%d) block(%d %d %d) B.smem_offset(%d) result(%d) a_value(%d) b_value(%d) n(%d) m(%d) k(%d) a_column(%d) b_column(%d) c_column(%d)\n", i, blockIdx.x, blockIdx.y, blockIdx.z, (int)B.smem_offset, (int)result, (int)a_value, (int)b_value, n, m, k, a_column, b_column, c_column);
-        //}
+        if (false && thread_id == 0) {
+          printf("i(%d) block(%d %d %d) result(%d) a_value(%d) b_value(%d)"
+                 "A.smem_offset(%d) B.smem_offset(%d) C.smem_offset(%d)"
+                 "n(%d) m(%d) k(%d) a_k_size(%d) b_n_size(%d) c_n_size(%d)\n",
+                 i, blockIdx.x, blockIdx.y, blockIdx.z,
+                 (int)result, (int)a_value, (int)b_value,
+                 A.smem_offset, B.smem_offset, C.smem_offset,
+                 n, m, k, a_k_size, b_n_size, c_n_size);
+        }
       }
       C_ptr[i] = result;
     } // for i

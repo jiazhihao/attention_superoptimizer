@@ -104,6 +104,8 @@ struct DTensor {
     size_t data_type_size = sizeof(FPType);
     return num_elements() * data_type_size;
   }
+
+  bool has_same_fingerprint(DTensor const& ref) const;
   aso::type::DataType data_type;
   aso::layout::DmemLayout layout;
   int num_dims;

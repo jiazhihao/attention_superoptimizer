@@ -33,9 +33,11 @@ TBOperator *Graph::create_output_op(STensor const &stensor, int3 output_map) {
 }
 
 TBOutputOp::TBOutputOp(Graph *_graph, STensor const &stensor, int3 _output_map)
-    : TBOperator(_graph, aso::type::TB_OUTPUT_OP), output_map(_output_map) {
+    : TBOperator(_graph, aso::type::TB_OUTPUT_OP, stensor), output_map(_output_map) {
   dtensor.num_dims = stensor.num_dims;
   dtensor.data_type = stensor.data_type;
+  // Currently assume that the output layouts are rowmajor
+  dtensor.layout = aso::layout::DmemRowMajor;
   for (int i = 0; i < dtensor.num_dims; i++) {
     dtensor.dim[i] = stensor.dim[i];
   }

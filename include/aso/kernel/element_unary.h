@@ -20,30 +20,16 @@
 namespace aso {
 namespace kernel {
 
-class KNMatmulOp : public aso::kernel::KNOperator {
+class KNElementUnaryOp : public aso::kernel::KNOperator {
 public:
-  KNMatmulOp(DTensor const &A, DTensor const &B);
-  ~KNMatmulOp();
+  KNElementUnaryOp(DTensor const &input, aso::type::KNOperatorType type);
+  ~KNElementUnaryOp();
   bool profile(ProfileResult &profile) override;
   bool fingerprint(void) override;
 
   operator json() const override;
 };
 
-class MatmulKey {
-public:
-  MatmulKey(DTensor const &A, DTensor const &B);
-  bool operator==(MatmulKey const &b) const;
-  DTensor operand_a;
-  DTensor operand_b;
-};
-
 } // namespace kernel
 } // namespace aso
 
-namespace std {
-template <>
-struct hash<aso::kernel::MatmulKey> {
-  size_t operator()(aso::kernel::MatmulKey const &) const;
-};
-} // namespace std

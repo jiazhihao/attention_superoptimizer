@@ -128,10 +128,11 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
           }
         }
       }
-      if (!found) {
+      if (!found && op->op_type != aso::type::TB_INPUT_OP) {
         // TODO: change output tensor_shape
         STensor stensor = op->output_tensors[i];
         DTensor dtensor = bgraph.new_output(stensor, plan.output_map);
+        printf("stensor.offset(%d)\n", stensor.smem_offset);
         dtensor.owner_op = this;
         dtensor.owner_ts_idx = static_cast<int>(output_tensors.size());
         DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();

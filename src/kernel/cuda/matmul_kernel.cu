@@ -122,6 +122,8 @@ __global__ void compute_matmul_fingerprint(
         uint32_t B_value = B_ptr[b * nk + i * n + col_idx];
         result = (result + A_value * B_value) % FP_PQ;
       }
+      if (threadIdx.x == 0)
+        printf("C[%d] = %d\n", b * mn + threadIdx.x + blockIdx.x * blockDim.x, result);
       C_ptr[b * mn + threadIdx.x + blockIdx.x * blockDim.x] = result;
     }
   }
@@ -152,6 +154,7 @@ bool KNMatmulOp::fingerprint(void) {
       row_C,
       column_C,
       row_B);
+  checkCUDA(cudaDeviceSynchronize());
   return true;
 }
 

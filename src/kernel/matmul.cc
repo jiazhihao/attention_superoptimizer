@@ -32,19 +32,23 @@ DTensor Graph::matmul(DTensor const &A, DTensor const &B) {
 }
 
 KNOperator *Graph::create_matmul_op(DTensor const &A, DTensor const &B) {
-  if (A.num_dims != 2 || B.num_dims != 2) {
+  if (A.num_dims != B.num_dims) {
     return nullptr;
   }
-  if (A.dim[1] != B.dim[0]) {
+  if (A.dim[A.num_dims-1] != B.dim[B.num_dims-2]) {
     return nullptr;
+  }
+  for (int i = 0; i < A.num_dims-2; i++) {
+    if (A.dim[i] != B.dim[i])
+      return nullptr;
   }
 
   DTensor C;
-  C.num_dims = 2;
-  C.dim[0] = A.dim[0];
-  C.dim[1] = B.dim[1];
-  //C.stride[0] = C.dim[1];
-  //C.stride[1] = 1;
+  C.num_dims = A.num_dims;
+  for (int i = 0; i < C.num_dims; i++) {
+    C.dim[i] = A.dim[i];
+  }
+  C.dim[C.num_dims-1] = B.dim[C.num_dims-1];
   C.data_type = A.data_type;
 
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
@@ -59,16 +63,19 @@ KNOperator *Graph::create_matmul_op(DTensor const &A, DTensor const &B) {
 KNMatmulOp::KNMatmulOp(DTensor const &A, DTensor const &B)
     : aso::kernel::KNOperator(aso::type::KN_MATMUL_OP, A, B) {
   DTensor C;
-  assert(A.num_dims == 2);
-  assert(B.num_dims == 2);
+  assert(A.num_dims == B.num_dims);
+  assert(A.dim[A.num_dims-1] == B.dim[B.num_dims-2]);
+  for (int i = 0; i < A.num_dims-2; i++) {
+    assert(A.dim[i] == B.dim[i]);
+  }
   // Currently only support row-major output
   // to be consistent with cutlass
-  C.num_dims = 2;
+  C.num_dims = A.num_dims;
+  for (int i = 0; i < C.num_dims; i++) {
+    C.dim[i] = A.dim[i];
+  }
+  C.dim[C.num_dims-1] = B.dim[C.num_dims-1];
   C.layout = aso::layout::DmemRowMajor;
-  C.dim[0] = A.dim[0];
-  C.dim[1] = B.dim[1];
-  //C.stride[0] = C.dim[1];
-  //C.stride[1] = 1;
   C.data_type = A.data_type;
   C.owner_op = this;
   C.owner_ts_idx = 0;

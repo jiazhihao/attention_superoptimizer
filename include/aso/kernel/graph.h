@@ -43,6 +43,10 @@ public:
   // matmul operator
   DTensor matmul(DTensor const &A, DTensor const &B);
   KNOperator *create_matmul_op(DTensor const &A, DTensor const &B);
+  // elementunary operator
+  DTensor exp(DTensor const &input);
+  KNOperator *create_elementunary_op(DTensor const &input,
+                                     aso::type::KNOperatorType _type);
   // customized operator
   std::vector<DTensor> customized(std::vector<DTensor> const &inputs,
                                   aso::threadblock::ExecutionPlan const &plan);

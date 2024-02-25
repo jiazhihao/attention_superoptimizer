@@ -93,12 +93,12 @@ public:
                       ElementType *smem_ptr,
                       MatrixCoord extent,
                       int thread_id,
-                      MatrixCoord threadblock_offset)
+                      MatrixCoord matrix_offset)
       : dmem_iterator(DmemLayout::packed(extent),
                       dmem_ptr,
                       extent,
                       thread_id,
-                      threadblock_offset),
+                      matrix_offset),
         smem_iterator({smem_ptr, SmemLayout::packed({kRow, kColumn})},
                       thread_id) {}
 
@@ -168,12 +168,12 @@ public:
                          ElementType *smem_ptr,
                          MatrixCoord extent,
                          int thread_id,
-                         MatrixCoord threadblock_offset)
+                         MatrixCoord matrix_offset)
       : dmem_iterator(DmemLayout::packed(extent),
                       dmem_ptr,
                       extent,
                       thread_id,
-                      threadblock_offset),
+                      matrix_offset),
         smem_iterator({smem_ptr, SmemLayout::packed({kRow, kColumn})},
                       thread_id) {}
 
@@ -198,7 +198,8 @@ public:
                     aso::threadblock::STensor const &stensor,
                     int thread_id,
                     int num_threads,
-                    MatrixCoord threadblock_offset) {
+                    MatrixCoord matrix_offset,
+                    int global_offset) {
     assert(stensor.dim[stensor.num_dims - 2] == kRow);
     assert(stensor.dim[stensor.num_dims - 1] == kColumn);
     // Currently only support half precision
@@ -219,11 +220,11 @@ public:
                                                   DmemLayout,
                                                   SmemLayout>;
           InputLoader loader(
-              (cutlass::half_t *)dtensor.data_ptr,
+              ((cutlass::half_t *)dtensor.data_ptr) + global_offset,
               (cutlass::half_t *)(stensor.smem_offset + smem_buffer),
               extent,
               thread_id,
-              threadblock_offset);
+              matrix_offset);
           loader.execute_kernel();
           break;
         }
@@ -239,11 +240,11 @@ public:
                                                   DmemLayout,
                                                   SmemLayout>;
           InputLoader loader(
-              (cutlass::half_t *)dtensor.data_ptr,
+              ((cutlass::half_t *)dtensor.data_ptr) + global_offset,
               (cutlass::half_t *)(stensor.smem_offset + smem_buffer),
               extent,
               thread_id,
-              threadblock_offset);
+              matrix_offset);
           loader.execute_kernel();
           break;
         }
@@ -265,11 +266,11 @@ public:
                                                      DmemLayout,
                                                      SmemLayout>;
           InputLoader loader(
-              (cutlass::half_t *)dtensor.data_ptr,
+              ((cutlass::half_t *)dtensor.data_ptr) + global_offset,
               (cutlass::half_t *)(stensor.smem_offset + smem_buffer),
               extent,
               thread_id,
-              threadblock_offset);
+              matrix_offset);
           loader.execute_kernel();
           break;
         }
@@ -285,11 +286,11 @@ public:
                                                      DmemLayout,
                                                      SmemLayout>;
           InputLoader loader(
-              (cutlass::half_t *)dtensor.data_ptr,
+              ((cutlass::half_t *)dtensor.data_ptr) + global_offset,
               (cutlass::half_t *)(stensor.smem_offset + smem_buffer),
               extent,
               thread_id,
-              threadblock_offset);
+              matrix_offset);
           loader.execute_kernel();
           break;
         }
@@ -310,7 +311,8 @@ public:
                      aso::threadblock::STensor const &stensor,
                      int thread_id,
                      int num_threads,
-                     MatrixCoord threadblock_offset) {
+                     MatrixCoord matrix_offset,
+                     int global_offset) {
     int kRow = stensor.dim[stensor.num_dims - 2];
     int kColumn = stensor.dim[stensor.num_dims - 1];
     if (kRow == 64 && kColumn == 64) {
@@ -319,21 +321,24 @@ public:
                                 stensor,
                                 thread_id,
                                 num_threads,
-                                threadblock_offset);
+                                matrix_offset,
+                                global_offset);
     } else if (kRow == 32 && kColumn == 64) {
       ShapedInputLoader<32, 64>(smem_buffer,
                                 dtensor,
                                 stensor,
                                 thread_id,
                                 num_threads,
-                                threadblock_offset);
+                                matrix_offset,
+                                global_offset);
     } else if (kRow == 64 && kColumn == 32) {
       ShapedInputLoader<64, 32>(smem_buffer,
                                 dtensor,
                                 stensor,
                                 thread_id,
                                 num_threads,
-                                threadblock_offset);
+                                matrix_offset,
+                                global_offset);
     }
   }
 };
@@ -346,16 +351,18 @@ public:
                              aso::threadblock::STensor const &stensor,
                              int thread_id,
                              int num_threads,
-                             MatrixCoord threadblock_offset) {
+                             MatrixCoord matrix_offset,
+                             int global_offset) {
     aso::type::FPType* smem_ptr = (aso::type::FPType*)(smem_buffer + stensor.smem_offset);
+    aso::type::FPType* dmem_ptr = dtensor.fp_ptr + global_offset;
     int num_elements = (int)stensor.num_elements();
     int smem_num_column = stensor.dim[stensor.num_dims-1];
     int dmem_num_column = dtensor.dim[dtensor.num_dims-1];
     for (int idx = thread_id; idx < num_elements; idx += num_threads) {
-      int dmem_row_idx = threadblock_offset.row() + idx / smem_num_column;
-      int dmem_column_idx = threadblock_offset.column() + idx % smem_num_column;
+      int dmem_row_idx = matrix_offset.row() + idx / smem_num_column;
+      int dmem_column_idx = matrix_offset.column() + idx % smem_num_column;
       assert(dmem_column_idx < dmem_num_column);
-      smem_ptr[idx] = dtensor.fp_ptr[dmem_row_idx * dmem_num_column + dmem_column_idx];
+      smem_ptr[idx] = dmem_ptr[dmem_row_idx * dmem_num_column + dmem_column_idx];
       //if (thread_id == 0) {
       //  printf("fp_ptr(%p) smem_offset(%d) idx(%d) blc(%d %d %d) val(%d) dmem_row_idx(%d) dmem_column_idx(%d) smem_num_column(%d) dmem_num_column(%d)\n",
       //      dtensor.fp_ptr, (int)stensor.smem_offset, idx, blockIdx.x, blockIdx.y, blockIdx.z, (int)smem_ptr[idx], dmem_row_idx, dmem_column_idx, smem_num_column, dmem_num_column);

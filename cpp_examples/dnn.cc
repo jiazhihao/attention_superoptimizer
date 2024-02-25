@@ -4,22 +4,34 @@
 using namespace aso;
 
 int main(int argc, char **argv) {
+  kernel::Graph ref_graph;
+  {
+    kernel::DTensor Q =
+      ref_graph.new_input({2, 64, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
+    kernel::DTensor K =
+      ref_graph.new_input({2, 64, 128}, type::DT_FLOAT16, layout::DmemColumnMajor);
+    kernel::DTensor A = ref_graph.matmul(Q, K);
+    ref_graph.exp(A);
+    for (const auto & op : ref_graph.operators) {
+      op->fingerprint();
+    }
+  }
   kernel::Graph graph;
   kernel::DTensor Q =
-      graph.new_input({64, 4096}, type::DT_FLOAT16, layout::DmemRowMajor);
+      graph.new_input({2, 64, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
   kernel::DTensor K =
-      graph.new_input({16384, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      graph.new_input({2, 64, 128}, type::DT_FLOAT16, layout::DmemColumnMajor);
   kernel::DTensor V =
-      graph.new_input({16384, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      graph.new_input({2, 128, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
   {
     threadblock::ExecutionPlan plan;
     plan.ops.push_back({aso::type::TB_MATMUL_OP, {{0, 0}, {1, 0}}});
     plan.ops.push_back({aso::type::TB_EXP_OP, {{3, 0}}});
-    plan.ops.push_back({aso::type::TB_MATMUL_OP, {{4, 0}, {2, 0}}});
-    plan.ops.push_back({aso::type::TB_REDUCTION_1_OP, {{4, 0}}});
-    plan.input_map.push_back({1, -1, -1});
-    plan.input_map.push_back({1, 0, -1});
-    plan.input_map.push_back({1, 0, -1});
+    //plan.ops.push_back({aso::type::TB_MATMUL_OP, {{4, 0}, {2, 0}}});
+    //plan.ops.push_back({aso::type::TB_REDUCTION_1_OP, {{4, 0}}});
+    plan.input_map.push_back({0, -1, -1});
+    plan.input_map.push_back({0, 2, -1});
+    plan.input_map.push_back({0, 1, -1});
     plan.input_smem_layouts = {
         // layout::SmemRowMajor,
         // layout::SmemColumnMajor,
@@ -28,16 +40,17 @@ int main(int argc, char **argv) {
         layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64,
         layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64,
     };
-    plan.output_map = {1, 0, -1};
-    plan.forloop_dim = {-1, 0, 0};
-    plan.grid_dim = {64, 16, 1};
+    plan.output_map = {0, 2, -1};
+    plan.forloop_dim = {-1, 2, 1};
+    plan.grid_dim = {2, 2, 1};
     plan.block_dim = {128, 1, 1};
-    plan.forloop_range = 16;
+    plan.forloop_range = 1;
     graph.customized({Q, K, V}, plan);
   }
   for (auto const &op : graph.operators) {
     op->fingerprint();
   }
+  assert(ref_graph.operators.back()->output_tensors[0].has_same_fingerprint(graph.operators.back()->output_tensors[0]));
   //ProfileResult result;
   //for (auto const &op : graph.operators) {
   //  op->profile(result);
