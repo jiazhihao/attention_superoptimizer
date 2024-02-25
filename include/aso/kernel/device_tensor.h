@@ -44,9 +44,9 @@ struct DTensor {
       if (dim[i] != b.dim[i]) {
         return false;
       }
-      if (stride[i] != b.stride[i]) {
-        return false;
-      }
+      //if (stride[i] != b.stride[i]) {
+      //  return false;
+      //}
     }
     if (owner_op != b.owner_op) {
       return false;
@@ -71,9 +71,9 @@ struct DTensor {
       if (dim[i] != b.dim[i]) {
         return true;
       }
-      if (stride[i] != b.stride[i]) {
-        return true;
-      }
+      //if (stride[i] != b.stride[i]) {
+      //  return true;
+      //}
     }
     if (owner_op != b.owner_op) {
       return true;
@@ -108,7 +108,7 @@ struct DTensor {
   aso::layout::DmemLayout layout;
   int num_dims;
   int dim[MAX_TENSOR_DIMS];
-  int stride[MAX_TENSOR_DIMS];
+  //int stride[MAX_TENSOR_DIMS];
   // DTensor fields
   KNOperator *owner_op;
   int owner_ts_idx;
@@ -119,7 +119,7 @@ struct DTensor {
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
-    DTensor, data_type, layout, num_dims, dim, stride)
+    DTensor, data_type, layout, num_dims, dim)
 
 } // namespace kernel
 } // namespace aso

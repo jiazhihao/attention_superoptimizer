@@ -61,11 +61,11 @@ TBOutputOp::TBOutputOp(Graph *_graph, STensor const &stensor, int3 _output_map)
     }
   }
 
-  for (int i = dtensor.num_dims - 1; i >= 0; i--) {
-    dtensor.stride[i] = (i == dtensor.num_dims - 1)
-                            ? 1
-                            : dtensor.stride[i + 1] * dtensor.dim[i + 1];
-  }
+  //for (int i = dtensor.num_dims - 1; i >= 0; i--) {
+  //  dtensor.stride[i] = (i == dtensor.num_dims - 1)
+  //                          ? 1
+  //                          : dtensor.stride[i + 1] * dtensor.dim[i + 1];
+  //}
 }
 
 TBOutputOp::~TBOutputOp() {}

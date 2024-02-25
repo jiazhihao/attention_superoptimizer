@@ -67,11 +67,10 @@ TBOperator *Graph::create_input_op(aso::kernel::DTensor const &dtensor,
     assert(tensor.dim[forloop_dim] % forloop_range == 0);
     tensor.dim[forloop_dim] /= forloop_range;
   }
-
-  for (int i = tensor.num_dims - 1; i >= 0; i--) {
-    tensor.stride[i] = (i == tensor.num_dims - 1)
-                           ? 1
-                           : tensor.stride[i + 1] * tensor.dim[i + 1];
+  // our data loader only supports 2D matrices
+  // (i.e., only the last two dims can be larger than 1
+  for (int i = 0; i < tensor.num_dims-2; i++) {
+    assert(tensor.dim[i] == 1);
   }
 
   if (smem_offset + (off_t)tensor.size() > (off_t)MAX_SMEM_SIZE) {
@@ -125,10 +124,9 @@ TBInputOp::TBInputOp(Graph *_graph,
     tensor.dim[forloop_dim] /= bgraph->forloop_range;
   }
 
-  for (int i = tensor.num_dims - 1; i >= 0; i--) {
-    tensor.stride[i] = (i == tensor.num_dims - 1)
-                           ? 1
-                           : tensor.stride[i + 1] * tensor.dim[i + 1];
+  // Our data loader only supports 2D matrices
+  for (int i = 0; i < tensor.num_dims-2; i++) {
+    assert(tensor.dim[i] == 1);
   }
   tensor.owner_op = this;
   tensor.owner_ts_idx = 0;

@@ -550,24 +550,29 @@ public:
     FPType *A_ptr = (FPType *)(smem_buffer + A.smem_offset);
     FPType *B_ptr = (FPType *)(smem_buffer + B.smem_offset);
     FPType *C_ptr = (FPType *)(smem_buffer + C.smem_offset);
+    int num_batches = 1;
+    for (int i = 0; i < C.num_dims-2; i++)
+      num_batches *= C.dim[i];
+    // Do not support batch matmul in TB
+    assert(num_batches == 1);
     int num_elements = (int)C.num_elements();
-    int c_column = C.dim[C.num_dims-1];
-    int a_column = A.dim[A.num_dims-1];
-    int b_column = B.dim[B.num_dims-1];
+    int c_n_size = C.dim[C.num_dims-1];
+    int a_k_size = A.dim[A.num_dims-1];
+    int b_n_size = B.dim[B.num_dims-1];
     for (int i = thread_id; i < num_elements; i+= num_threads) {
       uint32_t result = 0;
-      int n = i / c_column;
-      int m = i % c_column;
-      for (int k = 0; k < a_column; k++) {
-        uint32_t a_value = A_ptr[n * a_column + k];
-        uint32_t b_value = B_ptr[k * b_column + m];
+      int m = i / c_n_size;
+      int n = i % c_n_size;
+      for (int k = 0; k < a_k_size; k++) {
+        uint32_t a_value = A_ptr[m * a_k_size + k];
+        uint32_t b_value = B_ptr[k * b_n_size + n];
         result = (result + a_value * b_value) % FP_PQ;
         //if (thread_id == 0) {
         //  printf("i(%d) block(%d %d %d) B.smem_offset(%d) result(%d) a_value(%d) b_value(%d) n(%d) m(%d) k(%d) a_column(%d) b_column(%d) c_column(%d)\n", i, blockIdx.x, blockIdx.y, blockIdx.z, (int)B.smem_offset, (int)result, (int)a_value, (int)b_value, n, m, k, a_column, b_column, c_column);
         //}
       }
       C_ptr[i] = result;
-    }
+    } // for i
   }
 };
 

@@ -30,7 +30,7 @@ size_t hash<aso::threadblock::STensor>::operator()(
   hash_combine(ret, tensor.num_dims);
   for (int i = 0; i < tensor.num_dims; i++) {
     hash_combine(ret, tensor.dim[i]);
-    hash_combine(ret, tensor.stride[i]);
+    //hash_combine(ret, tensor.stride[i]);
   }
   hash_combine(ret, tensor.owner_op);
   hash_combine(ret, tensor.owner_ts_idx);

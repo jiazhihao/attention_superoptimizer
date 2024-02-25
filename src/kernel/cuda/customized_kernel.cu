@@ -54,25 +54,26 @@ __global__ void
           aso::kernel::DTensor dtensor = params.dmem_inputs[dmem_input_idx];
           aso::threadblock::STensor stensor =
               params.smem_outputs[smem_output_idx];
-          assert(dtensor.num_dims == 2);
-          assert(stensor.num_dims == 2);
-          int3 row_stride = {input_map.x == 0 ? stensor.dim[0] : 0,
-                             input_map.y == 0 ? stensor.dim[0] : 0,
-                             input_map.z == 0 ? stensor.dim[0] : 0};
-          int3 column_stride = {input_map.x == 1 ? stensor.dim[1] : 0,
-                                input_map.y == 1 ? stensor.dim[1] : 0,
-                                input_map.z == 1 ? stensor.dim[1] : 0};
+          //assert(dtensor.num_dims == 2);
+          //assert(stensor.num_dims == 2);
+          int num_dims = stensor.num_dims;
+          int3 row_stride = {input_map.x == num_dims-2 ? stensor.dim[num_dims-2] : 0,
+                             input_map.y == num_dims-2 ? stensor.dim[num_dims-2] : 0,
+                             input_map.z == num_dims-2 ? stensor.dim[num_dims-2] : 0};
+          int3 column_stride = {input_map.x == num_dims-1 ? stensor.dim[num_dims-1] : 0,
+                                input_map.y == num_dims-1 ? stensor.dim[num_dims-1] : 0,
+                                input_map.z == num_dims-1 ? stensor.dim[num_dims-1] : 0};
           int tb_offset_row = blockIdx.x * row_stride.x +
                               blockIdx.y * row_stride.y +
                               blockIdx.z * row_stride.z;
           int tb_offset_column = blockIdx.x * column_stride.x +
                                  blockIdx.y * column_stride.y +
                                  blockIdx.z * column_stride.z;
-          if (forloop_dim == 0) {
-            tb_offset_row += i * (dtensor.dim[0] / params.forloop_range);
+          if (forloop_dim == num_dims-2) {
+            tb_offset_row += i * (dtensor.dim[num_dims-2] / params.forloop_range);
           }
-          if (forloop_dim == 1) {
-            tb_offset_column += i * (dtensor.dim[i] / params.forloop_range);
+          if (forloop_dim == num_dims-1) {
+            tb_offset_column += i * (dtensor.dim[num_dims-1] / params.forloop_range);
           }
           // FIXME: use cutlass prologue for loading data into shared memory
           // examples/13_two_tensor_op_fusion/threadblock/
@@ -152,16 +153,18 @@ __global__ void
       int3 output_map = params.output_map;
       aso::kernel::DTensor dtensor = params.dmem_outputs[dmem_output_idx];
       aso::threadblock::STensor stensor = params.smem_outputs[smem_input_idx];
-      assert(dtensor.num_dims == 2);
-      assert(stensor.num_dims == 2);
-      int3 row_stride = {output_map.x == 0 ? stensor.dim[0] : 0,
-                         output_map.y == 0 ? stensor.dim[0] : 0,
-                         output_map.z == 0 ? stensor.dim[0] : 0};
-      int3 column_stride = {output_map.x == 1 ? stensor.dim[1] : 0,
-                            output_map.y == 1 ? stensor.dim[1] : 0,
-                            output_map.z == 1 ? stensor.dim[1] : 0};
+      //assert(dtensor.num_dims == 2);
+      //assert(stensor.num_dims == 2);
+      int num_dims = stensor.num_dims;
+      int3 row_stride = {output_map.x == num_dims-2 ? stensor.dim[num_dims-2] : 0,
+                         output_map.y == num_dims-2 ? stensor.dim[num_dims-2] : 0,
+                         output_map.z == num_dims-2 ? stensor.dim[num_dims-2] : 0};
+      int3 column_stride = {output_map.x == num_dims-1 ? stensor.dim[num_dims-1] : 0,
+                            output_map.y == num_dims-1 ? stensor.dim[num_dims-1] : 0,
+                            output_map.z == num_dims-1 ? stensor.dim[num_dims-1] : 0};
       int tb_offset_row = blockIdx.x * row_stride.x +
-                          blockIdx.y * row_stride.y + blockIdx.z * row_stride.z;
+                          blockIdx.y * row_stride.y +
+                          blockIdx.z * row_stride.z;
       int tb_offset_column = blockIdx.x * column_stride.x +
                              blockIdx.y * column_stride.y +
                              blockIdx.z * column_stride.z;
@@ -216,25 +219,26 @@ __global__ void
           if (threadIdx.x == 0 && blockIdx.x == 0 && blockIdx.y == 0) {
             printf("op(%d) num_ops(%d) smem_output_idx(%d) stensor.smem_offset(%d)\n", op,params.num_operators, smem_output_idx, (int)stensor.smem_offset);
           }
-          assert(dtensor.num_dims == 2);
-          assert(stensor.num_dims == 2);
-          int3 row_stride = {input_map.x == 0 ? stensor.dim[0] : 0,
-                             input_map.y == 0 ? stensor.dim[0] : 0,
-                             input_map.z == 0 ? stensor.dim[0] : 0};
-          int3 column_stride = {input_map.x == 1 ? stensor.dim[1] : 0,
-                                input_map.y == 1 ? stensor.dim[1] : 0,
-                                input_map.z == 1 ? stensor.dim[1] : 0};
+          //assert(dtensor.num_dims == 2);
+          //assert(stensor.num_dims == 2);
+          int num_dims = stensor.num_dims;
+          int3 row_stride = {input_map.x == num_dims-2 ? stensor.dim[num_dims-2] : 0,
+                             input_map.y == num_dims-2 ? stensor.dim[num_dims-2] : 0,
+                             input_map.z == num_dims-2 ? stensor.dim[num_dims-2] : 0};
+          int3 column_stride = {input_map.x == num_dims-1 ? stensor.dim[num_dims-1] : 0,
+                                input_map.y == num_dims-1 ? stensor.dim[num_dims-1] : 0,
+                                input_map.z == num_dims-1 ? stensor.dim[num_dims-1] : 0};
           int tb_offset_row = blockIdx.x * row_stride.x +
                               blockIdx.y * row_stride.y +
                               blockIdx.z * row_stride.z;
           int tb_offset_column = blockIdx.x * column_stride.x +
                                  blockIdx.y * column_stride.y +
                                  blockIdx.z * column_stride.z;
-          if (forloop_dim == 0) {
-            tb_offset_row += i * (dtensor.dim[0] / params.forloop_range);
+          if (forloop_dim == num_dims-2) {
+            tb_offset_row += i * (dtensor.dim[num_dims-2] / params.forloop_range);
           }
-          if (forloop_dim == 1) {
-            tb_offset_column += i * (dtensor.dim[i] / params.forloop_range);
+          if (forloop_dim == num_dims-1) {
+            tb_offset_column += i * (dtensor.dim[num_dims-1] / params.forloop_range);
           }
           // FIXME: use cutlass prologue for loading data into shared memory
           // examples/13_two_tensor_op_fusion/threadblock/
@@ -314,16 +318,18 @@ __global__ void
       int3 output_map = params.output_map;
       aso::kernel::DTensor dtensor = params.dmem_outputs[dmem_output_idx];
       aso::threadblock::STensor stensor = params.smem_outputs[smem_input_idx];
-      assert(dtensor.num_dims == 2);
-      assert(stensor.num_dims == 2);
-      int3 row_stride = {output_map.x == 0 ? stensor.dim[0] : 0,
-                         output_map.y == 0 ? stensor.dim[0] : 0,
-                         output_map.z == 0 ? stensor.dim[0] : 0};
-      int3 column_stride = {output_map.x == 1 ? stensor.dim[1] : 0,
-                            output_map.y == 1 ? stensor.dim[1] : 0,
-                            output_map.z == 1 ? stensor.dim[1] : 0};
+      //assert(dtensor.num_dims == 2);
+      //assert(stensor.num_dims == 2);
+      int num_dims = stensor.num_dims;
+      int3 row_stride = {output_map.x == num_dims-2 ? stensor.dim[num_dims-2] : 0,
+                         output_map.y == num_dims-2 ? stensor.dim[num_dims-2] : 0,
+                         output_map.z == num_dims-2 ? stensor.dim[num_dims-2] : 0};
+      int3 column_stride = {output_map.x == num_dims-1 ? stensor.dim[num_dims-1] : 0,
+                            output_map.y == num_dims-1 ? stensor.dim[num_dims-1] : 0,
+                            output_map.z == num_dims-1 ? stensor.dim[num_dims-1] : 0};
       int tb_offset_row = blockIdx.x * row_stride.x +
-                          blockIdx.y * row_stride.y + blockIdx.z * row_stride.z;
+                          blockIdx.y * row_stride.y +
+                          blockIdx.z * row_stride.z;
       int tb_offset_column = blockIdx.x * column_stride.x +
                              blockIdx.y * column_stride.y +
                              blockIdx.z * column_stride.z;

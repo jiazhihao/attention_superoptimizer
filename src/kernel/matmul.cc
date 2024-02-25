@@ -16,6 +16,7 @@
 #include "aso/kernel/matmul.h"
 #include "aso/kernel/device_memory_manager.h"
 #include "aso/kernel/graph.h"
+#include "aso/layout.h"
 #include "aso/utils/hash_utils.h"
 #include <cassert>
 
@@ -42,8 +43,8 @@ KNOperator *Graph::create_matmul_op(DTensor const &A, DTensor const &B) {
   C.num_dims = 2;
   C.dim[0] = A.dim[0];
   C.dim[1] = B.dim[1];
-  C.stride[0] = C.dim[1];
-  C.stride[1] = 1;
+  //C.stride[0] = C.dim[1];
+  //C.stride[1] = 1;
   C.data_type = A.data_type;
 
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
@@ -63,10 +64,11 @@ KNMatmulOp::KNMatmulOp(DTensor const &A, DTensor const &B)
   // Currently only support row-major output
   // to be consistent with cutlass
   C.num_dims = 2;
+  C.layout = aso::layout::DmemRowMajor;
   C.dim[0] = A.dim[0];
   C.dim[1] = B.dim[1];
-  C.stride[0] = C.dim[1];
-  C.stride[1] = 1;
+  //C.stride[0] = C.dim[1];
+  //C.stride[1] = 1;
   C.data_type = A.data_type;
   C.owner_op = this;
   C.owner_ts_idx = 0;
