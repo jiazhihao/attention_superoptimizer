@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/element_unary.h"
+#include "aso/kernel/reduction.h"
 #include "aso/kernel/device_memory_manager.h"
 #include "aso/kernel/graph.h"
 #include "aso/layout.h"
@@ -23,8 +23,12 @@
 namespace aso {
 namespace kernel {
 
-DTensor Graph::exp(DTensor const &input) {
-  KNOperator *op = create_elementunary_op(input, aso::type::KN_EXP_OP);
+using namespace aso::type;
+
+DTensor Graph::reduction(DTensor const &input,
+                         int dim,
+                         int factor) {
+  KNOperator *op = create_reduction_op(input, dim, factor);
   assert(op != nullptr);
   operators.push_back(op);
   assert(op->output_tensors.size() == 1);
@@ -32,21 +36,32 @@ DTensor Graph::exp(DTensor const &input) {
   return output;
 }
 
-KNOperator *Graph::create_elementunary_op(DTensor const &input,
-                                          aso::type::KNOperatorType type) {
+KNOperator *Graph::create_reduction_op(DTensor const &input,
+                                       int dim,
+                                       int factor) {
+  if (input.num_dims <= dim) {
+    return nullptr;
+  }
+  if (input.dim[dim] % factor != 0) {
+    return nullptr;
+  }
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
   if (dmm->offset + input.data_size() > dmm->total_size) {
     return nullptr;
   }
 
-  KNElementUnaryOp *op = new KNElementUnaryOp(input, type);
+  KNReductionOp *op = new KNReductionOp(input, dim, factor);
   return op;
 }
 
-KNElementUnaryOp::KNElementUnaryOp(DTensor const &input,
-                                   aso::type::KNOperatorType type)
-    : aso::kernel::KNOperator(type, input) {
+KNReductionOp::KNReductionOp(DTensor const &input,
+                             int dim,
+                             int factor)
+    : KNOperator((KNOperatorType)(KN_REDUCTION_0_OP + dim), input), reduction_dim(dim), reduction_factor(factor) {
   DTensor output = input;
+  assert(dim < output.num_dims);
+  assert(output.dim[dim] % factor == 0);
+  output.dim[dim] /= factor;
   output.owner_op = this;
   output.owner_ts_idx = 0;
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
@@ -55,14 +70,14 @@ KNElementUnaryOp::KNElementUnaryOp(DTensor const &input,
   output_tensors.push_back(output);
 }
 
-KNElementUnaryOp::~KNElementUnaryOp() {
+KNReductionOp::~KNReductionOp() {
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
   for (int i = output_tensors.size() - 1; i >= 0; i--) {
     dmm->free(output_tensors[i]);
   }
 }
 
-KNElementUnaryOp::operator json() const {
+KNReductionOp::operator json() const {
   return json{{"op_type", op_type},
               {"input_tensors", input_tensors},
               {"output_tensors", output_tensors}};

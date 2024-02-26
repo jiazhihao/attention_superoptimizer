@@ -7,27 +7,30 @@ int main(int argc, char **argv) {
   kernel::Graph ref_graph;
   {
     kernel::DTensor Q =
-      ref_graph.new_input({2, 64, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
+      ref_graph.new_input({16, 64, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
     kernel::DTensor K =
-      ref_graph.new_input({2, 64, 128}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      ref_graph.new_input({16, 64, 128}, type::DT_FLOAT16, layout::DmemColumnMajor);
+    kernel::DTensor V =
+      ref_graph.new_input({16, 128, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor A = ref_graph.matmul(Q, K);
-    ref_graph.exp(A);
+    kernel::DTensor E = ref_graph.exp(A);
+    ref_graph.matmul(E, V);
     for (const auto & op : ref_graph.operators) {
       op->fingerprint();
     }
   }
   kernel::Graph graph;
   kernel::DTensor Q =
-      graph.new_input({2, 64, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
+      graph.new_input({16, 64, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
   kernel::DTensor K =
-      graph.new_input({2, 64, 128}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      graph.new_input({16, 64, 128}, type::DT_FLOAT16, layout::DmemColumnMajor);
   kernel::DTensor V =
-      graph.new_input({2, 128, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      graph.new_input({16, 128, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
   {
     threadblock::ExecutionPlan plan;
     plan.ops.push_back({aso::type::TB_MATMUL_OP, {{0, 0}, {1, 0}}});
     plan.ops.push_back({aso::type::TB_EXP_OP, {{3, 0}}});
-    //plan.ops.push_back({aso::type::TB_MATMUL_OP, {{4, 0}, {2, 0}}});
+    plan.ops.push_back({aso::type::TB_MATMUL_OP, {{4, 0}, {2, 0}}});
     //plan.ops.push_back({aso::type::TB_REDUCTION_1_OP, {{4, 0}}});
     plan.input_map.push_back({0, -1, -1});
     plan.input_map.push_back({0, 2, -1});
@@ -42,10 +45,12 @@ int main(int argc, char **argv) {
     };
     plan.output_map = {0, 2, -1};
     plan.forloop_dim = {-1, 2, 1};
-    plan.grid_dim = {2, 2, 1};
+    plan.grid_dim = {16, 2, 1};
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 1;
-    graph.customized({Q, K, V}, plan);
+    std::vector<kernel::DTensor> outputs = graph.customized({Q, K, V}, plan);
+    assert(outputs.size() == 1);
+    graph.reduction(outputs[0], 2/*dim*/, 2/*factor*/);
   }
   for (auto const &op : graph.operators) {
     op->fingerprint();

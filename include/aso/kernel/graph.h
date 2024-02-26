@@ -47,6 +47,9 @@ public:
   DTensor exp(DTensor const &input);
   KNOperator *create_elementunary_op(DTensor const &input,
                                      aso::type::KNOperatorType _type);
+  // reduction operator
+  DTensor reduction(DTensor const &input, int dim, int factor);
+  KNOperator *create_reduction_op(DTensor const &input, int dim, int factor);
   // customized operator
   std::vector<DTensor> customized(std::vector<DTensor> const &inputs,
                                   aso::threadblock::ExecutionPlan const &plan);
