@@ -30,20 +30,20 @@ bool KNReductionOp::profile(ProfileResult &result) {
   return false;
 }
 
-__global__ void compute_reduction_fingerprint(
-    FPType *input_ptr,
-    FPType *output_ptr,
-    int num_elements,
-    int reduction_factor,
-    int input_stride,
-    int output_stride) {
+__global__ void compute_reduction_fingerprint(FPType *input_ptr,
+                                              FPType *output_ptr,
+                                              int num_elements,
+                                              int reduction_factor,
+                                              int input_stride,
+                                              int output_stride) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
   if (i < num_elements) {
     uint32_t result = 0;
     int n = i / output_stride;
     int m = i % output_stride;
     for (int k = 0; k < reduction_factor; k++) {
-      result = (result + input_ptr[n * input_stride + m + k * output_stride]) % FP_PQ;
+      result = (result + input_ptr[n * input_stride + m + k * output_stride]) %
+               FP_PQ;
     }
     output_ptr[i] = result;
   }
@@ -52,7 +52,8 @@ __global__ void compute_reduction_fingerprint(
 bool KNReductionOp::fingerprint(void) {
   int num_elements = output_tensors[0].num_elements();
   int const num_threads_per_blk = 1024;
-  int num_blocks = (num_elements + num_threads_per_blk - 1) / num_threads_per_blk;
+  int num_blocks =
+      (num_elements + num_threads_per_blk - 1) / num_threads_per_blk;
   int output_stride = 1;
   int input_stride = 1;
   for (int i = reduction_dim; i < output_tensors[0].num_dims; i++) {

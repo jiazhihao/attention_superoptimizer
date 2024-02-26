@@ -14,8 +14,8 @@
  */
 
 #include "aso/kernel/device_memory_manager.h"
-#include "aso/kernel/graph.h"
 #include "aso/kernel/element_unary.h"
+#include "aso/kernel/graph.h"
 #include "aso/utils/cuda_helper.h"
 #include "aso/utils/hash_utils.h"
 #include <cassert>
@@ -30,12 +30,11 @@ bool KNElementUnaryOp::profile(ProfileResult &result) {
   return false;
 }
 
-__global__ void compute_elementunary_fingerprint(
-    aso::type::KNOperatorType type,
-    FPType *exp_lookup_table,
-    aso::type::FPType *input_ptr,
-    aso::type::FPType *output_ptr,
-    int num_elements) {
+__global__ void compute_elementunary_fingerprint(aso::type::KNOperatorType type,
+                                                 FPType *exp_lookup_table,
+                                                 aso::type::FPType *input_ptr,
+                                                 aso::type::FPType *output_ptr,
+                                                 int num_elements) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
   if (type == aso::type::KN_EXP_OP) {
     if (i < num_elements) {
@@ -48,12 +47,12 @@ __global__ void compute_elementunary_fingerprint(
   }
 }
 
-
 bool KNElementUnaryOp::fingerprint(void) {
   assert(input_tensors[0].num_elements() == output_tensors[0].num_elements());
   int num_elements = input_tensors[0].num_elements();
   int const num_threads_per_blk = 1024;
-  int num_blocks = (num_elements + num_threads_per_blk - 1) / num_threads_per_blk;
+  int num_blocks =
+      (num_elements + num_threads_per_blk - 1) / num_threads_per_blk;
   aso::kernel::DeviceMemoryManager *dmm =
       aso::kernel::DeviceMemoryManager::get_instance();
   compute_elementunary_fingerprint<<<num_blocks, num_threads_per_blk>>>(
@@ -66,5 +65,5 @@ bool KNElementUnaryOp::fingerprint(void) {
   return true;
 }
 
-} // kernel
-} // aso
+} // namespace kernel
+} // namespace aso

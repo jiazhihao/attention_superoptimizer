@@ -65,7 +65,7 @@ public:
     FPType *ptr = (FPType *)(smem_buffer + input.smem_offset);
     int num_elements = output.num_elements();
     if (type == aso::type::TB_EXP_OP) {
-      for (int i = thread_id; i < num_elements; i+= num_threads) {
+      for (int i = thread_id; i < num_elements; i += num_threads) {
         FPType input = ptr[i];
         // FPType p_residual = input % FP_P;
         FPType q_residual = input % FP_Q;

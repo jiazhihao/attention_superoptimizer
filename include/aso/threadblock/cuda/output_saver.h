@@ -346,22 +346,36 @@ public:
                              int num_threads,
                              MatrixCoord matrix_offset,
                              int global_offset) {
-    aso::type::FPType* smem_ptr = (aso::type::FPType*)(stensor.smem_offset + smem_buffer);
-    aso::type::FPType* dmem_ptr = dtensor.fp_ptr + global_offset;
+    aso::type::FPType *smem_ptr =
+        (aso::type::FPType *)(stensor.smem_offset + smem_buffer);
+    aso::type::FPType *dmem_ptr = dtensor.fp_ptr + global_offset;
     int num_elements = (int)stensor.num_elements();
-    int smem_num_column = stensor.dim[stensor.num_dims-1];
-    int dmem_num_column = dtensor.dim[dtensor.num_dims-1];
+    int smem_num_column = stensor.dim[stensor.num_dims - 1];
+    int dmem_num_column = dtensor.dim[dtensor.num_dims - 1];
     for (int idx = thread_id; idx < num_elements; idx += num_threads) {
       int dmem_row_idx = matrix_offset.row() + idx / smem_num_column;
       int dmem_column_idx = matrix_offset.column() + idx % smem_num_column;
       assert(dmem_column_idx < dmem_num_column);
       if (thread_id == 0) {
-        printf("output:fp_ptr(%p) global_offset(%d) idx(%d) blc(%d %d %d) val(%d) smem_offset(%d)"
-               "dmem_row_idx(%d) dmem_column_idx(%d) smem_num_column(%d) dmem_num_column(%d)\n",
-               dtensor.fp_ptr, global_offset, idx, blockIdx.x, blockIdx.y, blockIdx.z, (int)smem_ptr[idx], stensor.smem_offset,
-               dmem_row_idx, dmem_column_idx, smem_num_column, dmem_num_column);
+        printf("output:fp_ptr(%p) global_offset(%d) idx(%d) blc(%d %d %d) "
+               "val(%d) smem_offset(%d)"
+               "dmem_row_idx(%d) dmem_column_idx(%d) smem_num_column(%d) "
+               "dmem_num_column(%d)\n",
+               dtensor.fp_ptr,
+               global_offset,
+               idx,
+               blockIdx.x,
+               blockIdx.y,
+               blockIdx.z,
+               (int)smem_ptr[idx],
+               stensor.smem_offset,
+               dmem_row_idx,
+               dmem_column_idx,
+               smem_num_column,
+               dmem_num_column);
       }
-      dmem_ptr[dmem_row_idx * dmem_num_column + dmem_column_idx] = smem_ptr[idx];
+      dmem_ptr[dmem_row_idx * dmem_num_column + dmem_column_idx] =
+          smem_ptr[idx];
     }
   }
 };

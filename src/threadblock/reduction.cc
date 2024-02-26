@@ -34,11 +34,11 @@ TBOperator *Graph::create_reduction_op(STensor const &input, int dim) {
   assert(output.num_dims > dim);
   assert(output.layout == aso::layout::SmemRowMajor);
   output.dim[dim] = 1;
-  //for (int i = output.num_dims - 1; i >= 0; i--) {
-  //  output.stride[i] = (i == output.num_dims - 1)
-  //                         ? 1
-  //                         : output.stride[i + 1] * output.dim[i + 1];
-  //}
+  // for (int i = output.num_dims - 1; i >= 0; i--) {
+  //   output.stride[i] = (i == output.num_dims - 1)
+  //                          ? 1
+  //                          : output.stride[i + 1] * output.dim[i + 1];
+  // }
 
   if (smem_offset + (off_t)output.size() > (off_t)MAX_SMEM_SIZE) {
     return nullptr;
@@ -56,11 +56,11 @@ TBReductionOp::TBReductionOp(Graph *bgraph, STensor const &input, int dim)
   assert(output.num_dims > reduce_dim);
   assert(output.layout == aso::layout::SmemRowMajor);
   output.dim[reduce_dim] = 1;
-  //for (int i = output.num_dims - 1; i >= 0; i--) {
-  //  output.stride[i] = (i == output.num_dims - 1)
-  //                         ? 1
-  //                         : output.stride[i + 1] * output.dim[i + 1];
-  //}
+  // for (int i = output.num_dims - 1; i >= 0; i--) {
+  //   output.stride[i] = (i == output.num_dims - 1)
+  //                          ? 1
+  //                          : output.stride[i + 1] * output.dim[i + 1];
+  // }
   output.owner_op = this;
   output.owner_ts_idx = 0;
   output.smem_offset = bgraph->allocate(output);

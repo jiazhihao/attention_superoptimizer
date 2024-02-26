@@ -6,16 +6,16 @@ using namespace aso;
 int main(int argc, char **argv) {
   kernel::Graph ref_graph;
   {
-    kernel::DTensor Q =
-      ref_graph.new_input({16, 64, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
-    kernel::DTensor K =
-      ref_graph.new_input({16, 64, 128}, type::DT_FLOAT16, layout::DmemColumnMajor);
-    kernel::DTensor V =
-      ref_graph.new_input({16, 128, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
+    kernel::DTensor Q = ref_graph.new_input(
+        {16, 64, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
+    kernel::DTensor K = ref_graph.new_input(
+        {16, 64, 128}, type::DT_FLOAT16, layout::DmemColumnMajor);
+    kernel::DTensor V = ref_graph.new_input(
+        {16, 128, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor A = ref_graph.matmul(Q, K);
     kernel::DTensor E = ref_graph.exp(A);
     ref_graph.matmul(E, V);
-    for (const auto & op : ref_graph.operators) {
+    for (auto const &op : ref_graph.operators) {
       op->fingerprint();
     }
   }
@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
     plan.ops.push_back({aso::type::TB_MATMUL_OP, {{0, 0}, {1, 0}}});
     plan.ops.push_back({aso::type::TB_EXP_OP, {{3, 0}}});
     plan.ops.push_back({aso::type::TB_MATMUL_OP, {{4, 0}, {2, 0}}});
-    //plan.ops.push_back({aso::type::TB_REDUCTION_1_OP, {{4, 0}}});
+    // plan.ops.push_back({aso::type::TB_REDUCTION_1_OP, {{4, 0}}});
     plan.input_map.push_back({0, -1, -1});
     plan.input_map.push_back({0, 2, -1});
     plan.input_map.push_back({0, 1, -1});
@@ -50,15 +50,16 @@ int main(int argc, char **argv) {
     plan.forloop_range = 1;
     std::vector<kernel::DTensor> outputs = graph.customized({Q, K, V}, plan);
     assert(outputs.size() == 1);
-    graph.reduction(outputs[0], 2/*dim*/, 2/*factor*/);
+    graph.reduction(outputs[0], 2 /*dim*/, 2 /*factor*/);
   }
   for (auto const &op : graph.operators) {
     op->fingerprint();
   }
-  assert(ref_graph.operators.back()->output_tensors[0].has_same_fingerprint(graph.operators.back()->output_tensors[0]));
-  //ProfileResult result;
-  //for (auto const &op : graph.operators) {
-  //  op->profile(result);
-  //}
+  assert(ref_graph.operators.back()->output_tensors[0].has_same_fingerprint(
+      graph.operators.back()->output_tensors[0]));
+  // ProfileResult result;
+  // for (auto const &op : graph.operators) {
+  //   op->profile(result);
+  // }
   return 0;
 }

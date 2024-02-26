@@ -19,25 +19,32 @@
 namespace aso {
 namespace kernel {
 
-bool DTensor::has_same_fingerprint(DTensor const& ref) const {
-  if (data_type != ref.data_type)
+bool DTensor::has_same_fingerprint(DTensor const &ref) const {
+  if (data_type != ref.data_type) {
     return false;
-  if (layout != ref.layout)
-    return false;
-  if (num_dims != ref.num_dims)
-    return false;
-  for (int i = 0; i < num_dims; i++) {
-    if (dim[i] != ref.dim[i])
-      return false;
   }
-  aso::type::FPType* A = (aso::type::FPType*)malloc(fingerprint_size());
-  aso::type::FPType* B = (aso::type::FPType*)malloc(fingerprint_size());
-  checkCUDA(cudaMemcpy(A, fp_ptr, fingerprint_size(), cudaMemcpyDeviceToHost));
-  checkCUDA(cudaMemcpy(B, ref.fp_ptr, fingerprint_size(), cudaMemcpyDeviceToHost));
-  int num_elements = (int)this->num_elements();
-  for (int i = 0; i < num_elements; i++)
-    if (A[i] != B[i])
+  if (layout != ref.layout) {
+    return false;
+  }
+  if (num_dims != ref.num_dims) {
+    return false;
+  }
+  for (int i = 0; i < num_dims; i++) {
+    if (dim[i] != ref.dim[i]) {
       return false;
+    }
+  }
+  aso::type::FPType *A = (aso::type::FPType *)malloc(fingerprint_size());
+  aso::type::FPType *B = (aso::type::FPType *)malloc(fingerprint_size());
+  checkCUDA(cudaMemcpy(A, fp_ptr, fingerprint_size(), cudaMemcpyDeviceToHost));
+  checkCUDA(
+      cudaMemcpy(B, ref.fp_ptr, fingerprint_size(), cudaMemcpyDeviceToHost));
+  int num_elements = (int)this->num_elements();
+  for (int i = 0; i < num_elements; i++) {
+    if (A[i] != B[i]) {
+      return false;
+    }
+  }
   return true;
 }
 

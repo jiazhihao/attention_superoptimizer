@@ -31,10 +31,10 @@ TBOperator *Graph::create_matmul_op(STensor const &A, STensor const &B) {
   if (A.num_dims != B.num_dims) {
     return nullptr;
   }
-  if (A.dim[A.num_dims-1] != B.dim[B.num_dims-2]) {
+  if (A.dim[A.num_dims - 1] != B.dim[B.num_dims - 2]) {
     return nullptr;
   }
-  for (int i = 0; i < A.num_dims-2; i++) {
+  for (int i = 0; i < A.num_dims - 2; i++) {
     if (A.dim[i] != 1 || B.dim[i] != 1) {
       return nullptr;
     }
@@ -45,7 +45,7 @@ TBOperator *Graph::create_matmul_op(STensor const &A, STensor const &B) {
   for (int i = 0; i < C.num_dims; i++) {
     C.dim[i] = A.dim[i];
   }
-  C.dim[C.num_dims-1] = B.dim[C.num_dims-1];
+  C.dim[C.num_dims - 1] = B.dim[C.num_dims - 1];
   C.data_type = A.data_type;
   if (smem_offset + (off_t)C.size() > (off_t)MAX_SMEM_SIZE) {
     return nullptr;
@@ -59,8 +59,8 @@ TBMatmulOp::TBMatmulOp(Graph *_graph, STensor const &A, STensor const &B)
     : TBOperator(_graph, aso::type::TB_MATMUL_OP, A, B) {
   STensor C;
   assert(A.num_dims == B.num_dims);
-  // Check that this is not a TB-level batch matmul 
-  for (int i = 0; i < A.num_dims-2; i++) {
+  // Check that this is not a TB-level batch matmul
+  for (int i = 0; i < A.num_dims - 2; i++) {
     assert(A.dim[i] == 1);
     assert(B.dim[i] == 1);
   }
@@ -71,7 +71,7 @@ TBMatmulOp::TBMatmulOp(Graph *_graph, STensor const &A, STensor const &B)
   for (int i = 0; i < C.num_dims; i++) {
     C.dim[i] = A.dim[i];
   }
-  C.dim[C.num_dims-1] = B.dim[C.num_dims-1];
+  C.dim[C.num_dims - 1] = B.dim[C.num_dims - 1];
   C.data_type = A.data_type;
   C.owner_op = this;
   C.owner_ts_idx = 0;

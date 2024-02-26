@@ -54,50 +54,55 @@ __global__ void
           aso::kernel::DTensor dtensor = params.dmem_inputs[dmem_input_idx];
           aso::threadblock::STensor stensor =
               params.smem_outputs[smem_output_idx];
-          //assert(dtensor.num_dims == 2);
-          //assert(stensor.num_dims == 2);
+          // assert(dtensor.num_dims == 2);
+          // assert(stensor.num_dims == 2);
           int num_dims = stensor.num_dims;
-          int3 row_stride = {input_map.x == num_dims-2 ? stensor.dim[num_dims-2] : 0,
-                             input_map.y == num_dims-2 ? stensor.dim[num_dims-2] : 0,
-                             input_map.z == num_dims-2 ? stensor.dim[num_dims-2] : 0};
-          int3 column_stride = {input_map.x == num_dims-1 ? stensor.dim[num_dims-1] : 0,
-                                input_map.y == num_dims-1 ? stensor.dim[num_dims-1] : 0,
-                                input_map.z == num_dims-1 ? stensor.dim[num_dims-1] : 0};
+          int3 row_stride = {
+              input_map.x == num_dims - 2 ? stensor.dim[num_dims - 2] : 0,
+              input_map.y == num_dims - 2 ? stensor.dim[num_dims - 2] : 0,
+              input_map.z == num_dims - 2 ? stensor.dim[num_dims - 2] : 0};
+          int3 column_stride = {
+              input_map.x == num_dims - 1 ? stensor.dim[num_dims - 1] : 0,
+              input_map.y == num_dims - 1 ? stensor.dim[num_dims - 1] : 0,
+              input_map.z == num_dims - 1 ? stensor.dim[num_dims - 1] : 0};
           int tb_offset_row = blockIdx.x * row_stride.x +
                               blockIdx.y * row_stride.y +
                               blockIdx.z * row_stride.z;
           int tb_offset_column = blockIdx.x * column_stride.x +
                                  blockIdx.y * column_stride.y +
                                  blockIdx.z * column_stride.z;
-          if (forloop_dim == num_dims-2) {
-            tb_offset_row += i * (dtensor.dim[num_dims-2] / params.forloop_range);
+          if (forloop_dim == num_dims - 2) {
+            tb_offset_row +=
+                i * (dtensor.dim[num_dims - 2] / params.forloop_range);
           }
-          if (forloop_dim == num_dims-1) {
-            tb_offset_column += i * (dtensor.dim[num_dims-1] / params.forloop_range);
+          if (forloop_dim == num_dims - 1) {
+            tb_offset_column +=
+                i * (dtensor.dim[num_dims - 1] / params.forloop_range);
           }
           // FIXME: use cutlass prologue for loading data into shared memory
           // examples/13_two_tensor_op_fusion/threadblock/
           // b2b_mma_pipelined_smem_accumulator.h prologue iterators
           cutlass::MatrixCoord matrix_offset = {tb_offset_row,
-                                                     tb_offset_column};
+                                                tb_offset_column};
           // calculate global offset beyond the last two dimensions
-          // global_offset captures offsets caused by partitioning other dimensions
-          // such as batch matmul
-          // global_offset is directly added to dtensor.data_ptr by the input loader
+          // global_offset captures offsets caused by partitioning other
+          // dimensions such as batch matmul global_offset is directly added to
+          // dtensor.data_ptr by the input loader
           int global_offset = 0;
           if (num_dims > 2) {
             int strides[MAX_TENSOR_DIMS];
-            strides[num_dims-3] = dtensor.dim[num_dims-2] * dtensor.dim[num_dims-1];
-            for (int j = num_dims-4; j >= 0; j--) {
-              strides[j] = strides[j+1] * dtensor.dim[j+1];
+            strides[num_dims - 3] =
+                dtensor.dim[num_dims - 2] * dtensor.dim[num_dims - 1];
+            for (int j = num_dims - 4; j >= 0; j--) {
+              strides[j] = strides[j + 1] * dtensor.dim[j + 1];
             }
-            if (input_map.x < num_dims-2 && input_map.x >= 0) {
+            if (input_map.x < num_dims - 2 && input_map.x >= 0) {
               global_offset += blockIdx.x * strides[input_map.x];
             }
-            if (input_map.y < num_dims-2 && input_map.y >= 0) {
+            if (input_map.y < num_dims - 2 && input_map.y >= 0) {
               global_offset += blockIdx.y * strides[input_map.y];
             }
-            if (input_map.z < num_dims-2 && input_map.z >= 0) {
+            if (input_map.z < num_dims - 2 && input_map.z >= 0) {
               global_offset += blockIdx.z * strides[input_map.z];
             }
           }
@@ -175,26 +180,26 @@ __global__ void
       int3 output_map = params.output_map;
       aso::kernel::DTensor dtensor = params.dmem_outputs[dmem_output_idx];
       aso::threadblock::STensor stensor = params.smem_inputs[smem_input_idx];
-      //assert(dtensor.num_dims == 2);
-      //assert(stensor.num_dims == 2);
+      // assert(dtensor.num_dims == 2);
+      // assert(stensor.num_dims == 2);
       int num_dims = stensor.num_dims;
-      int3 row_stride = {output_map.x == num_dims-2 ? stensor.dim[num_dims-2] : 0,
-                         output_map.y == num_dims-2 ? stensor.dim[num_dims-2] : 0,
-                         output_map.z == num_dims-2 ? stensor.dim[num_dims-2] : 0};
-      int3 column_stride = {output_map.x == num_dims-1 ? stensor.dim[num_dims-1] : 0,
-                            output_map.y == num_dims-1 ? stensor.dim[num_dims-1] : 0,
-                            output_map.z == num_dims-1 ? stensor.dim[num_dims-1] : 0};
+      int3 row_stride = {
+          output_map.x == num_dims - 2 ? stensor.dim[num_dims - 2] : 0,
+          output_map.y == num_dims - 2 ? stensor.dim[num_dims - 2] : 0,
+          output_map.z == num_dims - 2 ? stensor.dim[num_dims - 2] : 0};
+      int3 column_stride = {
+          output_map.x == num_dims - 1 ? stensor.dim[num_dims - 1] : 0,
+          output_map.y == num_dims - 1 ? stensor.dim[num_dims - 1] : 0,
+          output_map.z == num_dims - 1 ? stensor.dim[num_dims - 1] : 0};
       int tb_offset_row = blockIdx.x * row_stride.x +
-                          blockIdx.y * row_stride.y +
-                          blockIdx.z * row_stride.z;
+                          blockIdx.y * row_stride.y + blockIdx.z * row_stride.z;
       int tb_offset_column = blockIdx.x * column_stride.x +
                              blockIdx.y * column_stride.y +
                              blockIdx.z * column_stride.z;
       // FIXME: use cutlass prologue for loading data into shared memory
       // examples/13_two_tensor_op_fusion/threadblock/
       // b2b_mma_pipelined_smem_accumulator.h prologue iterators
-      cutlass::MatrixCoord matrix_offset = {tb_offset_row,
-                                                 tb_offset_column};
+      cutlass::MatrixCoord matrix_offset = {tb_offset_row, tb_offset_column};
       // calculate global offset beyond the last two dimensions
       // global_offset captures offsets caused by partitioning other dimensions
       // such as batch matmul
@@ -202,17 +207,18 @@ __global__ void
       int global_offset = 0;
       if (num_dims > 2) {
         int strides[MAX_TENSOR_DIMS];
-        strides[num_dims-3] = dtensor.dim[num_dims-2] * dtensor.dim[num_dims-1];
-        for (int j = num_dims-4; j >= 0; j--) {
-          strides[j] = strides[j+1] * dtensor.dim[j+1];
+        strides[num_dims - 3] =
+            dtensor.dim[num_dims - 2] * dtensor.dim[num_dims - 1];
+        for (int j = num_dims - 4; j >= 0; j--) {
+          strides[j] = strides[j + 1] * dtensor.dim[j + 1];
         }
-        if (output_map.x < num_dims-2 && output_map.x >= 0) {
+        if (output_map.x < num_dims - 2 && output_map.x >= 0) {
           global_offset += blockIdx.x * strides[output_map.x];
         }
-        if (output_map.y < num_dims-2 && output_map.y >= 0) {
+        if (output_map.y < num_dims - 2 && output_map.y >= 0) {
           global_offset += blockIdx.y * strides[output_map.y];
         }
-        if (output_map.z < num_dims-2 && output_map.z >= 0) {
+        if (output_map.z < num_dims - 2 && output_map.z >= 0) {
           global_offset += blockIdx.z * strides[output_map.z];
         }
       }
@@ -232,9 +238,9 @@ __global__ void
   assert(params.num_dmem_outputs == dmem_output_idx);
 }
 
-__global__ void compute_customizedop_fingerprint(
-    aso::threadblock::KernelParams params,
-    aso::type::FPType *exp_lookup_table) {
+__global__ void
+    compute_customizedop_fingerprint(aso::threadblock::KernelParams params,
+                                     aso::type::FPType *exp_lookup_table) {
   // since we are using cutlass, we group all threads within a threadblock
   // as a 1-D list of threads, therefore blockDim.y and blockDim.z must be
   // 1
@@ -261,47 +267,57 @@ __global__ void compute_customizedop_fingerprint(
           aso::threadblock::STensor stensor =
               params.smem_outputs[smem_output_idx];
           if (threadIdx.x == 0 && blockIdx.x == 0 && blockIdx.y == 0) {
-            printf("op(%d) num_ops(%d) smem_output_idx(%d) stensor.smem_offset(%d)\n", op,params.num_operators, smem_output_idx, (int)stensor.smem_offset);
+            printf("op(%d) num_ops(%d) smem_output_idx(%d) "
+                   "stensor.smem_offset(%d)\n",
+                   op,
+                   params.num_operators,
+                   smem_output_idx,
+                   (int)stensor.smem_offset);
           }
-          //assert(dtensor.num_dims == 2);
-          //assert(stensor.num_dims == 2);
+          // assert(dtensor.num_dims == 2);
+          // assert(stensor.num_dims == 2);
           int num_dims = stensor.num_dims;
-          int3 row_stride = {input_map.x == num_dims-2 ? stensor.dim[num_dims-2] : 0,
-                             input_map.y == num_dims-2 ? stensor.dim[num_dims-2] : 0,
-                             input_map.z == num_dims-2 ? stensor.dim[num_dims-2] : 0};
-          int3 column_stride = {input_map.x == num_dims-1 ? stensor.dim[num_dims-1] : 0,
-                                input_map.y == num_dims-1 ? stensor.dim[num_dims-1] : 0,
-                                input_map.z == num_dims-1 ? stensor.dim[num_dims-1] : 0};
+          int3 row_stride = {
+              input_map.x == num_dims - 2 ? stensor.dim[num_dims - 2] : 0,
+              input_map.y == num_dims - 2 ? stensor.dim[num_dims - 2] : 0,
+              input_map.z == num_dims - 2 ? stensor.dim[num_dims - 2] : 0};
+          int3 column_stride = {
+              input_map.x == num_dims - 1 ? stensor.dim[num_dims - 1] : 0,
+              input_map.y == num_dims - 1 ? stensor.dim[num_dims - 1] : 0,
+              input_map.z == num_dims - 1 ? stensor.dim[num_dims - 1] : 0};
           int tb_offset_row = blockIdx.x * row_stride.x +
                               blockIdx.y * row_stride.y +
                               blockIdx.z * row_stride.z;
           int tb_offset_column = blockIdx.x * column_stride.x +
                                  blockIdx.y * column_stride.y +
                                  blockIdx.z * column_stride.z;
-          if (forloop_dim == num_dims-2) {
-            tb_offset_row += i * (dtensor.dim[num_dims-2] / params.forloop_range);
+          if (forloop_dim == num_dims - 2) {
+            tb_offset_row +=
+                i * (dtensor.dim[num_dims - 2] / params.forloop_range);
           }
-          if (forloop_dim == num_dims-1) {
-            tb_offset_column += i * (dtensor.dim[num_dims-1] / params.forloop_range);
+          if (forloop_dim == num_dims - 1) {
+            tb_offset_column +=
+                i * (dtensor.dim[num_dims - 1] / params.forloop_range);
           }
           // calculate global offset beyond the last two dimensions
-          // global_offset captures offsets caused by partitioning other dimensions
-          // such as batch matmul
-          // global_offset is directly added to dtensor.data_ptr by the input loader
+          // global_offset captures offsets caused by partitioning other
+          // dimensions such as batch matmul global_offset is directly added to
+          // dtensor.data_ptr by the input loader
           int global_offset = 0;
           if (num_dims > 2) {
             int strides[MAX_TENSOR_DIMS];
-            strides[num_dims-3] = dtensor.dim[num_dims-2] * dtensor.dim[num_dims-1];
-            for (int j = num_dims-4; j >= 0; j--) {
-              strides[j] = strides[j+1] * dtensor.dim[j+1];
+            strides[num_dims - 3] =
+                dtensor.dim[num_dims - 2] * dtensor.dim[num_dims - 1];
+            for (int j = num_dims - 4; j >= 0; j--) {
+              strides[j] = strides[j + 1] * dtensor.dim[j + 1];
             }
-            if (input_map.x < num_dims-2 && input_map.x >= 0) {
+            if (input_map.x < num_dims - 2 && input_map.x >= 0) {
               global_offset += blockIdx.x * strides[input_map.x];
             }
-            if (input_map.y < num_dims-2 && input_map.y >= 0) {
+            if (input_map.y < num_dims - 2 && input_map.y >= 0) {
               global_offset += blockIdx.y * strides[input_map.y];
             }
-            if (input_map.z < num_dims-2 && input_map.z >= 0) {
+            if (input_map.z < num_dims - 2 && input_map.z >= 0) {
               global_offset += blockIdx.z * strides[input_map.z];
             }
           }
@@ -309,7 +325,7 @@ __global__ void compute_customizedop_fingerprint(
           // examples/13_two_tensor_op_fusion/threadblock/
           // b2b_mma_pipelined_smem_accumulator.h prologue iterators
           cutlass::MatrixCoord matrix_offset = {tb_offset_row,
-                                                     tb_offset_column};
+                                                tb_offset_column};
           aso::threadblock::TBInputLoaderFingerprinter fp(smem_buffer,
                                                           dtensor,
                                                           stensor,
@@ -384,26 +400,26 @@ __global__ void compute_customizedop_fingerprint(
       int3 output_map = params.output_map;
       aso::kernel::DTensor dtensor = params.dmem_outputs[dmem_output_idx];
       aso::threadblock::STensor stensor = params.smem_inputs[smem_input_idx];
-      //assert(dtensor.num_dims == 2);
-      //assert(stensor.num_dims == 2);
+      // assert(dtensor.num_dims == 2);
+      // assert(stensor.num_dims == 2);
       int num_dims = stensor.num_dims;
-      int3 row_stride = {output_map.x == num_dims-2 ? stensor.dim[num_dims-2] : 0,
-                         output_map.y == num_dims-2 ? stensor.dim[num_dims-2] : 0,
-                         output_map.z == num_dims-2 ? stensor.dim[num_dims-2] : 0};
-      int3 column_stride = {output_map.x == num_dims-1 ? stensor.dim[num_dims-1] : 0,
-                            output_map.y == num_dims-1 ? stensor.dim[num_dims-1] : 0,
-                            output_map.z == num_dims-1 ? stensor.dim[num_dims-1] : 0};
+      int3 row_stride = {
+          output_map.x == num_dims - 2 ? stensor.dim[num_dims - 2] : 0,
+          output_map.y == num_dims - 2 ? stensor.dim[num_dims - 2] : 0,
+          output_map.z == num_dims - 2 ? stensor.dim[num_dims - 2] : 0};
+      int3 column_stride = {
+          output_map.x == num_dims - 1 ? stensor.dim[num_dims - 1] : 0,
+          output_map.y == num_dims - 1 ? stensor.dim[num_dims - 1] : 0,
+          output_map.z == num_dims - 1 ? stensor.dim[num_dims - 1] : 0};
       int tb_offset_row = blockIdx.x * row_stride.x +
-                          blockIdx.y * row_stride.y +
-                          blockIdx.z * row_stride.z;
+                          blockIdx.y * row_stride.y + blockIdx.z * row_stride.z;
       int tb_offset_column = blockIdx.x * column_stride.x +
                              blockIdx.y * column_stride.y +
                              blockIdx.z * column_stride.z;
       // FIXME: use cutlass prologue for loading data into shared memory
       // examples/13_two_tensor_op_fusion/threadblock/
       // b2b_mma_pipelined_smem_accumulator.h prologue iterators
-      cutlass::MatrixCoord matrix_offset = {tb_offset_row,
-                                                 tb_offset_column};
+      cutlass::MatrixCoord matrix_offset = {tb_offset_row, tb_offset_column};
       // calculate global offset beyond the last two dimensions
       // global_offset captures offsets caused by partitioning other dimensions
       // such as batch matmul
@@ -411,27 +427,28 @@ __global__ void compute_customizedop_fingerprint(
       int global_offset = 0;
       if (num_dims > 2) {
         int strides[MAX_TENSOR_DIMS];
-        strides[num_dims-3] = dtensor.dim[num_dims-2] * dtensor.dim[num_dims-1];
-        for (int j = num_dims-4; j >= 0; j--) {
-          strides[j] = strides[j+1] * dtensor.dim[j+1];
+        strides[num_dims - 3] =
+            dtensor.dim[num_dims - 2] * dtensor.dim[num_dims - 1];
+        for (int j = num_dims - 4; j >= 0; j--) {
+          strides[j] = strides[j + 1] * dtensor.dim[j + 1];
         }
-        if (output_map.x < num_dims-2 && output_map.x >= 0) {
+        if (output_map.x < num_dims - 2 && output_map.x >= 0) {
           global_offset += blockIdx.x * strides[output_map.x];
         }
-        if (output_map.y < num_dims-2 && output_map.y >= 0) {
+        if (output_map.y < num_dims - 2 && output_map.y >= 0) {
           global_offset += blockIdx.y * strides[output_map.y];
         }
-        if (output_map.z < num_dims-2 && output_map.z >= 0) {
+        if (output_map.z < num_dims - 2 && output_map.z >= 0) {
           global_offset += blockIdx.z * strides[output_map.z];
         }
       }
       aso::threadblock::TBOutputSaverFingerprinter fp(smem_buffer,
-                                                   dtensor,
-                                                   stensor,
-                                                   threadIdx.x,
-                                                   blockDim.x,
-                                                   matrix_offset,
-                                                   global_offset);
+                                                      dtensor,
+                                                      stensor,
+                                                      threadIdx.x,
+                                                      blockDim.x,
+                                                      matrix_offset,
+                                                      global_offset);
       __syncthreads();
       dmem_output_idx++;
     }
@@ -473,7 +490,9 @@ bool KNCustomizedOp::fingerprint(void) {
   int smem_size = 48 * 1024; // 48 KB
   aso::threadblock::KernelParams params = bgraph.get_kernel_params();
   for (int i = 0; i < params.num_smem_outputs; i++) {
-    printf("params.smem_outputs[%d].smem_offset = %d\n", i, params.smem_outputs[i].smem_offset);
+    printf("params.smem_outputs[%d].smem_offset = %d\n",
+           i,
+           params.smem_outputs[i].smem_offset);
   }
   assert(bgraph.smem_offset <= smem_size);
   aso::kernel::DeviceMemoryManager *dmm =

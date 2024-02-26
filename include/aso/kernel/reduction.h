@@ -28,10 +28,10 @@ public:
   bool fingerprint(void) override;
 
   operator json() const override;
+
 public:
   int reduction_dim, reduction_factor;
 };
 
 } // namespace kernel
 } // namespace aso
-

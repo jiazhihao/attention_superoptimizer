@@ -36,7 +36,7 @@ struct STensor {
     num_dims = 0;
     for (int i = 0; i < MAX_TENSOR_DIMS; i++) {
       dim[i] = 0;
-      //stride[i] = 0;
+      // stride[i] = 0;
     }
     owner_op = nullptr;
     owner_ts_idx = -1000;
@@ -58,9 +58,9 @@ struct STensor {
       if (dim[i] != b.dim[i]) {
         return false;
       }
-      //if (stride[i] != b.stride[i]) {
-      //  return false;
-      //}
+      // if (stride[i] != b.stride[i]) {
+      //   return false;
+      // }
     }
     if (owner_op != b.owner_op) {
       return false;
@@ -89,9 +89,9 @@ struct STensor {
       if (dim[i] != b.dim[i]) {
         return true;
       }
-      //if (stride[i] != b.stride[i]) {
-      //  return true;
-      //}
+      // if (stride[i] != b.stride[i]) {
+      //   return true;
+      // }
     }
     if (owner_op != b.owner_op) {
       return true;
@@ -147,15 +147,14 @@ struct STensor {
   aso::layout::SmemLayout layout;
   int num_dims;
   int dim[MAX_TENSOR_DIMS];
-  //int stride[MAX_TENSOR_DIMS];
-  // STensor fields
+  // int stride[MAX_TENSOR_DIMS];
+  //  STensor fields
   TBOperator *owner_op;
   int owner_ts_idx;
   int smem_offset;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
-    STensor, data_type, layout, num_dims, dim)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(STensor, data_type, layout, num_dims, dim)
 
 } // namespace threadblock
 } // namespace aso

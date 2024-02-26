@@ -103,12 +103,13 @@ bool KNMatmulOp::profile(ProfileResult &result) {
   return true;
 }
 
-__global__ void compute_matmul_fingerprint(
-    aso::type::FPType *A_ptr,
-    aso::type::FPType *B_ptr,
-    aso::type::FPType *C_ptr,
-    int num_batches,
-    int m, int n, int k) {
+__global__ void compute_matmul_fingerprint(aso::type::FPType *A_ptr,
+                                           aso::type::FPType *B_ptr,
+                                           aso::type::FPType *C_ptr,
+                                           int num_batches,
+                                           int m,
+                                           int n,
+                                           int k) {
   int row_idx = (threadIdx.x + blockIdx.x * blockDim.x) / n;
   int col_idx = (threadIdx.x + blockIdx.x * blockDim.x) % n;
   int mk = m * k;
@@ -122,8 +123,11 @@ __global__ void compute_matmul_fingerprint(
         uint32_t B_value = B_ptr[b * nk + i * n + col_idx];
         result = (result + A_value * B_value) % FP_PQ;
       }
-      if (threadIdx.x == 0)
-        printf("C[%d] = %d\n", b * mn + threadIdx.x + blockIdx.x * blockDim.x, result);
+      if (threadIdx.x == 0) {
+        printf("C[%d] = %d\n",
+               b * mn + threadIdx.x + blockIdx.x * blockDim.x,
+               result);
+      }
       C_ptr[b * mn + threadIdx.x + blockIdx.x * blockDim.x] = result;
     }
   }
@@ -131,18 +135,19 @@ __global__ void compute_matmul_fingerprint(
 
 bool KNMatmulOp::fingerprint(void) {
   int num_dims = input_tensors[0].num_dims;
-  int row_A = input_tensors[0].dim[num_dims-2];
-  int column_A = input_tensors[0].dim[num_dims-1];
-  int row_B = input_tensors[1].dim[num_dims-2];
-  int column_B = input_tensors[1].dim[num_dims-1];
-  int row_C = output_tensors[0].dim[num_dims-2];
-  int column_C = output_tensors[0].dim[num_dims-1];
+  int row_A = input_tensors[0].dim[num_dims - 2];
+  int column_A = input_tensors[0].dim[num_dims - 1];
+  int row_B = input_tensors[1].dim[num_dims - 2];
+  int column_B = input_tensors[1].dim[num_dims - 1];
+  int row_C = output_tensors[0].dim[num_dims - 2];
+  int column_C = output_tensors[0].dim[num_dims - 1];
   assert(column_A == row_B);
   assert(row_C == row_A);
   assert(column_C == column_B);
   int num_batches = 1;
-  for (int i = 0; i < num_dims-2; i++)
+  for (int i = 0; i < num_dims - 2; i++) {
     num_batches *= input_tensors[0].dim[i];
+  }
   int const num_threads_per_blk = 1024;
   int num_blocks =
       (row_C * column_C + num_threads_per_blk - 1) / num_threads_per_blk;

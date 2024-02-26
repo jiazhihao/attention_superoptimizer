@@ -25,9 +25,7 @@ namespace kernel {
 
 using namespace aso::type;
 
-DTensor Graph::reduction(DTensor const &input,
-                         int dim,
-                         int factor) {
+DTensor Graph::reduction(DTensor const &input, int dim, int factor) {
   KNOperator *op = create_reduction_op(input, dim, factor);
   assert(op != nullptr);
   operators.push_back(op);
@@ -36,9 +34,8 @@ DTensor Graph::reduction(DTensor const &input,
   return output;
 }
 
-KNOperator *Graph::create_reduction_op(DTensor const &input,
-                                       int dim,
-                                       int factor) {
+KNOperator *
+    Graph::create_reduction_op(DTensor const &input, int dim, int factor) {
   if (input.num_dims <= dim) {
     return nullptr;
   }
@@ -54,10 +51,9 @@ KNOperator *Graph::create_reduction_op(DTensor const &input,
   return op;
 }
 
-KNReductionOp::KNReductionOp(DTensor const &input,
-                             int dim,
-                             int factor)
-    : KNOperator((KNOperatorType)(KN_REDUCTION_0_OP + dim), input), reduction_dim(dim), reduction_factor(factor) {
+KNReductionOp::KNReductionOp(DTensor const &input, int dim, int factor)
+    : KNOperator((KNOperatorType)(KN_REDUCTION_0_OP + dim), input),
+      reduction_dim(dim), reduction_factor(factor) {
   DTensor output = input;
   assert(dim < output.num_dims);
   assert(output.dim[dim] % factor == 0);
@@ -83,5 +79,5 @@ KNReductionOp::operator json() const {
               {"output_tensors", output_tensors}};
 }
 
-} // kernel
-} // aso
+} // namespace kernel
+} // namespace aso

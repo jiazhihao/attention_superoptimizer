@@ -35,12 +35,13 @@ KNOperator *Graph::create_matmul_op(DTensor const &A, DTensor const &B) {
   if (A.num_dims != B.num_dims) {
     return nullptr;
   }
-  if (A.dim[A.num_dims-1] != B.dim[B.num_dims-2]) {
+  if (A.dim[A.num_dims - 1] != B.dim[B.num_dims - 2]) {
     return nullptr;
   }
-  for (int i = 0; i < A.num_dims-2; i++) {
-    if (A.dim[i] != B.dim[i])
+  for (int i = 0; i < A.num_dims - 2; i++) {
+    if (A.dim[i] != B.dim[i]) {
       return nullptr;
+    }
   }
 
   DTensor C;
@@ -48,7 +49,7 @@ KNOperator *Graph::create_matmul_op(DTensor const &A, DTensor const &B) {
   for (int i = 0; i < C.num_dims; i++) {
     C.dim[i] = A.dim[i];
   }
-  C.dim[C.num_dims-1] = B.dim[C.num_dims-1];
+  C.dim[C.num_dims - 1] = B.dim[C.num_dims - 1];
   C.data_type = A.data_type;
 
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
@@ -64,8 +65,8 @@ KNMatmulOp::KNMatmulOp(DTensor const &A, DTensor const &B)
     : aso::kernel::KNOperator(aso::type::KN_MATMUL_OP, A, B) {
   DTensor C;
   assert(A.num_dims == B.num_dims);
-  assert(A.dim[A.num_dims-1] == B.dim[B.num_dims-2]);
-  for (int i = 0; i < A.num_dims-2; i++) {
+  assert(A.dim[A.num_dims - 1] == B.dim[B.num_dims - 2]);
+  for (int i = 0; i < A.num_dims - 2; i++) {
     assert(A.dim[i] == B.dim[i]);
   }
   // Currently only support row-major output
@@ -74,7 +75,7 @@ KNMatmulOp::KNMatmulOp(DTensor const &A, DTensor const &B)
   for (int i = 0; i < C.num_dims; i++) {
     C.dim[i] = A.dim[i];
   }
-  C.dim[C.num_dims-1] = B.dim[C.num_dims-1];
+  C.dim[C.num_dims - 1] = B.dim[C.num_dims - 1];
   C.layout = aso::layout::DmemRowMajor;
   C.data_type = A.data_type;
   C.owner_op = this;

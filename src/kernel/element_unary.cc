@@ -68,5 +68,5 @@ KNElementUnaryOp::operator json() const {
               {"output_tensors", output_tensors}};
 }
 
-} // kernel
-} // aso
+} // namespace kernel
+} // namespace aso

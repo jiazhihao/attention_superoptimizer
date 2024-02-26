@@ -140,7 +140,9 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         // Update dtensor saved by the output operator
         {
           assert(bgraph.operators.back()->op_type == aso::type::TB_OUTPUT_OP);
-          aso::threadblock::TBOutputOp *output = static_cast<aso::threadblock::TBOutputOp*>(bgraph.operators.back());
+          aso::threadblock::TBOutputOp *output =
+              static_cast<aso::threadblock::TBOutputOp *>(
+                  bgraph.operators.back());
           output->dtensor = dtensor;
         }
         output_tensors.push_back(dtensor);
