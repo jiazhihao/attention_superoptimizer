@@ -66,12 +66,14 @@ TBOutputOp::TBOutputOp(Graph *_graph, STensor const &stensor, int3 _output_map)
                             ? 1
                             : dtensor.stride[i + 1] * dtensor.dim[i + 1];
   }
+
+  input_tensors.push_back(stensor);
 }
 
 TBOutputOp::~TBOutputOp() {}
 
 TBOutputOp::operator json() const {
-  return json{{"op_type", op_type},
+  return json{{"op_type", "output"},
               {"input_tensors", input_tensors},
               {"output_tensors", output_tensors},
               {"dtensor", dtensor},

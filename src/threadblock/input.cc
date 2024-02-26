@@ -137,7 +137,7 @@ TBInputOp::~TBInputOp() {
 }
 
 TBInputOp::operator json() const {
-  return json{{"op_type", op_type},
+  return json{{"op_type", "input"},
               {"input_tensors", input_tensors},
               {"output_tensors", output_tensors},
               {"dtensor", dtensor},

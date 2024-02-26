@@ -42,7 +42,6 @@ size_t get_datatype_size(DataType type);
 enum KNOperatorType {
   KN_UNKOWN = 1000,
   KN_INPUT_OP = 1001,
-  KN_OUTPUT_OP = 1002,
   KN_MATMUL_OP = 1003,
   KN_REDUCTION_0_OP = 1004,
   KN_REDUCTION_1_OP = 1005,

@@ -1,8 +1,10 @@
 #pragma once
 
 #include "z3++.h"
+#include "aso/utils/hash_utils.h"
 #include <memory>
 #include <unordered_set>
+#include <unordered_map>
 
 namespace aso {
 namespace search {
@@ -17,6 +19,7 @@ public:
   virtual std::string to_string() const = 0;
 
   static std::unordered_set<std::string> all_variables;
+  static std::unordered_map<std::pair<std::string, std::string>, bool> cached_results;
 };
 
 class Var : public AlgebraicPattern {

@@ -4,6 +4,7 @@
 #include <tuple>
 #include <type_traits>
 #include <vector>
+#include <utility>
 
 // tuple hashing pulled from
 // https://www.variadic.xyz/2018/01/15/hashing-stdpair-and-stdtuple/
@@ -43,6 +44,18 @@ public:
     size_t seed = 0;
     //  begin with the first iteration
     hash_combine_tup<0>(seed, tupleValue);
+    return seed;
+  }
+};
+
+template <typename L, typename R>
+struct hash<pair<L, R>> {
+  size_t operator()(pair<L, R> const &p) const {
+    size_t seed = 283746;
+
+    hash_combine(seed, p.first);
+    hash_combine(seed, p.second);
+
     return seed;
   }
 };

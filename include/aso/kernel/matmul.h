@@ -23,7 +23,7 @@ namespace kernel {
 class KNMatmulOp : public aso::kernel::KNOperator {
 public:
   KNMatmulOp(DTensor const &A, DTensor const &B);
-  ~KNMatmulOp();
+  virtual ~KNMatmulOp();
   bool profile(ProfileResult &profile);
   bool fingerprint(void);
   

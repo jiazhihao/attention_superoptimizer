@@ -1,12 +1,17 @@
 #include "aso/search/algebraic_pattern.h"
+#include <cassert>
+#include <cmath>
 #include <iostream>
 #include <vector>
-#include <cmath>
+
+#include "aso/utils/containers.h"
 
 namespace aso {
 namespace search {
 
 std::unordered_set<std::string> AlgebraicPattern::all_variables;
+std::unordered_map<std::pair<std::string, std::string>, bool>
+    AlgebraicPattern::cached_results;
 
 z3::expr_vector to_expr_vector(z3::context &c,
                                std::vector<z3::expr> const &_vec) {
@@ -18,6 +23,13 @@ z3::expr_vector to_expr_vector(z3::context &c,
 }
 
 bool AlgebraicPattern::subpattern_to(AlgebraicPattern const &other) const {
+  std::pair<std::string, std::string> str_pair =
+      std::make_pair(to_string(), other.to_string());
+  if (contains_key(cached_results, str_pair)) {
+    return cached_results.at(str_pair);
+  }
+
+  // clock_t start_time = clock();
   z3::context c;
 
   z3::sort P = c.uninterpreted_sort("P");
@@ -74,29 +86,28 @@ bool AlgebraicPattern::subpattern_to(AlgebraicPattern const &other) const {
   s.add(forall(x, subpattern(x, exp(x))));
   s.add(forall(x, i, subpattern(x, red(i, x))));
 
-<<<<<<< HEAD
   s.add(forall(x, x == red(0, x)));
   s.add(forall(x, i1, i2, red(i1, red(i2, x)) == red(i1 + i2, x)));
   s.add(forall(to_expr_vector(c, {x, y, i, i1, i2}),
                red(i, add(red(i1, x), red(i2, y))) ==
                    add(red(i + i1, x), red(i + i2, y))));
-=======
-  s.add(forall(x, x == red(1, x)));
-  s.add(forall(x, i1, i2, red(i1, red(i2, x)) == red(i1 * i2, x)));
-  s.add(forall(to_expr_vector(c, {x, y, i, i1, i2}),
-               red(i, add(red(i1, x), red(i2, y))) ==
-                   add(red(i * i1, x), red(i * i2, y))));
->>>>>>> upstream/main
   s.add(forall(x, y, i, red(i, mul(x, y)) == mul(red(i, x), y)));
   s.add(forall(x, y, i, red(i, div(x, y)) == div(red(i, x), y)));
 
   // Lemmas
-  s.add(forall(x, i1, i2, implies(i1 <= i2, subpattern(red(i1, x), red(i2, x)))));
+  s.add(
+      forall(x, i1, i2, implies(i1 <= i2, subpattern(red(i1, x), red(i2, x)))));
 
   // Theorem to prove
   s.add(!subpattern(pattern1, pattern2));
 
-  return s.check() == z3::unsat;
+  bool result = s.check() == z3::unsat;
+  cached_results[str_pair] = result;
+  // clock_t end_time = clock();
+  // std::cerr << "solver time:" << ((double)end_time - start_time) /
+  // CLOCKS_PER_SEC << std::endl; std::cerr << "result: " << result <<
+  // std::endl;
+  return result;
 }
 
 Var::Var(std::string const &name) : name(name) {}
@@ -165,13 +176,8 @@ std::string Exp::to_string() const {
   return "e^" + exponent->to_string();
 }
 
-<<<<<<< HEAD
 Red::Red(int red_deg, std::shared_ptr<AlgebraicPattern> summand)
     : red_deg_log(std::ceil(std::log2(red_deg))), summand(summand) {}
-=======
-Red::Red(int k, std::shared_ptr<AlgebraicPattern> summand)
-    : k(k), summand(summand) {}
->>>>>>> upstream/main
 
 z3::expr Red::to_z3(z3::context &c) const {
   z3::sort P = c.uninterpreted_sort("P");

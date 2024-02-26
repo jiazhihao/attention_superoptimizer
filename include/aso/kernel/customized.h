@@ -31,7 +31,7 @@ public:
                  aso::threadblock::ExecutionPlan const &plan);
   KNCustomizedOp(std::vector<DTensor> const &inputs,
                  aso::threadblock::Graph const &_graph);
-  ~KNCustomizedOp();
+  virtual ~KNCustomizedOp();
   bool profile(ProfileResult &profile);
   void run(void);
   bool fingerprint(void);
