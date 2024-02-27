@@ -31,6 +31,7 @@ DeviceMemoryManager::DeviceMemoryManager() {
   checkCUDA(cublasCreate(&blas));
   checkCUDA(cublasSetMathMode(blas, CUBLAS_TENSOR_OP_MATH));
   // fingerprint related fields
+  // exponential lookup table
   exp_lookup_table = (FPType *)base_ptr;
   // make future tensors 16 bytes aligned
   offset += (sizeof(FPType) * FP_Q + 15) / 16 * 16;
@@ -40,11 +41,51 @@ DeviceMemoryManager::DeviceMemoryManager() {
   FPType exp_table[FP_Q];
   exp_table[0] = 1;
   for (int i = 1; i < FP_Q; i++) {
-    exp_table[i] = (exp_table[i - 1] * FP_Q) % FP_P;
+    exp_table[i] = (exp_table[i - 1] * FP_EXP_BASE) % FP_P;
   }
-  assert((exp_table[FP_Q - 1] * FP_Q) % FP_P == 1);
+  assert((exp_table[FP_Q - 1] * FP_EXP_BASE) % FP_P == 1);
   cudaMemcpy(exp_lookup_table,
              exp_table,
+             sizeof(FPType) * FP_Q,
+             cudaMemcpyHostToDevice);
+  // division p lookup table
+  div_p_lookup_table = (FPType *)(base_ptr + offset);
+  // make future tensors 16 bytes aligned
+  offset += (sizeof(FPType) * FP_P + 15) / 16 * 16;
+  FPType div_p_table[FP_P];
+  for (int i = 0; i < FP_P; i++) {
+    div_p_table[i] = 1;
+    for (int j = 1; j < FP_P; j++) {
+      if ((i * j) % FP_P == 1) {
+        div_p_table[i] = j;
+      }
+    }
+    if (i > 1) {
+      assert(div_p_table[i] != 1);
+    }
+  }
+  cudaMemcpy(div_p_lookup_table,
+             div_p_table,
+             sizeof(FPType) * FP_P,
+             cudaMemcpyHostToDevice);
+  // division q lookup table
+  div_q_lookup_table = (FPType *)(base_ptr + offset);
+  // make future tensors 16 bytes aligned
+  offset += (sizeof(FPType) * FP_Q + 15) / 16 * 16;
+  FPType div_q_table[FP_Q];
+  for (int i = 0; i < FP_Q; i++) {
+    div_q_table[i] = 1;
+    for (int j = 1; j < FP_Q; j++) {
+      if ((i * j) % FP_Q == 1) {
+        div_q_table[i] = j;
+      }
+    }
+    if (i > 1) {
+      assert(div_q_table[i] != 1);
+    }
+  }
+  cudaMemcpy(div_q_lookup_table,
+             div_q_table,
              sizeof(FPType) * FP_Q,
              cudaMemcpyHostToDevice);
 }

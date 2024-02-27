@@ -47,6 +47,11 @@ public:
   DTensor exp(DTensor const &input);
   KNOperator *create_elementunary_op(DTensor const &input,
                                      aso::type::KNOperatorType _type);
+  // elementunary operator
+  DTensor div(DTensor const &input1, DTensor const &input2);
+  KNOperator *create_elementbinary_op(DTensor const &input1,
+                                      DTensor const &input2,
+                                      aso::type::KNOperatorType _type);
   // reduction operator
   DTensor reduction(DTensor const &input, int dim, int factor);
   KNOperator *create_reduction_op(DTensor const &input, int dim, int factor);

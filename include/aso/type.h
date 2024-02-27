@@ -25,7 +25,12 @@ namespace type {
 typedef uint16_t FPType;
 const uint16_t FP_P = 227;
 const uint16_t FP_Q = 113;
+const uint32_t FP_EXP_BASE = 3;
 const uint16_t FP_PQ = 25651;
+// FP_P_MUL_Q_MOD_1 is a multiplier of P and is 1 module Q
+const uint16_t FP_P_MUL_Q_MOD_1 = 227;
+// FP_Q_MUL_P_MOD_1 is a multiplier of Q and is 1 module P
+const uint16_t FP_Q_MUL_P_MOD_1 = 25425;
 
 enum DataType {
   DT_INT8,

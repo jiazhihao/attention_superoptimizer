@@ -69,7 +69,9 @@ public:
         FPType input = ptr[i];
         // FPType p_residual = input % FP_P;
         FPType q_residual = input % FP_Q;
-        ptr[i] = exp_lookup_table[q_residual] * FP_Q;
+        uint32_t result = exp_lookup_table[q_residual];
+        result = (result * FP_Q_MUL_P_MOD_1) % FP_PQ;
+        ptr[i] = result;
       }
     } else {
       assert(false && "Unimplemented");

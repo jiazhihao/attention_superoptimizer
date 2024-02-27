@@ -40,7 +40,9 @@ __global__ void compute_elementunary_fingerprint(aso::type::KNOperatorType type,
     if (i < num_elements) {
       aso::type::FPType val = input_ptr[i];
       aso::type::FPType q_residual = val % FP_Q;
-      output_ptr[i] = exp_lookup_table[q_residual] * FP_Q;
+      uint32_t result = exp_lookup_table[q_residual];
+      result = (result * FP_Q_MUL_P_MOD_1) % FP_PQ;
+      output_ptr[i] = result;
     }
   } else {
     assert(false && "Unimplemented");

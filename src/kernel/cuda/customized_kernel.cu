@@ -15,6 +15,7 @@
 
 #include "aso/kernel/customized.h"
 #include "aso/kernel/device_memory_manager.h"
+#include "aso/threadblock/cuda/element_binary.h"
 #include "aso/threadblock/cuda/element_unary.h"
 #include "aso/threadblock/cuda/input_loader.h"
 #include "aso/threadblock/cuda/matmul.h"
@@ -240,7 +241,9 @@ __global__ void
 
 __global__ void
     compute_customizedop_fingerprint(aso::threadblock::KernelParams params,
-                                     aso::type::FPType *exp_lookup_table) {
+                                     aso::type::FPType *exp_lookup_table,
+                                     aso::type::FPType *div_p_lookup_table,
+                                     aso::type::FPType *div_q_lookup_table) {
   // since we are using cutlass, we group all threads within a threadblock
   // as a 1-D list of threads, therefore blockDim.y and blockDim.z must be
   // 1
@@ -366,6 +369,24 @@ __global__ void
               exp_lookup_table /*lookup_table*/,
               smem_buffer,
               input,
+              output,
+              threadIdx.x,
+              blockDim.x);
+          break;
+        }
+        case aso::type::TB_DIV_OP: {
+          aso::threadblock::STensor input1 = params.smem_inputs[smem_input_idx];
+          aso::threadblock::STensor input2 =
+              params.smem_inputs[smem_input_idx + 1];
+          aso::threadblock::STensor output =
+              params.smem_outputs[smem_output_idx];
+          aso::threadblock::TBElementBinaryFingerPrinter fp(
+              params.operator_types[op],
+              div_p_lookup_table /*div_p_lookup*/,
+              div_q_lookup_table /*div_q_lookup*/,
+              smem_buffer,
+              input1,
+              input2,
               output,
               threadIdx.x,
               blockDim.x);
@@ -501,7 +522,9 @@ bool KNCustomizedOp::fingerprint(void) {
   compute_customizedop_fingerprint<<<bgraph.grid_dim,
                                      bgraph.block_dim,
                                      smem_size>>>(params,
-                                                  dmm->exp_lookup_table);
+                                                  dmm->exp_lookup_table,
+                                                  dmm->div_p_lookup_table,
+                                                  dmm->div_q_lookup_table);
   checkCUDA(cudaDeviceSynchronize());
   return true;
 }
