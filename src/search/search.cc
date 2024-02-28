@@ -98,9 +98,6 @@ void KernelGraphGenerator::generate_threadblock_graphs(
           }
           STensor input1 = op1->output_tensors[0],
                   input2 = op2->output_tensors[0];
-          if (!check_tensor_shape(op_type, input1, input2)) {
-            continue;
-          }
           assert(contains_key(c.algebraic_pattern, input1));
           assert(contains_key(c.algebraic_pattern, input2));
           std::shared_ptr<AlgebraicPattern> pattern =
@@ -155,9 +152,6 @@ void KernelGraphGenerator::generate_threadblock_graphs(
           continue;
         }
         STensor input = op->output_tensors[0];
-        if (!check_tensor_shape(op_type, input)) {
-          continue;
-        }
         assert(contains_key(c.algebraic_pattern, input));
         std::shared_ptr<AlgebraicPattern> pattern =
             get_pattern(op_type, input, c.algebraic_pattern.at(input));
@@ -263,9 +257,6 @@ void KernelGraphGenerator::generate_next_kernel(
           KNOperator *op1 = g.operators[op_idx1], *op2 = g.operators[op_idx2];
           for (DTensor input1 : op1->output_tensors) {
             for (DTensor input2 : op2->output_tensors) {
-              if (!check_tensor_shape(op_type, input1, input2)) {
-                continue;
-              }
               size_t hash = get_operator_hash(input1, input2, op_type);
               if (contains(c.existing_op_hash, hash)) {
                 continue;
@@ -316,9 +307,6 @@ void KernelGraphGenerator::generate_next_kernel(
       for (int op_idx = 0; op_idx < num_op; ++op_idx) {
         KNOperator *op = g.operators[op_idx];
         for (DTensor input : op->output_tensors) {
-          if (!check_tensor_shape(op_type, input)) {
-            continue;
-          }
           size_t hash = get_operator_hash(input, op_type);
           if (contains(c.existing_op_hash, hash)) {
             continue;

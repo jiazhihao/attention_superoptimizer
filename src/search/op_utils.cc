@@ -82,9 +82,8 @@ std::shared_ptr<AlgebraicPattern>
 
   switch (op) {
     case type::KNOperatorType::KN_MATMUL_OP:
-      // FIXME: Correctly support batched matmul
-      if (tensor_l.dim[1] > 1) {
-        return std::make_shared<Red>(tensor_l.dim[1],
+      if (tensor_l.dim[2] > 1) {
+        return std::make_shared<Red>(tensor_l.dim[2],
                                          std::make_shared<Mul>(lhs, rhs));
       } else {
         return std::make_shared<Mul>(lhs, rhs);
@@ -103,9 +102,8 @@ std::shared_ptr<AlgebraicPattern>
 
   switch (op) {
     case type::TBOperatorType::TB_MATMUL_OP:
-      // FIXME: Correctly support batched matmul
-      if (tensor_l.dim[1] > 1) {
-        return std::make_shared<Red>(tensor_l.dim[1],
+      if (tensor_l.dim[2] > 1) {
+        return std::make_shared<Red>(tensor_l.dim[2],
                                          std::make_shared<Mul>(lhs, rhs));
       } else {
         return std::make_shared<Mul>(lhs, rhs);

@@ -53,10 +53,10 @@ bool check_tensor_shape(type::TBOperatorType op,
                         STensor const &input2) {
   switch (op) {
     case type::TBOperatorType::TB_MATMUL_OP:
-      return input1.num_dims == 2 && input2.num_dims == 2 &&
-             input1.dim[1] == input2.dim[0];
+      return input1.num_dims == 3 && input2.num_dims == 3 &&
+             input1.dim[2] == input2.dim[1];
     case type::TBOperatorType::TB_DIV_OP:
-      return input1.num_dims == 2 && input2.num_dims == 2 && input2.dim[1] == 1;
+      return input1.num_dims == 3 && input2.num_dims == 3 && input2.dim[1] == 1;
     default:
       assert(false && "Unsupported Operator");
   }
