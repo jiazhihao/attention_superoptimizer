@@ -336,6 +336,51 @@ public:
   }
 };
 
+class TBOutputAccumFingerprinter {
+public:
+  CUTLASS_DEVICE
+  TBOutputAccumFingerprinter(char *smem_buffer,
+                             aso::threadblock::STensor const &input,
+                             aso::threadblock::STensor const &output,
+                             bool is_first_loop,
+                             int thread_id,
+                             int num_threads) {
+    aso::type::FPType *input_ptr =
+        (aso::type::FPType *)(input.smem_offset + smem_buffer);
+    aso::type::FPType *output_ptr =
+        (aso::type::FPType *)(output.smem_offset + smem_buffer);
+    int num_elements = (int)input.num_elements();
+    if (is_first_loop) {
+      for (int idx = thread_id; idx < num_elements; idx += num_threads) {
+        output_ptr[idx] = input_ptr[idx];
+      }
+      if (thread_id == 0) {
+        printf("Accumu(0): block(%d %d %d) output(%d) input(%d)\n",
+               blockIdx.x,
+               blockIdx.y,
+               blockIdx.z,
+               output_ptr[thread_id],
+               input_ptr[thread_id]);
+      }
+    } else {
+      for (int idx = thread_id; idx < num_elements; idx += num_threads) {
+        uint32_t value = input_ptr[idx];
+        if (thread_id == 0) {
+          printf("Accumu(1): block(%d %d %d) output_old(%d) input(%d) "
+                 "output_new(%d)\n",
+                 blockIdx.x,
+                 blockIdx.y,
+                 blockIdx.z,
+                 output_ptr[thread_id],
+                 input_ptr[thread_id],
+                 (value + output_ptr[idx]) % FP_PQ);
+        }
+        output_ptr[idx] = (value + output_ptr[idx]) % FP_PQ;
+      }
+    }
+  }
+};
+
 class TBOutputSaverFingerprinter {
 public:
   CUTLASS_DEVICE

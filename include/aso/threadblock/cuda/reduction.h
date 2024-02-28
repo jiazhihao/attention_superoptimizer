@@ -46,16 +46,17 @@ public:
                            STensor const &output,
                            int thread_id,
                            int num_threads) {
+    int reduction_dim = type - aso::type::TB_REDUCTION_0_OP;
+    int num_dims = output.num_dims;
     FPType *input_ptr = (FPType *)(smem_buffer + input.smem_offset);
     FPType *output_ptr = (FPType *)(smem_buffer + output.smem_offset);
     int num_elements = output.num_elements();
-    int output_columns = output.dim[output.num_dims - 1];
-    int input_columns = input.dim[input.num_dims - 1];
-    assert(output.num_dims == 2);
-    assert(input.num_dims == 2);
-    if (type == TB_REDUCTION_0_OP) {
-      int output_rows = output.dim[output.num_dims - 2];
-      int kK = input.dim[0] / output.dim[0];
+    int output_columns = output.dim[num_dims - 1];
+    int input_columns = input.dim[num_dims - 1];
+    if (reduction_dim == num_dims - 2) {
+      // Reduce along the row dim
+      int output_rows = output.dim[num_dims - 2];
+      int kK = input.dim[num_dims - 2] / output.dim[num_dims - 2];
       for (int i = thread_id; i < num_elements; i += num_threads) {
         uint32_t result = 0;
         int no = i / output_columns;
@@ -66,8 +67,9 @@ public:
         }
         output_ptr[i] = result;
       }
-    } else if (type == TB_REDUCTION_1_OP) {
-      int kK = input.dim[1] / output.dim[1];
+    } else if (reduction_dim == num_dims - 1) {
+      // Reduce along the column dim
+      int kK = input.dim[num_dims - 1] / output.dim[num_dims - 1];
       for (int i = thread_id; i < num_elements; i += num_threads) {
         uint32_t result = 0;
         int n = i / output_columns;

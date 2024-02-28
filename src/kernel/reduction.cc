@@ -26,6 +26,10 @@ namespace kernel {
 using namespace aso::type;
 
 DTensor Graph::reduction(DTensor const &input, int dim, int factor) {
+  // Reduce to a dimension of 1 if unset
+  if (factor == -1) {
+    factor = input.dim[dim];
+  }
   KNOperator *op = create_reduction_op(input, dim, factor);
   assert(op != nullptr);
   operators.push_back(op);

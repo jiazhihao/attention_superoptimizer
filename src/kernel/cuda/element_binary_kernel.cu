@@ -43,7 +43,7 @@ __global__ void
     if (i < num_elements) {
       int input1_stride = 1, input1_idx = 0;
       int input2_stride = 1, input2_idx = 0;
-      for (int d = output.num_dims; d >= 0; d--) {
+      for (int d = output.num_dims - 1; d >= 0; d--) {
         input1_idx += (i % input1.dim[d]) * input1_stride;
         input2_idx += (i % input2.dim[d]) * input2_stride;
         input1_stride *= input1.dim[d];
@@ -56,6 +56,9 @@ __global__ void
           (x % FP_P) * div_p_lookup_table[y % FP_P] * FP_Q_MUL_P_MOD_1 +
           (x % FP_Q) * div_q_lookup_table[y % FP_Q] * FP_P_MUL_Q_MOD_1;
       output.fp_ptr[threadIdx.x + blockIdx.x * blockDim.x] = z % FP_PQ;
+      // printf("div: output[%d] = %d input1[%d] = %d input2[%d] = %d\n",
+      //     threadIdx.x + blockIdx.x * blockDim.x, z % FP_PQ,
+      //     input1_idx, x, input2_idx, y);
     }
   } else {
     assert(false && "Unimplemented");

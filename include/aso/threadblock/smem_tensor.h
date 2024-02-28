@@ -41,6 +41,7 @@ struct STensor {
     owner_op = nullptr;
     owner_ts_idx = -1000;
     smem_offset = 128;
+    // accum_output = false;
   }
 
   CUTLASS_HOST_DEVICE
@@ -152,6 +153,11 @@ struct STensor {
   TBOperator *owner_op;
   int owner_ts_idx;
   int smem_offset;
+  // a flag indicating whether we should accumulate output
+  // This flag is false by default and should only be set
+  // by an output saver to indicate its input should
+  // be accumulated
+  // bool accum_output;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(STensor, data_type, layout, num_dims, dim)

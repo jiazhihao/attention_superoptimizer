@@ -45,7 +45,7 @@ public:
         int idx = i;
         int input1_stride = 1, input1_idx = 0;
         int input2_stride = 1, input2_idx = 0;
-        for (int d = output.num_dims; d >= 0; d--) {
+        for (int d = output.num_dims - 1; d >= 0; d--) {
           input1_idx += (idx % input1.dim[d]) * input1_stride;
           input2_idx += (idx % input2.dim[d]) * input2_stride;
           input1_stride *= input1.dim[d];

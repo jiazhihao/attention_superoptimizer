@@ -59,13 +59,19 @@ __global__ void
           // assert(stensor.num_dims == 2);
           int num_dims = stensor.num_dims;
           int3 row_stride = {
-              input_map.x == num_dims - 2 ? stensor.dim[num_dims - 2] : 0,
-              input_map.y == num_dims - 2 ? stensor.dim[num_dims - 2] : 0,
-              input_map.z == num_dims - 2 ? stensor.dim[num_dims - 2] : 0};
+              (input_map.x == num_dims - 2 ? stensor.dim[num_dims - 2] : 0) *
+                  (forloop_dim == num_dims - 2 ? params.forloop_range : 1),
+              (input_map.y == num_dims - 2 ? stensor.dim[num_dims - 2] : 0) *
+                  (forloop_dim == num_dims - 2 ? params.forloop_range : 1),
+              (input_map.z == num_dims - 2 ? stensor.dim[num_dims - 2] : 0) *
+                  (forloop_dim == num_dims - 2 ? params.forloop_range : 1)};
           int3 column_stride = {
-              input_map.x == num_dims - 1 ? stensor.dim[num_dims - 1] : 0,
-              input_map.y == num_dims - 1 ? stensor.dim[num_dims - 1] : 0,
-              input_map.z == num_dims - 1 ? stensor.dim[num_dims - 1] : 0};
+              (input_map.x == num_dims - 1 ? stensor.dim[num_dims - 1] : 0) *
+                  (forloop_dim == num_dims - 1 ? params.forloop_range : 1),
+              (input_map.y == num_dims - 1 ? stensor.dim[num_dims - 1] : 0) *
+                  (forloop_dim == num_dims - 1 ? params.forloop_range : 1),
+              (input_map.z == num_dims - 1 ? stensor.dim[num_dims - 1] : 0) *
+                  (forloop_dim == num_dims - 1 ? params.forloop_range : 1)};
           int tb_offset_row = blockIdx.x * row_stride.x +
                               blockIdx.y * row_stride.y +
                               blockIdx.z * row_stride.z;
@@ -73,12 +79,10 @@ __global__ void
                                  blockIdx.y * column_stride.y +
                                  blockIdx.z * column_stride.z;
           if (forloop_dim == num_dims - 2) {
-            tb_offset_row +=
-                i * (dtensor.dim[num_dims - 2] / params.forloop_range);
+            tb_offset_row += i * stensor.dim[num_dims - 2];
           }
           if (forloop_dim == num_dims - 1) {
-            tb_offset_column +=
-                i * (dtensor.dim[num_dims - 1] / params.forloop_range);
+            tb_offset_column += i * stensor.dim[num_dims - 1];
           }
           // FIXME: use cutlass prologue for loading data into shared memory
           // examples/13_two_tensor_op_fusion/threadblock/
@@ -105,6 +109,10 @@ __global__ void
             }
             if (input_map.z < num_dims - 2 && input_map.z >= 0) {
               global_offset += blockIdx.z * strides[input_map.z];
+            }
+            if (forloop_dim < num_dims - 2 && forloop_dim >= 0) {
+              global_offset +=
+                  i * stensor.dim[forloop_dim] * strides[forloop_dim];
             }
           }
           aso::threadblock::GenericInputLoader loader(smem_buffer,
@@ -249,12 +257,13 @@ __global__ void
   // 1
   assert(blockDim.y == 1);
   assert(blockDim.z == 1);
-  if (false && threadIdx.x == 0) {
-    printf("threadIdx(%d) blockIdx(%d %d %d)\n",
+  if (threadIdx.x == 0) {
+    printf("threadIdx(%d) blockIdx(%d %d %d) num_operators(%d)\n",
            threadIdx.x,
            blockIdx.x,
            blockIdx.y,
-           blockIdx.z);
+           blockIdx.z,
+           params.num_operators);
   }
   extern __shared__ char smem_buffer[];
   for (int i = 0; i < params.forloop_range; i++) {
@@ -281,13 +290,19 @@ __global__ void
           // assert(stensor.num_dims == 2);
           int num_dims = stensor.num_dims;
           int3 row_stride = {
-              input_map.x == num_dims - 2 ? stensor.dim[num_dims - 2] : 0,
-              input_map.y == num_dims - 2 ? stensor.dim[num_dims - 2] : 0,
-              input_map.z == num_dims - 2 ? stensor.dim[num_dims - 2] : 0};
+              (input_map.x == num_dims - 2 ? stensor.dim[num_dims - 2] : 0) *
+                  (forloop_dim == num_dims - 2 ? params.forloop_range : 1),
+              (input_map.y == num_dims - 2 ? stensor.dim[num_dims - 2] : 0) *
+                  (forloop_dim == num_dims - 2 ? params.forloop_range : 1),
+              (input_map.z == num_dims - 2 ? stensor.dim[num_dims - 2] : 0) *
+                  (forloop_dim == num_dims - 2 ? params.forloop_range : 1)};
           int3 column_stride = {
-              input_map.x == num_dims - 1 ? stensor.dim[num_dims - 1] : 0,
-              input_map.y == num_dims - 1 ? stensor.dim[num_dims - 1] : 0,
-              input_map.z == num_dims - 1 ? stensor.dim[num_dims - 1] : 0};
+              (input_map.x == num_dims - 1 ? stensor.dim[num_dims - 1] : 0) *
+                  (forloop_dim == num_dims - 1 ? params.forloop_range : 1),
+              (input_map.y == num_dims - 1 ? stensor.dim[num_dims - 1] : 0) *
+                  (forloop_dim == num_dims - 1 ? params.forloop_range : 1),
+              (input_map.z == num_dims - 1 ? stensor.dim[num_dims - 1] : 0) *
+                  (forloop_dim == num_dims - 1 ? params.forloop_range : 1)};
           int tb_offset_row = blockIdx.x * row_stride.x +
                               blockIdx.y * row_stride.y +
                               blockIdx.z * row_stride.z;
@@ -295,12 +310,10 @@ __global__ void
                                  blockIdx.y * column_stride.y +
                                  blockIdx.z * column_stride.z;
           if (forloop_dim == num_dims - 2) {
-            tb_offset_row +=
-                i * (dtensor.dim[num_dims - 2] / params.forloop_range);
+            tb_offset_row += i * stensor.dim[num_dims - 2];
           }
           if (forloop_dim == num_dims - 1) {
-            tb_offset_column +=
-                i * (dtensor.dim[num_dims - 1] / params.forloop_range);
+            tb_offset_column += i * stensor.dim[num_dims - 1];
           }
           // calculate global offset beyond the last two dimensions
           // global_offset captures offsets caused by partitioning other
@@ -323,6 +336,10 @@ __global__ void
             if (input_map.z < num_dims - 2 && input_map.z >= 0) {
               global_offset += blockIdx.z * strides[input_map.z];
             }
+            if (forloop_dim < num_dims - 2 && forloop_dim >= 0) {
+              global_offset +=
+                  i * stensor.dim[forloop_dim] * strides[forloop_dim];
+            }
           }
           // FIXME: use cutlass prologue for loading data into shared memory
           // examples/13_two_tensor_op_fusion/threadblock/
@@ -341,8 +358,12 @@ __global__ void
           break;
         }
         case aso::type::TB_OUTPUT_OP: {
-          // Only save outputs after forloop
-          // So we do nothing here
+          aso::threadblock::STensor input = params.smem_inputs[smem_input_idx];
+          aso::threadblock::STensor output =
+              params.smem_outputs[smem_output_idx];
+          aso::threadblock::TBOutputAccumFingerprinter fp(
+              smem_buffer, input, output, (i == 0), threadIdx.x, blockDim.x);
+          __syncthreads();
           break;
         }
         case aso::type::TB_MATMUL_OP: {
@@ -372,6 +393,7 @@ __global__ void
               output,
               threadIdx.x,
               blockDim.x);
+          __syncthreads();
           break;
         }
         case aso::type::TB_DIV_OP: {
@@ -390,14 +412,23 @@ __global__ void
               output,
               threadIdx.x,
               blockDim.x);
+          __syncthreads();
           break;
         }
         case aso::type::TB_REDUCTION_0_OP:
         case aso::type::TB_REDUCTION_1_OP:
         case aso::type::TB_REDUCTION_2_OP: {
-          // aso::threadblock::STensor input =
-          // params.smem_inputs[smem_input_idx]; aso::threadblock::STensor
-          // output = params.smem_outputs[smem_output_idx];
+          aso::threadblock::STensor input = params.smem_inputs[smem_input_idx];
+          aso::threadblock::STensor output =
+              params.smem_outputs[smem_output_idx];
+          aso::threadblock::TBReductionFingerprinter fp(
+              params.operator_types[op],
+              smem_buffer,
+              input,
+              output,
+              threadIdx.x,
+              blockDim.x);
+          __syncthreads();
           break;
         }
         default: {
@@ -415,12 +446,12 @@ __global__ void
   }
 
   // Save output
-  int dmem_output_idx = 0, smem_input_idx = 0;
+  int dmem_output_idx = 0, smem_output_idx = 0;
   for (int op = 0; op < params.num_operators; op++) {
     if (params.operator_types[op] == aso::type::TB_OUTPUT_OP) {
       int3 output_map = params.output_map;
       aso::kernel::DTensor dtensor = params.dmem_outputs[dmem_output_idx];
-      aso::threadblock::STensor stensor = params.smem_inputs[smem_input_idx];
+      aso::threadblock::STensor stensor = params.smem_outputs[smem_output_idx];
       // assert(dtensor.num_dims == 2);
       // assert(stensor.num_dims == 2);
       int num_dims = stensor.num_dims;
@@ -473,9 +504,9 @@ __global__ void
       __syncthreads();
       dmem_output_idx++;
     }
-    smem_input_idx += params.operator_num_inputs[op];
+    smem_output_idx += params.operator_num_outputs[op];
   }
-  assert(params.num_smem_inputs == smem_input_idx);
+  assert(params.num_smem_outputs == smem_output_idx);
   assert(params.num_dmem_outputs == dmem_output_idx);
 }
 
@@ -508,7 +539,7 @@ bool KNCustomizedOp::profile(ProfileResult &result) {
 }
 
 bool KNCustomizedOp::fingerprint(void) {
-  int smem_size = 48 * 1024; // 48 KB
+  int smem_size = 64 * 1024; // 48 KB
   aso::threadblock::KernelParams params = bgraph.get_kernel_params();
   for (int i = 0; i < params.num_smem_outputs; i++) {
     printf("params.smem_outputs[%d].smem_offset = %d\n",
@@ -518,7 +549,9 @@ bool KNCustomizedOp::fingerprint(void) {
   assert(bgraph.smem_offset <= smem_size);
   aso::kernel::DeviceMemoryManager *dmm =
       aso::kernel::DeviceMemoryManager::get_instance();
-
+  checkCUDA(cudaFuncSetAttribute(compute_customizedop_fingerprint,
+                                 cudaFuncAttributeMaxDynamicSharedMemorySize,
+                                 smem_size));
   compute_customizedop_fingerprint<<<bgraph.grid_dim,
                                      bgraph.block_dim,
                                      smem_size>>>(params,

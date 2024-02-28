@@ -44,6 +44,17 @@ __global__ void compute_reduction_fingerprint(FPType *input_ptr,
     for (int k = 0; k < reduction_factor; k++) {
       result = (result + input_ptr[n * input_stride + m + k * output_stride]) %
                FP_PQ;
+      if (threadIdx.x == 0) {
+        printf("result(%d) output_stride(%d) input_stride(%d) i(%d), n(%d) "
+               "m(%d) k(%d)\n",
+               result,
+               output_stride,
+               input_stride,
+               i,
+               n,
+               m,
+               k);
+      }
     }
     output_ptr[i] = result;
   }
