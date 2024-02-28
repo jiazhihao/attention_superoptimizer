@@ -7,16 +7,6 @@
 
 #include <iostream>
 
-std::ostream &operator<<(std::ostream &os, dim3 const &d) {
-  os << "(" << d.x << "," << d.y << "," << d.z << ")";
-  return os;
-}
-
-std::ostream &operator<<(std::ostream &os, int3 const &d) {
-  os << "(" << d.x << "," << d.y << "," << d.z << ")";
-  return os;
-}
-
 namespace aso {
 namespace search {
 
