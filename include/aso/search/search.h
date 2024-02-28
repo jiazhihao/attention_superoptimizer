@@ -60,9 +60,10 @@ private:
   bool check_pattern(std::shared_ptr<AlgebraicPattern> pattern);
 
   void pattern_eval();
-};
 
-bool verify(kernel::Graph const &g);
+  bool verify(kernel::Graph const &g,
+              SearchContext<KNOperator, DTensor> &c);
+};
 
 } // namespace search
 } // namespace aso

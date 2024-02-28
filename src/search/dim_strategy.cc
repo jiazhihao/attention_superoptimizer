@@ -10,14 +10,14 @@ unsigned int get_num_threadblock(dim3 const &grid_dim) {
 std::vector<dim3> get_grid_dim_cand(std::vector<DTensor> const &tensors,
                                     std::vector<int3> const &input_map) {
   std::vector<dim3> results;
-  for (int x = 16; x <= 128; x *= 2) {
+  for (unsigned int x = 16; x <= 64; x *= 2) {
     for (size_t i = 0; i < tensors.size(); ++i) {
       if (input_map[i].x != -1 && tensors[i].num_dims > input_map[i].x &&
           tensors[i].dim[input_map[i].x] % x != 0) {
         return results;
       }
     }
-    for (int y = x; y <= 128; y *= 2) {
+    for (unsigned int y = x; y <= 64; y *= 2) {
       bool feasible = true;
       for (size_t i = 0; i < tensors.size(); ++i) {
         if (input_map[i].y != -1 && tensors[i].num_dims > input_map[i].y &&
@@ -99,7 +99,7 @@ std::vector<std::vector<int3>>
   std::vector<std::vector<int3>> results;
   // Assume two-dimentional inputs
   // TODO: There are invalid input maps, how to prune them out?
-  for (int3 input_map_pattern : {int3{0, 1, -1}, int3{1, 0, -1}}) {
+  for (int3 input_map_pattern : {int3{0, 1, -1}/*, int3{1, 0, -1}*/}) {
     generate_input_map_cand(tensors, input_map_pattern, {}, results);
   }
   return results;

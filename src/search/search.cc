@@ -69,7 +69,7 @@ void KernelGraphGenerator::generate_threadblock_graphs(
     return;
   }
 
-  if (g.operators.size() >= threadblock::KernelParams::MAX_TOTAL_SMEM_OUTPUTS) {
+  if (g.operators.size() >= 8) {
     return;
   }
 
@@ -77,7 +77,7 @@ void KernelGraphGenerator::generate_threadblock_graphs(
       type::TBOperatorType::TB_MATMUL_OP,
       type::TBOperatorType::TB_REDUCTION_0_OP,
       type::TBOperatorType::TB_REDUCTION_1_OP,
-      type::TBOperatorType::TB_REDUCTION_2_OP,
+      // type::TBOperatorType::TB_REDUCTION_2_OP,
       type::TBOperatorType::TB_EXP_OP,
       type::TBOperatorType::TB_DIV_OP,
       type::TBOperatorType::TB_OUTPUT_OP};
@@ -211,13 +211,16 @@ void KernelGraphGenerator::generate_threadblock_graphs(
 
         STensor input = op->output_tensors[0];
         assert(contains_key(c.algebraic_pattern, input));
-        std::shared_ptr<AlgebraicPattern> pattern = g.forloop_range > 1 ? std::make_shared<Red>(g.forloop_range,
-                                             c.algebraic_pattern.at(input)) : c.algebraic_pattern.at(input);
+        std::shared_ptr<AlgebraicPattern> pattern =
+            g.forloop_range > 1
+                ? std::make_shared<Red>(g.forloop_range,
+                                        c.algebraic_pattern.at(input))
+                : c.algebraic_pattern.at(input);
         if (!check_pattern(pattern)) {
           continue;
         }
 
-        for (int3 output_map : {int3{0, 1, -1}/*, int3{1, 0, -1}*/}) {
+        for (int3 output_map : {int3{0, 1, -1}, int3{1, 0, -1}}) {
           threadblock::Graph ng = g;
           threadblock::TBOperator *new_op =
               ng.create_output_op(input, output_map);
@@ -240,7 +243,7 @@ void KernelGraphGenerator::generate_threadblock_graphs(
 
 void KernelGraphGenerator::generate_next_kernel(
     SearchContext<KNOperator, DTensor> &c, kernel::Graph &g) {
-  if (verify(g)) {
+  if (verify(g, c)) {
     std::cout << "kernel graph candidate: " << json(g) << std::endl;
     return;
   }
@@ -254,8 +257,10 @@ void KernelGraphGenerator::generate_next_kernel(
 
   for (type::KNOperatorType op_type : op_to_explore) {
     if (is_binary(op_type)) {
-      for (auto op1 : g.operators) {
-        for (auto op2 : g.operators) {
+      int num_op = g.operators.size();
+      for (int op_idx1 = 0; op_idx1 < num_op; ++op_idx1) {
+        for (int op_idx2 = 0; op_idx2 < num_op; ++op_idx2) {
+          KNOperator *op1 = g.operators[op_idx1], *op2 = g.operators[op_idx2];
           for (DTensor input1 : op1->output_tensors) {
             for (DTensor input2 : op2->output_tensors) {
               if (!check_tensor_shape(op_type, input1, input2)) {
@@ -307,7 +312,9 @@ void KernelGraphGenerator::generate_next_kernel(
         }
       }
     } else if (is_unary(op_type)) {
-      for (auto op : g.operators) {
+      int num_op = g.operators.size();
+      for (int op_idx = 0; op_idx < num_op; ++op_idx) {
+        KNOperator *op = g.operators[op_idx];
         for (DTensor input : op->output_tensors) {
           if (!check_tensor_shape(op_type, input)) {
             continue;
@@ -430,7 +437,8 @@ void KernelGraphGenerator::generate_next_kernel(
                       continue;
                     }
                     g.operators.push_back(new_op);
-                    assert(new_op->output_tensors.size() == output_patterns[i].size());
+                    assert(new_op->output_tensors.size() ==
+                           output_patterns[i].size());
                     for (size_t j = 0; j < new_op->output_tensors.size(); ++j) {
                       c.algebraic_pattern.insert(
                           {new_op->output_tensors[j], output_patterns[i][j]});
@@ -532,13 +540,13 @@ void KernelGraphGenerator::pattern_eval() {
         input_id++;
         break;
       case type::KNOperatorType::KN_MATMUL_OP:
-          computation_graph_patterns.insert(
-              {op->output_tensors[0],
-              std::make_shared<Red>(
-                  op->input_tensors[0].dim[1],
-                  std::make_shared<Mul>(
-                      computation_graph_patterns.at(op->input_tensors[0]),
-                      computation_graph_patterns.at(op->input_tensors[1])))});
+        computation_graph_patterns.insert(
+            {op->output_tensors[0],
+             std::make_shared<Red>(
+                 op->input_tensors[0].dim[1],
+                 std::make_shared<Mul>(
+                     computation_graph_patterns.at(op->input_tensors[0]),
+                     computation_graph_patterns.at(op->input_tensors[1])))});
         break;
       case type::KNOperatorType::KN_REDUCTION_0_OP:
         computation_graph_patterns.insert(
@@ -565,8 +573,27 @@ void KernelGraphGenerator::pattern_eval() {
   }
 }
 
-bool verify(kernel::Graph const &g) {
-  return g.operators.size() > 2;
+bool KernelGraphGenerator::verify(kernel::Graph const &g,
+                                  SearchContext<KNOperator, DTensor> &c) {
+  size_t num_output = 0;
+  for (KNOperator *op : g.operators) {
+    if (c.output_degree[op] == 0) {
+      for (DTensor const &tensor : op->output_tensors) {
+        if (num_output >= final_patterns.size() ||
+            !c.algebraic_pattern.at(tensor)->subpattern_to(
+                *final_patterns[num_output]) ||
+            !final_patterns[num_output]->subpattern_to(
+                *c.algebraic_pattern.at(tensor))) {
+          return false;
+        }
+        ++num_output;
+      }
+    }
+  }
+  if (num_output != final_patterns.size()) {
+    return false;
+  }
+
   // assert(false && "TBD");
   return true;
 }
