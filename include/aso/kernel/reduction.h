@@ -15,18 +15,23 @@
 
 #pragma once
 
-#include "aso/threadblock/operator.h"
+#include "aso/kernel/operator.h"
 
 namespace aso {
-namespace threadblock {
+namespace kernel {
 
-class TBMatmulOp : public aso::threadblock::TBOperator {
+class KNReductionOp : public aso::kernel::KNOperator {
 public:
-  TBMatmulOp(Graph *_graph, STensor const &A, STensor const &B);
-  static bool compitble_layouts(STensor const &A, STensor const &B);
-  ~TBMatmulOp();
+  KNReductionOp(DTensor const &input, int reduction_dim, int reduction_factor);
+  ~KNReductionOp();
+  bool profile(ProfileResult &profile) override;
+  bool fingerprint(void) override;
+
   operator json() const override;
+
+public:
+  int reduction_dim, reduction_factor;
 };
 
-} // namespace threadblock
+} // namespace kernel
 } // namespace aso

@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "aso/layout.h"
 #include "aso/type.h"
 #include "aso/utils/json_utils.h"
 #include "cutlass/cutlass.h"
@@ -35,16 +36,20 @@ struct STensor {
     num_dims = 0;
     for (int i = 0; i < MAX_TENSOR_DIMS; i++) {
       dim[i] = 0;
-      stride[i] = 0;
+      // stride[i] = 0;
     }
     owner_op = nullptr;
     owner_ts_idx = -1000;
-    smem_offset = 0;
+    smem_offset = 128;
+    // accum_output = false;
   }
 
   CUTLASS_HOST_DEVICE
   bool operator==(STensor const &b) const {
     if (data_type != b.data_type) {
+      return false;
+    }
+    if (layout != b.layout) {
       return false;
     }
     if (num_dims != b.num_dims) {
@@ -54,9 +59,9 @@ struct STensor {
       if (dim[i] != b.dim[i]) {
         return false;
       }
-      if (stride[i] != b.stride[i]) {
-        return false;
-      }
+      // if (stride[i] != b.stride[i]) {
+      //   return false;
+      // }
     }
     if (owner_op != b.owner_op) {
       return false;
@@ -75,6 +80,9 @@ struct STensor {
     if (data_type != b.data_type) {
       return true;
     }
+    if (layout != b.layout) {
+      return true;
+    }
     if (num_dims != b.num_dims) {
       return true;
     }
@@ -82,9 +90,9 @@ struct STensor {
       if (dim[i] != b.dim[i]) {
         return true;
       }
-      if (stride[i] != b.stride[i]) {
-        return true;
-      }
+      // if (stride[i] != b.stride[i]) {
+      //   return true;
+      // }
     }
     if (owner_op != b.owner_op) {
       return true;
@@ -127,25 +135,32 @@ struct STensor {
     return num_elements * data_type_size;
   }
 
-  enum STensorLayout {
-    ROW_MAJOR,
-    COLUMN_MAJOR,
-    ROW_MAJOR_TENSOROP_MULTIPLICAND,
-    COLUMN_MAJOR_TENSOROP_MULTIPLICAND,
-  };
+  CUTLASS_HOST_DEVICE
+  size_t num_elements() const {
+    size_t num_elements = 1;
+    for (int i = 0; i < num_dims; i++) {
+      num_elements *= dim[i];
+    }
+    return num_elements;
+  }
+
   aso::type::DataType data_type;
-  STensorLayout layout;
+  aso::layout::SmemLayout layout;
   int num_dims;
   int dim[MAX_TENSOR_DIMS];
-  int stride[MAX_TENSOR_DIMS];
-  // STensor fields
+  // int stride[MAX_TENSOR_DIMS];
+  //  STensor fields
   TBOperator *owner_op;
   int owner_ts_idx;
-  off_t smem_offset;
+  int smem_offset;
+  // a flag indicating whether we should accumulate output
+  // This flag is false by default and should only be set
+  // by an output saver to indicate its input should
+  // be accumulated
+  // bool accum_output;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
-    STensor, data_type, layout, num_dims, dim, stride)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(STensor, data_type, layout, num_dims, dim)
 
 } // namespace threadblock
 } // namespace aso

@@ -41,6 +41,11 @@ struct KernelParams {
   int num_dmem_inputs, num_dmem_outputs;
   aso::kernel::DTensor dmem_inputs[MAX_NUM_DMEM_INPUTS];
   aso::kernel::DTensor dmem_outputs[MAX_NUM_DMEM_INPUTS];
+  // mappings between input dtensors and stensors
+  int3 input_map[MAX_NUM_DMEM_INPUTS];
+  int forloop_dim[MAX_NUM_DMEM_INPUTS];
+  // mappings between output dtensors and their stensors
+  int3 output_map;
 };
 
 class ExecutionPlan {
@@ -48,9 +53,12 @@ public:
   std::vector<
       std::pair<aso::type::TBOperatorType, std::vector<std::pair<int, int>>>>
       ops;
+  // input-related fields
   std::vector<int3> input_map;
-  int3 output_map; // assume that all output must use the same map
   std::vector<int> forloop_dim;
+  std::vector<aso::layout::SmemLayout> input_smem_layouts;
+  // output-related fields
+  int3 output_map; // assume that all output must use the same map
   int forloop_range;
   dim3 grid_dim, block_dim;
 };
@@ -66,10 +74,12 @@ public:
   // input operator
   STensor new_input(aso::kernel::DTensor const &dtensor,
                     int3 input_map,
-                    int forloop_dim);
+                    int forloop_dim,
+                    aso::layout::SmemLayout layout);
   TBOperator *create_input_op(aso::kernel::DTensor const &dtensor,
                               int3 input_map,
-                              int forloop_dim);
+                              int forloop_dim,
+                              aso::layout::SmemLayout layout);
   // output operator
   aso::kernel::DTensor new_output(STensor const &stensor, int3 output_map);
   TBOperator *create_output_op(STensor const &stensor, int3 output_map);

@@ -43,8 +43,10 @@ public:
 
 class KNInputOp : public KNOperator {
 public:
-  KNInputOp(std::vector<int> const &dims, aso::type::DataType data_type);
-  virtual ~KNInputOp();
+  KNInputOp(std::vector<int> const &dims,
+            aso::type::DataType data_type,
+            aso::layout::DmemLayout layout);
+  ~KNInputOp();
   bool profile(ProfileResult &profile);
   bool fingerprint(void);
 

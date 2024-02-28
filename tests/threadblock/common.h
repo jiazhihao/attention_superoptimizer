@@ -26,8 +26,10 @@ inline STensor
   tensor.data_type = type::DT_FLOAT16;
   int contig_dim = -1;
   if constexpr (std::is_same_v<Layout, cutlass::layout::RowMajor>) {
+    tensor.layout = STensor::STensorLayout::ROW_MAJOR;
     contig_dim = 1;
   } else if constexpr (std::is_same_v<Layout, cutlass::layout::ColumnMajor>) {
+    tensor.layout = STensor::STensorLayout::COLUMN_MAJOR;
     contig_dim = 0;
   } else {
     static_assert(std::is_same_v<Element, void>, "Unsupported layout.");
@@ -81,6 +83,16 @@ void random_fill_tensor(cutlass::HostTensor<Element, Layout> &host_tensor,
   Element *ptr = host_tensor.host_data();
   for (size_t i = 0; i < size; ++i) {
     ptr[i] = static_cast<Element>(dist(gen));
+  }
+  host_tensor.sync_device();
+}
+
+template <typename Element, typename Layout>
+void zero_fill_tensor(cutlass::HostTensor<Element, Layout> &host_tensor) {
+  size_t size = host_tensor.size();
+  Element *ptr = host_tensor.host_data();
+  for (size_t i = 0; i < size; ++i) {
+    ptr[i] = static_cast<Element>(0);
   }
   host_tensor.sync_device();
 }

@@ -44,6 +44,8 @@ public:
   std::vector<std::pair<void *, size_t>> allocated_tensors;
   // fingerprint related fields
   aso::type::FPType *exp_lookup_table;
+  aso::type::FPType *div_p_lookup_table;
+  aso::type::FPType *div_q_lookup_table;
 
 public:
   cublasHandle_t blas;

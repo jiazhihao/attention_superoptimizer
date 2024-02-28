@@ -21,8 +21,9 @@ namespace threadblock {
 
 STensor Graph::new_input(aso::kernel::DTensor const &dtensor,
                          int3 input_map,
-                         int forloop_dim) {
-  TBOperator *op = create_input_op(dtensor, input_map, forloop_dim);
+                         int forloop_dim,
+                         aso::layout::SmemLayout layout) {
+  TBOperator *op = create_input_op(dtensor, input_map, forloop_dim, layout);
   assert(op != nullptr);
   operators.push_back(op);
   return op->output_tensors[0];
@@ -30,7 +31,8 @@ STensor Graph::new_input(aso::kernel::DTensor const &dtensor,
 
 TBOperator *Graph::create_input_op(aso::kernel::DTensor const &dtensor,
                                    int3 input_map,
-                                   int forloop_dim) {
+                                   int forloop_dim,
+                                   aso::layout::SmemLayout layout) {
   STensor tensor;
   tensor.num_dims = dtensor.num_dims;
   tensor.data_type = dtensor.data_type;
@@ -65,28 +67,29 @@ TBOperator *Graph::create_input_op(aso::kernel::DTensor const &dtensor,
     assert(tensor.dim[forloop_dim] % forloop_range == 0);
     tensor.dim[forloop_dim] /= forloop_range;
   }
-
-  for (int i = tensor.num_dims - 1; i >= 0; i--) {
-    tensor.stride[i] = (i == tensor.num_dims - 1)
-                           ? 1
-                           : tensor.stride[i + 1] * tensor.dim[i + 1];
+  // our data loader only supports 2D matrices
+  // (i.e., only the last two dims can be larger than 1
+  for (int i = 0; i < tensor.num_dims - 2; i++) {
+    assert(tensor.dim[i] == 1);
   }
 
   if (smem_offset + (off_t)tensor.size() > (off_t)MAX_SMEM_SIZE) {
     return nullptr;
   }
 
-  TBInputOp *op = new TBInputOp(this, dtensor, input_map, forloop_dim);
+  TBInputOp *op = new TBInputOp(this, dtensor, input_map, forloop_dim, layout);
   return op;
 }
 
 TBInputOp::TBInputOp(Graph *_graph,
                      aso::kernel::DTensor const &_dtensor,
                      int3 _input_map,
-                     int _forloop_dim)
+                     int _forloop_dim,
+                     aso::layout::SmemLayout _layout)
     : TBOperator(_graph, aso::type::TB_INPUT_OP), dtensor(_dtensor),
       input_map(_input_map), forloop_dim(_forloop_dim) {
   STensor tensor;
+  tensor.layout = _layout;
   tensor.num_dims = dtensor.num_dims;
   tensor.data_type = dtensor.data_type;
   for (int i = 0; i < tensor.num_dims; i++) {
@@ -121,10 +124,9 @@ TBInputOp::TBInputOp(Graph *_graph,
     tensor.dim[forloop_dim] /= bgraph->forloop_range;
   }
 
-  for (int i = tensor.num_dims - 1; i >= 0; i--) {
-    tensor.stride[i] = (i == tensor.num_dims - 1)
-                           ? 1
-                           : tensor.stride[i + 1] * tensor.dim[i + 1];
+  // Our data loader only supports 2D matrices
+  for (int i = 0; i < tensor.num_dims - 2; i++) {
+    assert(tensor.dim[i] == 1);
   }
   tensor.owner_op = this;
   tensor.owner_ts_idx = 0;

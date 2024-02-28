@@ -28,19 +28,24 @@ STensor Graph::matmul(STensor const &A, STensor const &B) {
 }
 
 TBOperator *Graph::create_matmul_op(STensor const &A, STensor const &B) {
-  if (A.num_dims != 2 || B.num_dims != 2) {
+  if (A.num_dims != B.num_dims) {
     return nullptr;
   }
-  if (A.dim[1] != B.dim[0]) {
+  if (A.dim[A.num_dims - 1] != B.dim[B.num_dims - 2]) {
     return nullptr;
+  }
+  for (int i = 0; i < A.num_dims - 2; i++) {
+    if (A.dim[i] != 1 || B.dim[i] != 1) {
+      return nullptr;
+    }
   }
 
   STensor C;
-  C.num_dims = 2;
-  C.dim[0] = A.dim[0];
-  C.dim[1] = B.dim[1];
-  C.stride[0] = C.dim[1];
-  C.stride[1] = 1;
+  C.num_dims = A.num_dims;
+  for (int i = 0; i < C.num_dims; i++) {
+    C.dim[i] = A.dim[i];
+  }
+  C.dim[C.num_dims - 1] = B.dim[C.num_dims - 1];
   C.data_type = A.data_type;
   if (smem_offset + (off_t)C.size() > (off_t)MAX_SMEM_SIZE) {
     return nullptr;
@@ -53,15 +58,20 @@ TBOperator *Graph::create_matmul_op(STensor const &A, STensor const &B) {
 TBMatmulOp::TBMatmulOp(Graph *_graph, STensor const &A, STensor const &B)
     : TBOperator(_graph, aso::type::TB_MATMUL_OP, A, B) {
   STensor C;
-  assert(A.num_dims == 2);
-  assert(B.num_dims == 2);
+  assert(A.num_dims == B.num_dims);
+  // Check that this is not a TB-level batch matmul
+  for (int i = 0; i < A.num_dims - 2; i++) {
+    assert(A.dim[i] == 1);
+    assert(B.dim[i] == 1);
+  }
   // Currently only support row-major output
   // to be consistent with cutlass
-  C.num_dims = 2;
-  C.dim[0] = A.dim[0];
-  C.dim[1] = B.dim[1];
-  C.stride[0] = C.dim[1];
-  C.stride[1] = 1;
+  C.layout = aso::layout::SmemRowMajor;
+  C.num_dims = A.num_dims;
+  for (int i = 0; i < C.num_dims; i++) {
+    C.dim[i] = A.dim[i];
+  }
+  C.dim[C.num_dims - 1] = B.dim[C.num_dims - 1];
   C.data_type = A.data_type;
   C.owner_op = this;
   C.owner_ts_idx = 0;

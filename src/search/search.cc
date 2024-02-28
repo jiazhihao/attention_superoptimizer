@@ -405,8 +405,11 @@ void KernelGraphGenerator::generate_next_kernel(
                   bool input_created = true;
                   for (size_t i = 0; i < input_tensors.size(); ++i) {
                     DTensor tensor = input_tensors[i];
-                    TBOperator *input_op = ng.create_input_op(
-                        tensor, input_map[i], forloop_dim[i]);
+                    TBOperator *input_op =
+                        ng.create_input_op(tensor,
+                                           input_map[i],
+                                           forloop_dim[i],
+                                           layout::SmemRowMajor);
                     if (input_op == nullptr) {
                       input_created = false;
                       break;
@@ -481,7 +484,8 @@ void KernelGraphGenerator::generate_kernel_graphs() {
       DTensor output_tensor = op->output_tensors[0];
       DTensor input =
           g.new_input(to_dim_vector(output_tensor.num_dims, output_tensor.dim),
-                      output_tensor.data_type);
+                      output_tensor.data_type,
+                      layout::DmemRowMajor);
       assert(contains_key(computation_graph_patterns, output_tensor));
       c.algebraic_pattern.insert(
           {input, computation_graph_patterns.at(output_tensor)});

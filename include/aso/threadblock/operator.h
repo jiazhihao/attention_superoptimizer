@@ -52,7 +52,8 @@ public:
   TBInputOp(Graph *_graph,
             aso::kernel::DTensor const &dtensor,
             int3 input_map,
-            int forloop_dim);
+            int forloop_dim,
+            aso::layout::SmemLayout layout);
   ~TBInputOp();
 
   operator json() const override;

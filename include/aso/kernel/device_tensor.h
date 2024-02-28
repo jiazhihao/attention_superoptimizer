@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "aso/layout.h"
 #include "aso/type.h"
 #include "aso/utils/json_utils.h"
 #include <cstddef>
@@ -33,6 +34,9 @@ struct DTensor {
     if (data_type != b.data_type) {
       return false;
     }
+    if (layout != b.layout) {
+      return false;
+    }
     if (num_dims != b.num_dims) {
       return false;
     }
@@ -40,9 +44,9 @@ struct DTensor {
       if (dim[i] != b.dim[i]) {
         return false;
       }
-      if (stride[i] != b.stride[i]) {
-        return false;
-      }
+      // if (stride[i] != b.stride[i]) {
+      //   return false;
+      // }
     }
     if (owner_op != b.owner_op) {
       return false;
@@ -57,6 +61,9 @@ struct DTensor {
     if (data_type != b.data_type) {
       return true;
     }
+    if (layout != b.layout) {
+      return true;
+    }
     if (num_dims != b.num_dims) {
       return true;
     }
@@ -64,9 +71,9 @@ struct DTensor {
       if (dim[i] != b.dim[i]) {
         return true;
       }
-      if (stride[i] != b.stride[i]) {
-        return true;
-      }
+      // if (stride[i] != b.stride[i]) {
+      //   return true;
+      // }
     }
     if (owner_op != b.owner_op) {
       return true;
@@ -97,16 +104,14 @@ struct DTensor {
     size_t data_type_size = sizeof(FPType);
     return num_elements() * data_type_size;
   }
-  enum DTensorLayout {
-    ROW_MAJOR,
-    COLUMN_MAJOR,
-  };
+
+  bool has_same_fingerprint(DTensor const &ref) const;
   aso::type::DataType data_type;
-  DTensorLayout layout;
+  aso::layout::DmemLayout layout;
   int num_dims;
   int dim[MAX_TENSOR_DIMS];
-  int stride[MAX_TENSOR_DIMS];
-  // DTensor fields
+  // int stride[MAX_TENSOR_DIMS];
+  //  DTensor fields
   KNOperator *owner_op;
   int owner_ts_idx;
   // pointer to data
@@ -115,8 +120,7 @@ struct DTensor {
   aso::type::FPType *fp_ptr;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
-    DTensor, data_type, layout, num_dims, dim, stride)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(DTensor, data_type, layout, num_dims, dim)
 
 } // namespace kernel
 } // namespace aso

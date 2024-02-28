@@ -46,22 +46,25 @@ KNOperator::KNOperator(aso::type::KNOperatorType _type,
 KNOperator::~KNOperator() {}
 
 DTensor Graph::new_input(std::vector<int> const &dims,
-                         aso::type::DataType data_type) {
-  KNOperator *op = create_input_op(dims, data_type);
+                         aso::type::DataType data_type,
+                         aso::layout::DmemLayout layout) {
+  KNOperator *op = create_input_op(dims, data_type, layout);
   assert(op != nullptr);
   operators.push_back(op);
   return op->output_tensors[0];
 }
 
 KNOperator *Graph::create_input_op(std::vector<int> const &dims,
-                                   aso::type::DataType data_type) {
+                                   aso::type::DataType data_type,
+                                   aso::layout::DmemLayout layout) {
   DTensor tensor;
+  tensor.layout = layout;
   tensor.num_dims = dims.size();
   for (int i = tensor.num_dims - 1; i >= 0; i--) {
     tensor.dim[i] = dims[i];
-    tensor.stride[i] = (i == tensor.num_dims - 1)
-                           ? 1
-                           : tensor.stride[i + 1] * tensor.dim[i + 1];
+    // tensor.stride[i] = (i == tensor.num_dims - 1)
+    //                        ? 1
+    //                        : tensor.stride[i + 1] * tensor.dim[i + 1];
   }
   tensor.data_type = data_type;
 
@@ -69,22 +72,24 @@ KNOperator *Graph::create_input_op(std::vector<int> const &dims,
   if (dmm->offset + tensor.data_size() > dmm->total_size) {
     return nullptr;
   }
-  KNInputOp *op = new KNInputOp(dims, data_type);
+  KNInputOp *op = new KNInputOp(dims, data_type, layout);
   return op;
 }
 
 KNInputOp::KNInputOp(std::vector<int> const &dims,
-                     aso::type::DataType data_type)
+                     aso::type::DataType data_type,
+                     aso::layout::DmemLayout layout)
     : KNOperator(aso::type::KN_INPUT_OP) {
   DTensor tensor;
   tensor.num_dims = dims.size();
   for (int i = tensor.num_dims - 1; i >= 0; i--) {
     tensor.dim[i] = dims[i];
-    tensor.stride[i] = (i == tensor.num_dims - 1)
-                           ? 1
-                           : tensor.stride[i + 1] * tensor.dim[i + 1];
+    // tensor.stride[i] = (i == tensor.num_dims - 1)
+    //                        ? 1
+    //                        : tensor.stride[i + 1] * tensor.dim[i + 1];
   }
   tensor.data_type = data_type;
+  tensor.layout = layout;
   tensor.owner_op = this;
   tensor.owner_ts_idx = 0;
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
@@ -97,13 +102,10 @@ KNInputOp::~KNInputOp() {
   dmm->free(output_tensors[0]);
 }
 
-bool KNInputOp::profile(ProfileResult &profile) {
-  profile.run_time = 0.0f;
-  return true;
-}
-
 KNInputOp::operator json() const {
-  return json{{"op_type", "input"}, {"input_tensors", input_tensors}, {"output_tensors", output_tensors}};
+  return json{{"op_type", op_type},
+              {"input_tensors", input_tensors},
+              {"output_tensors", output_tensors}};
 }
 
 } // namespace kernel

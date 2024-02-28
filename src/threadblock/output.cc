@@ -32,12 +32,23 @@ TBOperator *Graph::create_output_op(STensor const &stensor, int3 output_map) {
   return op;
 }
 
-TBOutputOp::TBOutputOp(Graph *_graph, STensor const &stensor, int3 _output_map)
-    : TBOperator(_graph, aso::type::TB_OUTPUT_OP), output_map(_output_map) {
-  dtensor.num_dims = stensor.num_dims;
-  dtensor.data_type = stensor.data_type;
+TBOutputOp::TBOutputOp(Graph *_graph, STensor const &input, int3 _output_map)
+    : TBOperator(_graph, aso::type::TB_OUTPUT_OP, input),
+      output_map(_output_map) {
+  // Create a stensor for accumulating results
+  STensor accum = input;
+  accum.owner_op = this;
+  accum.owner_ts_idx = 0;
+  accum.smem_offset = bgraph->allocate(accum);
+  assert(output_tensors.size() == 0);
+  output_tensors.push_back(accum);
+
+  dtensor.num_dims = accum.num_dims;
+  dtensor.data_type = accum.data_type;
+  // Currently assume that the output layouts are row-major
+  dtensor.layout = aso::layout::DmemRowMajor;
   for (int i = 0; i < dtensor.num_dims; i++) {
-    dtensor.dim[i] = stensor.dim[i];
+    dtensor.dim[i] = accum.dim[i];
   }
 
   for (int d = 0; d < 3; d++) {
@@ -60,14 +71,6 @@ TBOutputOp::TBOutputOp(Graph *_graph, STensor const &stensor, int3 _output_map)
       dtensor.dim[dim_idx] *= dim_div;
     }
   }
-
-  for (int i = dtensor.num_dims - 1; i >= 0; i--) {
-    dtensor.stride[i] = (i == dtensor.num_dims - 1)
-                            ? 1
-                            : dtensor.stride[i + 1] * dtensor.dim[i + 1];
-  }
-
-  input_tensors.push_back(stensor);
 }
 
 TBOutputOp::~TBOutputOp() {}

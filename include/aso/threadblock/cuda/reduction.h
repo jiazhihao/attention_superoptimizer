@@ -46,43 +46,39 @@ public:
                            STensor const &output,
                            int thread_id,
                            int num_threads) {
+    int reduction_dim = type - aso::type::TB_REDUCTION_0_OP;
+    int num_dims = output.num_dims;
     FPType *input_ptr = (FPType *)(smem_buffer + input.smem_offset);
     FPType *output_ptr = (FPType *)(smem_buffer + output.smem_offset);
-    int num_elements = output.size();
-    if (type == TB_REDUCTION_0_OP) {
-      int kK = input.dim[0] / output.dim[0];
-      int kIterations = (num_elements + num_threads - 1) / num_threads;
-      for (int i = 0; i < kIterations; i++) {
+    int num_elements = output.num_elements();
+    int output_columns = output.dim[num_dims - 1];
+    int input_columns = input.dim[num_dims - 1];
+    if (reduction_dim == num_dims - 2) {
+      // Reduce along the row dim
+      int output_rows = output.dim[num_dims - 2];
+      int kK = input.dim[num_dims - 2] / output.dim[num_dims - 2];
+      for (int i = thread_id; i < num_elements; i += num_threads) {
         uint32_t result = 0;
-        int no = (i * num_threads + thread_id) / output.dim[1];
-        int m = (i * num_threads + thread_id) % output.dim[1];
-        if (no >= output.dim[0]) {
-          continue;
-        }
+        int no = i / output_columns;
+        int m = i % output_columns;
         for (int k = 0; k < kK; k++) {
-          int ni = no + k * output.dim[0];
-          result =
-              (result + input_ptr[ni * input.stride[0] + m * input.stride[1]]) %
-              FP_PQ;
+          int ni = no + k * output_rows;
+          result = (result + input_ptr[ni * input_columns + m]) % FP_PQ;
         }
-        output_ptr[no * output.stride[0] + m * output.stride[1]] = result;
+        output_ptr[i] = result;
       }
-    } else if (type == TB_REDUCTION_1_OP) {
-      int kK = input.dim[1] / output.dim[1];
-      for (int i = 0; i < (num_elements + num_threads - 1) / num_threads; i++) {
+    } else if (reduction_dim == num_dims - 1) {
+      // Reduce along the column dim
+      int kK = input.dim[num_dims - 1] / output.dim[num_dims - 1];
+      for (int i = thread_id; i < num_elements; i += num_threads) {
         uint32_t result = 0;
-        int n = (i * num_threads + thread_id) / output.dim[1];
-        int mo = (i * num_threads + thread_id) % output.dim[1];
-        if (n >= output.dim[0]) {
-          continue;
-        }
+        int n = i / output_columns;
+        int mo = i % output_columns;
         for (int k = 0; k < kK; k++) {
-          int mi = mo + k * output.dim[1];
-          result =
-              (result + input_ptr[n * input.stride[0] + mi * input.stride[1]]) %
-              FP_PQ;
+          int mi = mo + k * output_columns;
+          result = (result + input_ptr[n * input_columns + mi]) % FP_PQ;
         }
-        output_ptr[n * output.stride[0] + mo * output.stride[1]] = result;
+        output_ptr[i] = result;
       }
     } else {
       assert(false && "Unimplemented");

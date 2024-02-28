@@ -17,15 +17,24 @@
 
 namespace aso {
 namespace layout {
-struct Layout {
-  enum DefaultLayout {
-    RowMajor,
-    ColumnMajor,
-  };
-  Layout(DefaultLayout _layout, int _rows, int _columns);
-  int num_dims;
-  int dims[MAX_NUM_DIMS];
-  int stride[MAX_NUM_DIMS];
+
+enum DmemLayout {
+  DmemRowMajor = 100,
+  DmemColumnMajor = 101,
+  DmemUnknownLayout = 199,
 };
+
+enum SmemLayout {
+  SmemRowMajor = 200,
+  SmemColumnMajor = 201,
+  SmemRowMajorTensorOpMultiplicand_Crosswise16 = 202,
+  SmemRowMajorTensorOpMultiplicand_Crosswise32 = 203,
+  SmemRowMajorTensorOpMultiplicand_Crosswise64 = 204,
+  SmemColumnMajorTensorOpMultiplicand_Crosswise16 = 205,
+  SmemColumnMajorTensorOpMultiplicand_Crosswise32 = 206,
+  SmemColumnMajorTensorOpMultiplicand_Crosswise64 = 207,
+  SmemUnknownLayout = 299,
+};
+
 } // namespace layout
 } // namespace aso

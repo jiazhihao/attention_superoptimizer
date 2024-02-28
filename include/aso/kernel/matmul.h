@@ -23,10 +23,10 @@ namespace kernel {
 class KNMatmulOp : public aso::kernel::KNOperator {
 public:
   KNMatmulOp(DTensor const &A, DTensor const &B);
-  virtual ~KNMatmulOp();
-  bool profile(ProfileResult &profile);
-  bool fingerprint(void);
-  
+  ~KNMatmulOp();
+  bool profile(ProfileResult &profile) override;
+  bool fingerprint(void) override;
+
   operator json() const override;
 };
 

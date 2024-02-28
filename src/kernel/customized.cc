@@ -68,10 +68,14 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
       bgraph(_plan.grid_dim, _plan.block_dim, _plan.forloop_range) {
   assert(_inputs.size() == plan.input_map.size());
   assert(plan.forloop_dim.size() == plan.input_map.size());
+  assert(plan.input_smem_layouts.size() == plan.input_map.size());
   // Step 1: computing input shapes
   // Step 1: creating a stensor for each input
   for (size_t i = 0; i < input_tensors.size(); i++) {
-    bgraph.new_input(input_tensors[i], plan.input_map[i], plan.forloop_dim[i]);
+    bgraph.new_input(input_tensors[i],
+                     plan.input_map[i],
+                     plan.forloop_dim[i],
+                     plan.input_smem_layouts[i]);
   }
 
   auto const &ops = plan.ops;
@@ -124,14 +128,23 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
           }
         }
       }
-      if (!found) {
+      if (!found && op->op_type != aso::type::TB_INPUT_OP) {
         // TODO: change output tensor_shape
         STensor stensor = op->output_tensors[i];
         DTensor dtensor = bgraph.new_output(stensor, plan.output_map);
+        printf("stensor.offset(%d)\n", stensor.smem_offset);
         dtensor.owner_op = this;
         dtensor.owner_ts_idx = static_cast<int>(output_tensors.size());
         DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
         dmm->allocate(dtensor);
+        // Update dtensor saved by the output operator
+        {
+          assert(bgraph.operators.back()->op_type == aso::type::TB_OUTPUT_OP);
+          aso::threadblock::TBOutputOp *output =
+              static_cast<aso::threadblock::TBOutputOp *>(
+                  bgraph.operators.back());
+          output->dtensor = dtensor;
+        }
         output_tensors.push_back(dtensor);
       }
     }
@@ -171,8 +184,10 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         assert(my_inputs.size() == 0);
         aso::threadblock::TBInputOp *input_op =
             static_cast<aso::threadblock::TBInputOp *>(op);
-        bgraph.new_input(
-            input_op->dtensor, input_op->input_map, input_op->forloop_dim);
+        bgraph.new_input(input_op->dtensor,
+                         input_op->input_map,
+                         input_op->forloop_dim,
+                         input_op->output_tensors[0].layout);
         plan.input_map.push_back(input_op->input_map);
         plan.forloop_dim.push_back(input_op->forloop_dim);
         break;

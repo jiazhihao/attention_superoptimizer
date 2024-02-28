@@ -16,13 +16,45 @@
 #include "aso/kernel/operator.h"
 #include "aso/utils/cuda_helper.h"
 
+#include "cutlass/cutlass.h"
+#include "cutlass/fast_math.h"
+#include "cutlass/matrix_coord.h"
+
 namespace aso {
 namespace kernel {
 
 using namespace aso::type;
 
+template <typename DT>
+__global__ void init_input(DTensor const A, size_t num_elements) {
+  int idx = (threadIdx.x + blockIdx.x * blockDim.x);
+  int kColumn = A.dim[A.num_dims - 1];
+  int myRow = idx / kColumn;
+  int myColumn = idx % kColumn;
+  if (idx < num_elements) {
+    ((DT *)A.data_ptr)[idx] = ((float)myColumn);
+    // printf("idx(%d) v(%.f)\n", idx, (float)myRow);
+  }
+}
+
+bool KNInputOp::profile(ProfileResult &profile) {
+  profile.run_time = 0.0f;
+  int const num_threads_per_blk = 1024;
+  int num_blocks =
+      (output_tensors[0].num_elements() + num_threads_per_blk - 1) /
+      num_threads_per_blk;
+  if (output_tensors[0].data_type == aso::type::DT_FLOAT16) {
+    init_input<cutlass::half_t><<<num_blocks, num_threads_per_blk>>>(
+        output_tensors[0], output_tensors[0].num_elements());
+  } else {
+    assert(false && "Unsupported type");
+  }
+  checkCUDA(cudaDeviceSynchronize());
+  return true;
+}
+
 __global__ void init_input_fingerprint(DTensor const A, size_t num_elements) {
-  int idx = (threadIdx.x + blockIdx.x + blockDim.x);
+  int idx = (threadIdx.x + blockIdx.x * blockDim.x);
   if (idx < num_elements) {
     // FIXME: replace this with curand to generate random numbers
     A.fp_ptr[idx] = idx % FP_PQ;

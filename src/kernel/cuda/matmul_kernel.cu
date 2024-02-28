@@ -51,20 +51,20 @@ bool KNMatmulOp::profile(ProfileResult &result) {
   cublasComputeType_t compute_type = CUBLAS_COMPUTE_16F;
   cublasOperation_t trans_A = CUBLAS_OP_N;
   cublasOperation_t trans_B = CUBLAS_OP_N;
-  if (input_tensors[0].layout == DTensor::COLUMN_MAJOR) {
+  if (input_tensors[0].layout == layout::DmemColumnMajor) {
     trans_A = CUBLAS_OP_T;
   } else {
-    assert(input_tensors[0].layout == DTensor::ROW_MAJOR);
+    assert(input_tensors[0].layout == layout::DmemRowMajor);
   }
-  if (input_tensors[1].layout == DTensor::COLUMN_MAJOR) {
+  if (input_tensors[1].layout == layout::DmemColumnMajor) {
     trans_B = CUBLAS_OP_T;
   } else {
-    assert(input_tensors[1].layout == DTensor::ROW_MAJOR);
+    assert(input_tensors[1].layout == layout::DmemRowMajor);
   }
   // Currently assume C must be in row major;
-  assert(output_tensors[0].layout == DTensor::ROW_MAJOR);
-  int lda = input_tensors[0].layout == DTensor::ROW_MAJOR ? row_A : column_A;
-  int ldb = input_tensors[1].layout == DTensor::ROW_MAJOR ? row_B : column_B;
+  assert(output_tensors[0].layout == layout::DmemRowMajor);
+  int lda = input_tensors[0].layout == layout::DmemRowMajor ? row_A : column_A;
+  int ldb = input_tensors[1].layout == layout::DmemRowMajor ? row_B : column_B;
   int ldc = row_C;
 
   checkCUDA(cudaDeviceSynchronize());
@@ -103,45 +103,63 @@ bool KNMatmulOp::profile(ProfileResult &result) {
   return true;
 }
 
-__global__ void compute_matmul_fingerprint(
-    DTensor const A, DTensor const B, DTensor const C, int m, int n, int k) {
+__global__ void compute_matmul_fingerprint(aso::type::FPType *A_ptr,
+                                           aso::type::FPType *B_ptr,
+                                           aso::type::FPType *C_ptr,
+                                           int num_batches,
+                                           int m,
+                                           int n,
+                                           int k) {
   int row_idx = (threadIdx.x + blockIdx.x * blockDim.x) / n;
   int col_idx = (threadIdx.x + blockIdx.x * blockDim.x) % n;
+  int mk = m * k;
+  int mn = m * n;
+  int nk = n * k;
   if (row_idx < m) {
-    uint32_t result = 0;
-    int A_stride_0 = A.stride[0];
-    int A_stride_1 = A.stride[1];
-    int B_stride_0 = B.stride[0];
-    int B_stride_1 = B.stride[1];
-    for (int i = 0; i < k; i++) {
-      uint32_t A_value = A.fp_ptr[row_idx * A_stride_0 + k * A_stride_1];
-      uint32_t B_value = B.fp_ptr[k * B_stride_0 + col_idx * B_stride_1];
-      result = (result + A_value * B_value) % FP_PQ;
+    for (int b = 0; b < num_batches; b++) {
+      uint32_t result = 0;
+      for (int i = 0; i < k; i++) {
+        uint32_t A_value = A_ptr[b * mk + row_idx * k + i];
+        uint32_t B_value = B_ptr[b * nk + i * n + col_idx];
+        result = (result + A_value * B_value) % FP_PQ;
+      }
+      if (threadIdx.x == 0) {
+        printf("C[%d] = %d\n",
+               b * mn + threadIdx.x + blockIdx.x * blockDim.x,
+               result);
+      }
+      C_ptr[b * mn + threadIdx.x + blockIdx.x * blockDim.x] = result;
     }
-    C.fp_ptr[row_idx * C.stride[0] + col_idx * C.stride[1]] = result;
   }
 }
 
 bool KNMatmulOp::fingerprint(void) {
-  int row_A = input_tensors[0].dim[0];
-  int column_A = input_tensors[0].dim[1];
-  int row_B = input_tensors[1].dim[0];
-  int column_B = input_tensors[1].dim[1];
-  int row_C = output_tensors[0].dim[0];
-  int column_C = output_tensors[0].dim[1];
+  int num_dims = input_tensors[0].num_dims;
+  int row_A = input_tensors[0].dim[num_dims - 2];
+  int column_A = input_tensors[0].dim[num_dims - 1];
+  int row_B = input_tensors[1].dim[num_dims - 2];
+  int column_B = input_tensors[1].dim[num_dims - 1];
+  int row_C = output_tensors[0].dim[num_dims - 2];
+  int column_C = output_tensors[0].dim[num_dims - 1];
   assert(column_A == row_B);
   assert(row_C == row_A);
   assert(column_C == column_B);
+  int num_batches = 1;
+  for (int i = 0; i < num_dims - 2; i++) {
+    num_batches *= input_tensors[0].dim[i];
+  }
   int const num_threads_per_blk = 1024;
   int num_blocks =
       (row_C * column_C + num_threads_per_blk - 1) / num_threads_per_blk;
   compute_matmul_fingerprint<<<num_blocks, num_threads_per_blk>>>(
-      input_tensors[0],
-      input_tensors[1],
-      output_tensors[0],
+      input_tensors[0].fp_ptr,
+      input_tensors[1].fp_ptr,
+      output_tensors[0].fp_ptr,
+      num_batches,
       row_C,
       column_C,
       row_B);
+  checkCUDA(cudaDeviceSynchronize());
   return true;
 }
 

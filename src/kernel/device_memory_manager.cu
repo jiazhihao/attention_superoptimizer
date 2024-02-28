@@ -25,25 +25,67 @@ DeviceMemoryManager *DeviceMemoryManager::singleton = nullptr;
 
 DeviceMemoryManager::DeviceMemoryManager() {
   // preallocate 10 GB of device memory
-  total_size = (size_t)10 * 1024 * 1024 * 1024;
+  total_size = (size_t)1 * 1024 * 1024 * 1024;
   offset = 0;
   checkCUDA(cudaMalloc(&base_ptr, total_size));
   checkCUDA(cublasCreate(&blas));
   checkCUDA(cublasSetMathMode(blas, CUBLAS_TENSOR_OP_MATH));
   // fingerprint related fields
+  // exponential lookup table
   exp_lookup_table = (FPType *)base_ptr;
-  offset += sizeof(FPType) * FP_Q;
+  // make future tensors 16 bytes aligned
+  offset += (sizeof(FPType) * FP_Q + 15) / 16 * 16;
   // check PQ relations
   assert(FP_Q < FP_P);
   assert((FP_P - 1) % FP_Q == 0);
   FPType exp_table[FP_Q];
   exp_table[0] = 1;
   for (int i = 1; i < FP_Q; i++) {
-    exp_table[i] = (exp_table[i - 1] * FP_Q) % FP_P;
+    exp_table[i] = (exp_table[i - 1] * FP_EXP_BASE) % FP_P;
   }
-  assert((exp_table[FP_Q - 1] * FP_Q) % FP_P == 1);
+  assert((exp_table[FP_Q - 1] * FP_EXP_BASE) % FP_P == 1);
   cudaMemcpy(exp_lookup_table,
              exp_table,
+             sizeof(FPType) * FP_Q,
+             cudaMemcpyHostToDevice);
+  // division p lookup table
+  div_p_lookup_table = (FPType *)(base_ptr + offset);
+  // make future tensors 16 bytes aligned
+  offset += (sizeof(FPType) * FP_P + 15) / 16 * 16;
+  FPType div_p_table[FP_P];
+  for (int i = 0; i < FP_P; i++) {
+    div_p_table[i] = 1;
+    for (int j = 1; j < FP_P; j++) {
+      if ((i * j) % FP_P == 1) {
+        div_p_table[i] = j;
+      }
+    }
+    if (i > 1) {
+      assert(div_p_table[i] != 1);
+    }
+  }
+  cudaMemcpy(div_p_lookup_table,
+             div_p_table,
+             sizeof(FPType) * FP_P,
+             cudaMemcpyHostToDevice);
+  // division q lookup table
+  div_q_lookup_table = (FPType *)(base_ptr + offset);
+  // make future tensors 16 bytes aligned
+  offset += (sizeof(FPType) * FP_Q + 15) / 16 * 16;
+  FPType div_q_table[FP_Q];
+  for (int i = 0; i < FP_Q; i++) {
+    div_q_table[i] = 1;
+    for (int j = 1; j < FP_Q; j++) {
+      if ((i * j) % FP_Q == 1) {
+        div_q_table[i] = j;
+      }
+    }
+    if (i > 1) {
+      assert(div_q_table[i] != 1);
+    }
+  }
+  cudaMemcpy(div_q_lookup_table,
+             div_q_table,
              sizeof(FPType) * FP_Q,
              cudaMemcpyHostToDevice);
 }
@@ -54,17 +96,24 @@ DeviceMemoryManager::~DeviceMemoryManager() {
 }
 
 bool DeviceMemoryManager::allocate(DTensor &tensor, bool allocate_fingerprint) {
+  // assert that the start of the tensor is 16 bytes aligned
+  assert(offset % 16 == 0);
   void *ret_ptr = base_ptr + offset;
-  offset += tensor.data_size();
+  size_t tensor_size = tensor.data_size();
+  // make tensor_size a multiplier of 16
+  tensor_size = (tensor_size + 15) / 16 * 16;
+  offset += tensor_size;
   tensor.data_ptr = ret_ptr;
-  allocated_tensors.push_back(std::make_pair(ret_ptr, tensor.data_size()));
+  allocated_tensors.push_back(std::make_pair(ret_ptr, tensor_size));
 
   if (allocate_fingerprint) {
+    assert(offset % 16 == 0);
     ret_ptr = base_ptr + offset;
-    offset += tensor.fingerprint_size();
+    size_t tensor_size = tensor.fingerprint_size();
+    tensor_size = (tensor_size + 15) / 16 * 16;
+    offset += tensor_size;
     tensor.fp_ptr = (aso::type::FPType *)ret_ptr;
-    allocated_tensors.push_back(
-        std::make_pair(ret_ptr, tensor.fingerprint_size()));
+    allocated_tensors.push_back(std::make_pair(ret_ptr, tensor_size));
   }
   // Assert that we haven't used more than what we pre-allocated
   assert(offset <= total_size);
