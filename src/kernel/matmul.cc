@@ -19,6 +19,7 @@
 #include "aso/layout.h"
 #include "aso/utils/hash_utils.h"
 #include <cassert>
+#include <iostream>
 
 namespace aso {
 namespace kernel {
@@ -94,7 +95,7 @@ KNMatmulOp::~KNMatmulOp() {
 }
 
 KNMatmulOp::operator json() const {
-  return json{{"op_type", op_type},
+  return json{{"op_type", "matmul"},
               {"input_tensors", input_tensors},
               {"output_tensors", output_tensors}};
 }

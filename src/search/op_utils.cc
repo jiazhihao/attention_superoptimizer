@@ -40,11 +40,11 @@ std::shared_ptr<AlgebraicPattern>
                 std::shared_ptr<AlgebraicPattern> opd) {
   switch (op) {
     case type::KNOperatorType::KN_REDUCTION_0_OP:
-    case type::KNOperatorType::KN_REDUCTION_1_OP:
-    case type::KNOperatorType::KN_REDUCTION_2_OP:
       return std::make_shared<Red>(tensor.dim[0], opd);
-    case type::KNOperatorType::KN_OUTPUT_OP:
-      return opd;
+    case type::KNOperatorType::KN_REDUCTION_1_OP:
+      return std::make_shared<Red>(tensor.dim[1], opd);
+    case type::KNOperatorType::KN_REDUCTION_2_OP:
+      return std::make_shared<Red>(tensor.dim[2], opd);
     default:
       assert(false);
   }
@@ -58,9 +58,14 @@ std::shared_ptr<AlgebraicPattern>
     case type::TBOperatorType::TB_EXP_OP:
       return std::make_shared<Exp>(opd);
     case type::TBOperatorType::TB_REDUCTION_0_OP:
-    case type::TBOperatorType::TB_REDUCTION_1_OP:
-    case type::TBOperatorType::TB_REDUCTION_2_OP:
+      assert(tensor.dim[0] > 1);
       return std::make_shared<Red>(tensor.dim[0], opd);
+    case type::TBOperatorType::TB_REDUCTION_1_OP:
+      assert(tensor.dim[1] > 1);
+      return std::make_shared<Red>(tensor.dim[1], opd);
+    case type::TBOperatorType::TB_REDUCTION_2_OP:
+      assert(tensor.dim[2] > 1);
+      return std::make_shared<Red>(tensor.dim[2], opd);
     case type::TBOperatorType::TB_OUTPUT_OP:
       return opd;
     default:
@@ -77,9 +82,12 @@ std::shared_ptr<AlgebraicPattern>
 
   switch (op) {
     case type::KNOperatorType::KN_MATMUL_OP:
-      // FIXME: Correctly support batched matmul
-      return std::make_shared<Red>(tensor_l.dim[1],
-                                   std::make_shared<Mul>(lhs, rhs));
+      if (tensor_l.dim[2] > 1) {
+        return std::make_shared<Red>(tensor_l.dim[2],
+                                         std::make_shared<Mul>(lhs, rhs));
+      } else {
+        return std::make_shared<Mul>(lhs, rhs);
+      }
     default:
       assert(false);
   }
@@ -94,9 +102,12 @@ std::shared_ptr<AlgebraicPattern>
 
   switch (op) {
     case type::TBOperatorType::TB_MATMUL_OP:
-      // FIXME: Correctly support batched matmul
-      return std::make_shared<Red>(tensor_l.dim[1],
-                                   std::make_shared<Mul>(lhs, rhs));
+      if (tensor_l.dim[2] > 1) {
+        return std::make_shared<Red>(tensor_l.dim[2],
+                                         std::make_shared<Mul>(lhs, rhs));
+      } else {
+        return std::make_shared<Mul>(lhs, rhs);
+      }
     case type::TBOperatorType::TB_DIV_OP:
       return std::make_shared<Div>(lhs, rhs);
     default:

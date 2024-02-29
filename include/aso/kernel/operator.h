@@ -31,7 +31,7 @@ public:
              DTensor const &input2);
   KNOperator(aso::type::KNOperatorType _type,
              std::vector<DTensor> const &inputs);
-  ~KNOperator();
+  virtual ~KNOperator();
   virtual bool profile(ProfileResult &result) = 0;
   virtual bool fingerprint(void) = 0;
   aso::type::KNOperatorType op_type;

@@ -25,8 +25,6 @@ public:
   kernel::Graph computation_graph;
   size_t device_mem_size, shared_mem_size;
 
-  std::vector<kernel::Graph> kernel_graph_candidates;
-
 private:
   template <typename OpType, typename TensorType>
   struct SearchContext {
@@ -36,7 +34,11 @@ private:
     std::unordered_map<OpType *, int> output_degree; // Output degree
   };
 
-  std::shared_ptr<AlgebraicPattern> final_pattern;
+  std::vector<std::shared_ptr<AlgebraicPattern>> final_patterns;
+  std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>>
+      computation_graph_patterns;
+
+  int num_kernels;
 
   void generate_threadblock_graphs(
       SearchContext<TBOperator, STensor> &c,
@@ -46,18 +48,22 @@ private:
       std::vector<std::vector<std::shared_ptr<AlgebraicPattern>>>
           &result_output_patterns);
   void generate_next_kernel(SearchContext<KNOperator, DTensor> &c,
-                            kernel::Graph g);
+                            kernel::Graph &g);
 
   bool is_finished_graph(SearchContext<TBOperator, STensor> &c,
                          threadblock::Graph const &g);
+
+  void find_final_patterns(
+      std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> const
+          &input_pattern);
+
+  bool check_pattern(std::shared_ptr<AlgebraicPattern> pattern);
+
+  void pattern_eval();
+
+  bool verify(kernel::Graph const &g,
+              SearchContext<KNOperator, DTensor> &c);
 };
-
-std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> pattern_eval(
-    kernel::Graph const &g,
-    std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> const
-        &input_pattern);
-
-bool verify(kernel::Graph const &g);
 
 } // namespace search
 } // namespace aso

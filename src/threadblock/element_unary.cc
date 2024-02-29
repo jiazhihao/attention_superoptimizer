@@ -52,7 +52,7 @@ TBElementUnaryOp::~TBElementUnaryOp() {
 }
 
 TBElementUnaryOp::operator json() const {
-  return json{{"op_type", op_type},
+  return json{{"op_type", "element_unary"},
               {"input_tensors", input_tensors},
               {"output_tensors", output_tensors}};
 }

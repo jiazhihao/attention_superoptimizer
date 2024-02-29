@@ -28,8 +28,6 @@ STensor Graph::reduction(STensor const &input, int dim) {
 }
 
 TBOperator *Graph::create_reduction_op(STensor const &input, int dim) {
-  TBOperator *op = new TBReductionOp(this, input, dim);
-
   STensor output = input;
   assert(output.num_dims > dim);
   assert(output.layout == aso::layout::SmemRowMajor);
@@ -43,6 +41,8 @@ TBOperator *Graph::create_reduction_op(STensor const &input, int dim) {
   if (smem_offset + (off_t)output.size() > (off_t)MAX_SMEM_SIZE) {
     return nullptr;
   }
+
+  TBOperator *op = new TBReductionOp(this, input, dim);
 
   return op;
 }
@@ -72,7 +72,7 @@ TBReductionOp::~TBReductionOp() {
 }
 
 TBReductionOp::operator json() const {
-  return json{{"op_type", op_type},
+  return json{{"op_type", "reduction"},
               {"input_tensors", input_tensors},
               {"output_tensors", output_tensors},
               {"reduce_dim", reduce_dim}};

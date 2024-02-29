@@ -8,3 +8,4 @@ function(add_aso_test TEST_NAME TEST_ENTRY_PATH)
 endfunction()
 
 add_subdirectory(threadblock)
+add_subdirectory(search)
