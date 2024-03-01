@@ -53,8 +53,8 @@ int main(int argc, char **argv) {
     plan.forloop_range = 4;
     std::vector<kernel::DTensor> outputs = graph.customized({Q, K, V}, plan);
     assert(outputs.size() == 2);
-    kernel::DTensor o1 = graph.reduction(outputs[0], 2 /*dim*/, 2 /*factor*/);
-    kernel::DTensor o2 = graph.reduction(outputs[1], 2 /*dim*/, 2 /*factor*/);
+    kernel::DTensor o1 = graph.reduction(outputs[0], 2 /*dim*/, 64 /*size*/);
+    kernel::DTensor o2 = graph.reduction(outputs[1], 2 /*dim*/);
     graph.div(o1, o2);
   }
   for (auto const &op : graph.operators) {
