@@ -22,18 +22,15 @@ namespace threadblock {
 
 using namespace cutlass;
 
-class TBReductionOp : public TBOperator {
+class TBElementBinaryOp : public TBOperator {
 public:
-  TBReductionOp(Graph *graph,
-                STensor const &_input,
-                int reduce_dim,
-                int reduce_size);
-  ~TBReductionOp();
+  TBElementBinaryOp(Graph *_graph,
+                   STensor const &_input1,
+                   STensor const &_input2,
+                   aso::type::TBOperatorType _type);
+  ~TBElementBinaryOp();
 
   operator json() const override;
-
-public:
-  int reduce_dim, reduce_size;
 };
 
 } // namespace threadblock

@@ -511,14 +511,20 @@ __global__ void
 }
 
 void KNCustomizedOp::run() {
-  int smem_size = 48 * 1024; // 48 KB
   aso::threadblock::KernelParams params = bgraph.get_kernel_params();
-  assert(bgraph.smem_offset <= smem_size);
-  customized_kernel_function<<<bgraph.grid_dim, bgraph.block_dim, smem_size>>>(
-      params);
+  customized_kernel_function<<<bgraph.grid_dim,
+                               bgraph.block_dim,
+                               bgraph.smem_offset>>>(params);
 }
 
 bool KNCustomizedOp::profile(ProfileResult &result) {
+  int max_smem_size = aso::type::MAX_SMEM_SIZE;
+  assert(bgraph.smem_offset <= max_smem_size);
+  if (bgraph.smem_offset > 48 * 1024) {
+    checkCUDA(cudaFuncSetAttribute(customized_kernel_function,
+                                   cudaFuncAttributeMaxDynamicSharedMemorySize,
+                                   bgraph.smem_offset));
+  }
   checkCUDA(cudaDeviceSynchronize());
   cudaEvent_t events[2];
   checkCUDA(cudaEventCreate(&events[0]));
@@ -539,25 +545,28 @@ bool KNCustomizedOp::profile(ProfileResult &result) {
 }
 
 bool KNCustomizedOp::fingerprint(void) {
-  int smem_size = 64 * 1024; // 48 KB
+  int max_smem_size = aso::type::MAX_SMEM_SIZE;
   aso::threadblock::KernelParams params = bgraph.get_kernel_params();
   for (int i = 0; i < params.num_smem_outputs; i++) {
     printf("params.smem_outputs[%d].smem_offset = %d\n",
            i,
            params.smem_outputs[i].smem_offset);
   }
-  assert(bgraph.smem_offset <= smem_size);
+  assert(bgraph.smem_offset <= max_smem_size);
   aso::kernel::DeviceMemoryManager *dmm =
       aso::kernel::DeviceMemoryManager::get_instance();
-  checkCUDA(cudaFuncSetAttribute(compute_customizedop_fingerprint,
-                                 cudaFuncAttributeMaxDynamicSharedMemorySize,
-                                 smem_size));
+  if (bgraph.smem_offset > 48 * 1024) {
+    checkCUDA(cudaFuncSetAttribute(compute_customizedop_fingerprint,
+                                   cudaFuncAttributeMaxDynamicSharedMemorySize,
+                                   bgraph.smem_offset));
+  }
   compute_customizedop_fingerprint<<<bgraph.grid_dim,
                                      bgraph.block_dim,
-                                     smem_size>>>(params,
-                                                  dmm->exp_lookup_table,
-                                                  dmm->div_p_lookup_table,
-                                                  dmm->div_q_lookup_table);
+                                     bgraph.smem_offset>>>(
+      params,
+      dmm->exp_lookup_table,
+      dmm->div_p_lookup_table,
+      dmm->div_q_lookup_table);
   checkCUDA(cudaDeviceSynchronize());
   return true;
 }

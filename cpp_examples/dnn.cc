@@ -28,6 +28,7 @@ int main(int argc, char **argv) {
       graph.new_input({16, 64, 512}, type::DT_FLOAT16, layout::DmemColumnMajor);
   kernel::DTensor V =
       graph.new_input({16, 512, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
+  std::vector<kernel::DTensor> outputs;
   {
     threadblock::ExecutionPlan plan;
     plan.ops.push_back({aso::type::TB_MATMUL_OP, {{0, 0}, {1, 0}}});
@@ -51,11 +52,30 @@ int main(int argc, char **argv) {
     plan.grid_dim = {16, 2, 1};
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 4;
-    std::vector<kernel::DTensor> outputs = graph.customized({Q, K, V}, plan);
+    outputs = graph.customized({Q, K, V}, plan);
     assert(outputs.size() == 2);
-    kernel::DTensor o1 = graph.reduction(outputs[0], 2 /*dim*/, 64 /*size*/);
-    kernel::DTensor o2 = graph.reduction(outputs[1], 2 /*dim*/);
-    graph.div(o1, o2);
+    // kernel::DTensor o1 = graph.reduction(outputs[0], 2 /*dim*/, 64 /*size*/);
+    // kernel::DTensor o2 = graph.reduction(outputs[1], 2 /*dim*/);
+    // graph.div(o1, o2);
+  }
+  {
+    threadblock::ExecutionPlan plan;
+    plan.ops.push_back({aso::type::TB_REDUCTION_2_TO_DIMX_OP, {{0, 0}}});
+    plan.ops.push_back({aso::type::TB_REDUCTION_2_OP, {{1, 0}}});
+    plan.ops.push_back({aso::type::TB_DIV_OP, {{2, 0}, {3, 0}}});
+    plan.input_map.push_back({0, -1, -1});
+    plan.input_map.push_back({0, -1, -1});
+    plan.input_smem_layouts = {
+        layout::SmemRowMajor,
+        layout::SmemRowMajor,
+    };
+    plan.output_map = {0, -1, -1};
+    plan.forloop_dim = {-1, -1};
+    plan.grid_dim = {16, 1, 1};
+    plan.block_dim = {128, 1, 1};
+    plan.forloop_range = 1;
+    outputs = graph.customized({outputs[0], outputs[1]}, plan);
+    assert(outputs.size() == 1);
   }
   for (auto const &op : graph.operators) {
     op->fingerprint();

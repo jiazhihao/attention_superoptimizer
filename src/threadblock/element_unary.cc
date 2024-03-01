@@ -48,7 +48,8 @@ TBElementUnaryOp::TBElementUnaryOp(Graph *_graph,
 }
 
 TBElementUnaryOp::~TBElementUnaryOp() {
-  bgraph->free(output_tensors);
+  // Don't free since we inplace the output by default
+  // bgraph->free(output_tensors);
 }
 
 TBElementUnaryOp::operator json() const {

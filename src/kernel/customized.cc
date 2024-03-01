@@ -101,12 +101,25 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         bgraph.exp(my_inputs[0]);
         break;
       }
+      case aso::type::TB_DIV_OP: {
+        assert(my_inputs.size() == 2);
+        bgraph.div(my_inputs[0], my_inputs[1]);
+        break;
+      }
       case aso::type::TB_REDUCTION_0_OP:
       case aso::type::TB_REDUCTION_1_OP:
       case aso::type::TB_REDUCTION_2_OP: {
         assert(my_inputs.size() == 1);
         int reduce_dim = op.first - aso::type::TB_REDUCTION_0_OP;
         bgraph.reduction(my_inputs[0], reduce_dim);
+        break;
+      }
+      case aso::type::TB_REDUCTION_0_TO_DIMX_OP:
+      case aso::type::TB_REDUCTION_1_TO_DIMX_OP:
+      case aso::type::TB_REDUCTION_2_TO_DIMX_OP: {
+        assert(my_inputs.size() == 1);
+        int reduce_dim = op.first - aso::type::TB_REDUCTION_0_TO_DIMX_OP;
+        bgraph.reduction_to_dimx(my_inputs[0], reduce_dim);
         break;
       }
       default: {
