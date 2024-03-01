@@ -61,8 +61,7 @@ private:
 
   void pattern_eval();
 
-  bool verify(kernel::Graph const &g,
-              SearchContext<KNOperator, DTensor> &c);
+  bool verify(kernel::Graph const &g, SearchContext<KNOperator, DTensor> &c);
 };
 
 } // namespace search

@@ -99,7 +99,7 @@ std::vector<std::vector<int3>>
   std::vector<std::vector<int3>> results;
   // Assume two-dimentional inputs
   // TODO: There are invalid input maps, how to prune them out?
-  for (int3 input_map_pattern : {int3{0, 1, -1}/*, int3{1, 0, -1}*/}) {
+  for (int3 input_map_pattern : {int3{0, 1, -1} /*, int3{1, 0, -1}*/}) {
     generate_input_map_cand(tensors, input_map_pattern, {}, results);
   }
   return results;

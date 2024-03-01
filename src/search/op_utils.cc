@@ -84,7 +84,7 @@ std::shared_ptr<AlgebraicPattern>
     case type::KNOperatorType::KN_MATMUL_OP:
       if (tensor_l.dim[2] > 1) {
         return std::make_shared<Red>(tensor_l.dim[2],
-                                         std::make_shared<Mul>(lhs, rhs));
+                                     std::make_shared<Mul>(lhs, rhs));
       } else {
         return std::make_shared<Mul>(lhs, rhs);
       }
@@ -104,7 +104,7 @@ std::shared_ptr<AlgebraicPattern>
     case type::TBOperatorType::TB_MATMUL_OP:
       if (tensor_l.dim[2] > 1) {
         return std::make_shared<Red>(tensor_l.dim[2],
-                                         std::make_shared<Mul>(lhs, rhs));
+                                     std::make_shared<Mul>(lhs, rhs));
       } else {
         return std::make_shared<Mul>(lhs, rhs);
       }

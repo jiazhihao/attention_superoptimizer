@@ -25,12 +25,8 @@ namespace kernel {
 
 using namespace aso::type;
 
-DTensor Graph::reduction(DTensor const &input, int dim, int factor) {
-  // Reduce to a dimension of 1 if unset
-  if (factor == -1) {
-    factor = input.dim[dim];
-  }
-  KNOperator *op = create_reduction_op(input, dim, factor);
+DTensor Graph::reduction(DTensor const &input, int dim, int size) {
+  KNOperator *op = create_reduction_op(input, dim, size);
   assert(op != nullptr);
   operators.push_back(op);
   assert(op->output_tensors.size() == 1);
@@ -39,11 +35,11 @@ DTensor Graph::reduction(DTensor const &input, int dim, int factor) {
 }
 
 KNOperator *
-    Graph::create_reduction_op(DTensor const &input, int dim, int factor) {
+    Graph::create_reduction_op(DTensor const &input, int dim, int size) {
   if (input.num_dims <= dim) {
     return nullptr;
   }
-  if (input.dim[dim] % factor != 0) {
+  if (input.dim[dim] % size != 0) {
     return nullptr;
   }
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
@@ -51,17 +47,17 @@ KNOperator *
     return nullptr;
   }
 
-  KNReductionOp *op = new KNReductionOp(input, dim, factor);
+  KNReductionOp *op = new KNReductionOp(input, dim, size);
   return op;
 }
 
-KNReductionOp::KNReductionOp(DTensor const &input, int dim, int factor)
+KNReductionOp::KNReductionOp(DTensor const &input, int dim, int size)
     : KNOperator((KNOperatorType)(KN_REDUCTION_0_OP + dim), input),
-      reduction_dim(dim), reduction_factor(factor) {
+      reduction_dim_idx(dim), reduction_dim_size(size) {
   DTensor output = input;
   assert(dim < output.num_dims);
-  assert(output.dim[dim] % factor == 0);
-  output.dim[dim] /= factor;
+  assert(output.dim[dim] % size == 0);
+  output.dim[dim] = size;
   output.owner_op = this;
   output.owner_ts_idx = 0;
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
