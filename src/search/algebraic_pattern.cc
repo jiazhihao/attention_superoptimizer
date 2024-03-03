@@ -110,6 +110,10 @@ bool AlgebraicPattern::subpattern_to(AlgebraicPattern const &other) const {
   return result;
 }
 
+bool AlgebraicPattern::operator==(AlgebraicPattern const &other) const {
+  return subpattern_to(other) && other.subpattern_to(*this);
+}
+
 Var::Var(std::string const &name) : name(name) {}
 
 z3::expr Var::to_z3(z3::context &c) const {

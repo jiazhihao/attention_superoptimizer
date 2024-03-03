@@ -73,7 +73,9 @@ TBOutputOp::TBOutputOp(Graph *_graph, STensor const &input, int3 _output_map)
   }
 }
 
-TBOutputOp::~TBOutputOp() {}
+TBOutputOp::~TBOutputOp() {
+  bgraph->free(output_tensors);
+}
 
 TBOutputOp::operator json() const {
   return json{{"op_type", "output"},
