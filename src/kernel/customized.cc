@@ -131,17 +131,24 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
   assert(output_tensors.size() == 0);
   // Identify outputs: a tensor is an output if it is not used by
   // any other operators
-  for (auto const &op : bgraph.operators) {
+  size_t num_operators = bgraph.operators.size();
+  for (size_t op1_idx = 0; op1_idx < num_operators; op1_idx++) {
+    aso::threadblock::TBOperator const *op = bgraph.operators[op1_idx];
+    if (op->op_type == aso::type::TB_INPUT_OP) {
+      // Skip input loader
+      continue;
+    }
     for (size_t i = 0; i < op->output_tensors.size(); i++) {
       bool found = false;
-      for (auto const &op2 : bgraph.operators) {
+      for (size_t op2_idx = op1_idx + 1; op2_idx < num_operators; op2_idx++) {
+        aso::threadblock::TBOperator const *op2 = bgraph.operators[op2_idx];
         for (size_t j = 0; j < op2->input_tensors.size(); j++) {
           if (op2->input_tensors[j] == op->output_tensors[i]) {
             found = true;
           }
         }
       }
-      if (!found && op->op_type != aso::type::TB_INPUT_OP) {
+      if (!found) {
         // TODO: change output tensor_shape
         STensor stensor = op->output_tensors[i];
         DTensor dtensor = bgraph.new_output(stensor, plan.output_map);

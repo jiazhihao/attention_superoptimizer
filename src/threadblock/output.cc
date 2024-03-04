@@ -28,7 +28,7 @@ aso::kernel::DTensor Graph::new_output(STensor const &stensor,
 }
 
 TBOperator *Graph::create_output_op(STensor const &stensor, int3 output_map) {
-  if (smem_offset + stensor.size() >= MAX_SMEM_SIZE) {
+  if (smem_offset + stensor.size() >= aso::type::MAX_SMEM_SIZE) {
     return nullptr;
   }
   TBOutputOp *op = new TBOutputOp(this, stensor, output_map);
