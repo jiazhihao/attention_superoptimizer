@@ -13,30 +13,24 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/element_binary.h"
-#include "aso/kernel/device_memory_manager.h"
-#include "aso/kernel/graph.h"
-#include "aso/layout.h"
-#include "aso/utils/hash_utils.h"
-#include <cassert>
+#include "aso/threadblock/element_binary.h"
+#include "aso/threadblock/graph.h"
+#include "aso/threadblock/operator.h"
 
 namespace aso {
-namespace kernel {
+namespace threadblock {
 
-DTensor Graph::div(DTensor const &input1, DTensor const &input2) {
-  KNOperator *op =
-      create_elementbinary_op(input1, input2, aso::type::KN_DIV_OP);
+STensor Graph::div(STensor const &input1, STensor const &input2) {
+  TBOperator *op = create_elementbinary_op(input1, input2, aso::type::TB_DIV_OP);
   assert(op != nullptr);
   operators.push_back(op);
-  assert(op->output_tensors.size() == 1);
-  DTensor output = op->output_tensors[0];
-  return output;
+  return op->output_tensors[0];
 }
 
-KNOperator *Graph::create_elementbinary_op(DTensor const &input1,
-                                           DTensor const &input2,
-                                           aso::type::KNOperatorType type) {
-  DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
+TBOperator *Graph::create_elementbinary_op(STensor const &input1,
+                                           STensor const &input2,
+                                           aso::type::TBOperatorType _type) {
+  TBElementBinaryOp *op = new TBElementBinaryOp(this, input1, input2, _type);
   if (input1.num_dims != input2.num_dims) {
     return nullptr;
   }
@@ -46,53 +40,49 @@ KNOperator *Graph::create_elementbinary_op(DTensor const &input1,
       return nullptr;
     }
   }
-  DTensor output = input1;
+  STensor output = input1;
   for (int i = 0; i < output.num_dims; i++) {
     output.dim[i] = std::max(input1.dim[i], input2.dim[i]);
   }
 
-  if (dmm->offset + output.data_size() > dmm->total_size) {
+  if (smem_offset + output.size() > (off_t)aso::type::MAX_SMEM_SIZE) {
     return nullptr;
   }
 
-  KNElementBinaryOp *op = new KNElementBinaryOp(input1, input2, type);
   return op;
 }
 
-KNElementBinaryOp::KNElementBinaryOp(DTensor const &input1,
-                                     DTensor const &input2,
-                                     aso::type::KNOperatorType type)
-    : aso::kernel::KNOperator(type, input1, input2) {
+TBElementBinaryOp::TBElementBinaryOp(Graph *_graph,
+                                     STensor const &input1,
+                                     STensor const &input2,
+                                     aso::type::TBOperatorType _type)
+    : TBOperator(_graph, _type, input1, input2) {
   assert(input1.num_dims == input2.num_dims);
   for (int i = 0; i < input1.num_dims; i++) {
     if (input1.dim[i] != input2.dim[i]) {
       assert(input1.dim[i] == 1 || input2.dim[i] == 1);
     }
   }
-  DTensor output = input1;
+  STensor output = input1;
   for (int i = 0; i < output.num_dims; i++) {
     output.dim[i] = std::max(input1.dim[i], input2.dim[i]);
   }
   output.owner_op = this;
   output.owner_ts_idx = 0;
-  DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
-  dmm->allocate(output);
+  output.smem_offset = bgraph->allocate(output);
   assert(output_tensors.size() == 0);
   output_tensors.push_back(output);
 }
 
-KNElementBinaryOp::~KNElementBinaryOp() {
-  DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
-  for (int i = output_tensors.size() - 1; i >= 0; i--) {
-    dmm->free(output_tensors[i]);
-  }
+TBElementBinaryOp::~TBElementBinaryOp() {
+  bgraph->free(output_tensors);
 }
 
-KNElementBinaryOp::operator json() const {
-  return json{{"op_type", op_type},
+TBElementBinaryOp::operator json() const {
+  return json{{"op_type", "element_binary"},
               {"input_tensors", input_tensors},
               {"output_tensors", output_tensors}};
 }
 
-} // namespace kernel
+} // namespace threadblock
 } // namespace aso

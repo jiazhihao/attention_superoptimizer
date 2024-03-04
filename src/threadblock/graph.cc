@@ -33,7 +33,7 @@ size_t Graph::pair_hash::operator()(std::pair<int, int> const &p) const {
 off_t Graph::allocate(STensor const &tensor) {
   off_t ret = smem_offset;
   smem_offset += tensor.size();
-  assert(smem_offset <= (off_t)MAX_SMEM_SIZE);
+  assert(smem_offset <= (off_t)aso::type::MAX_SMEM_SIZE);
   allocated_tensors.push_back(std::make_pair(ret, tensor.size()));
   return ret;
 }

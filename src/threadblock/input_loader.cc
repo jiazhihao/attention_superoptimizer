@@ -76,7 +76,7 @@ TBOperator *Graph::create_input_op(aso::kernel::DTensor const &dtensor,
     // assert(tensor.dim[i] == 1);
   }
 
-  if (smem_offset + (off_t)tensor.size() > (off_t)MAX_SMEM_SIZE) {
+  if (smem_offset + (off_t)tensor.size() > (off_t)aso::type::MAX_SMEM_SIZE) {
     return nullptr;
   }
 

@@ -29,14 +29,19 @@ TEST(algebraic_expression, basic) {
     std::shared_ptr<AlgebraicPattern> output_pattern = results.at(matmul);
     std::shared_ptr<AlgebraicPattern> target_pattern = std::make_shared<Red>(
         Q.dim[1], std::make_shared<Mul>(K_pattern, Q_pattern));
-    std::shared_ptr<AlgebraicPattern> mul_pattern = std::make_shared<Mul>(Q_pattern, K_pattern);
+    std::shared_ptr<AlgebraicPattern> mul_pattern =
+        std::make_shared<Mul>(Q_pattern, K_pattern);
     std::shared_ptr<AlgebraicPattern> another_pattern =
         std::make_shared<Mul>(K_pattern, std::make_shared<Exp>(Q_pattern));
     std::shared_ptr<AlgebraicPattern> V_pattern = std::make_shared<Var>("v");
-    std::shared_ptr<AlgebraicPattern> larger_pattern = std::make_shared<Red>(4, std::make_shared<Red>(red_dim / 2, mul_pattern));
-    std::shared_ptr<AlgebraicPattern> larger_pattern2 = std::make_shared<Red>(2, std::make_shared<Red>(red_dim, mul_pattern));
-    std::shared_ptr<AlgebraicPattern> larger_pattern3 = std::make_shared<Red>(red_dim * 2, mul_pattern);
-    std::shared_ptr<AlgebraicPattern> exp_pattern = std::make_shared<Exp>(V_pattern);
+    std::shared_ptr<AlgebraicPattern> larger_pattern = std::make_shared<Red>(
+        4, std::make_shared<Red>(red_dim / 2, mul_pattern));
+    std::shared_ptr<AlgebraicPattern> larger_pattern2 =
+        std::make_shared<Red>(2, std::make_shared<Red>(red_dim, mul_pattern));
+    std::shared_ptr<AlgebraicPattern> larger_pattern3 =
+        std::make_shared<Red>(red_dim * 2, mul_pattern);
+    std::shared_ptr<AlgebraicPattern> exp_pattern =
+        std::make_shared<Exp>(V_pattern);
 
     EXPECT_TRUE(output_pattern->subpattern_to(*target_pattern));
     EXPECT_TRUE(target_pattern->subpattern_to(*output_pattern));

@@ -90,9 +90,17 @@ public:
   STensor exp(STensor const &A);
   TBOperator *create_elementunary_op(STensor const &A,
                                      aso::type::TBOperatorType _type);
+  STensor div(STensor const &A, STensor const &B);
+  TBOperator *create_elementbinary_op(STensor const &A,
+                                      STensor const &B,
+                                      aso::type::TBOperatorType _type);
   // reduction operator
   STensor reduction(STensor const &A, int dim);
   TBOperator *create_reduction_op(STensor const &A, int dim);
+
+  // reduction_to_dimx operator
+  STensor reduction_to_dimx(STensor const &A, int dim);
+  TBOperator *create_reduction_to_dimx_op(STensor const &A, int dim);
 
   off_t allocate(STensor const &tensor);
   void free(STensor const &tensor);
@@ -109,8 +117,6 @@ public:
   // memory allocator
   off_t smem_offset;
   std::vector<std::pair<off_t, size_t>> allocated_tensors;
-
-  const size_t MAX_SMEM_SIZE = 64 * 1024; // 96 KB
 };
 
 } // namespace threadblock

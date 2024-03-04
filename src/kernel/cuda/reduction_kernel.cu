@@ -67,10 +67,12 @@ bool KNReductionOp::fingerprint(void) {
       (num_elements + num_threads_per_blk - 1) / num_threads_per_blk;
   int output_stride = 1;
   int input_stride = 1;
-  for (int i = reduction_dim; i < output_tensors[0].num_dims; i++) {
+  for (int i = reduction_dim_idx; i < output_tensors[0].num_dims; i++) {
     output_stride *= output_tensors[0].dim[i];
     input_stride *= input_tensors[0].dim[i];
   }
+  int reduction_factor = input_tensors[0].dim[reduction_dim_idx] /
+                         output_tensors[0].dim[reduction_dim_idx];
   assert(output_stride * reduction_factor == input_stride);
   compute_reduction_fingerprint<<<num_blocks, num_threads_per_blk>>>(
       input_tensors[0].fp_ptr,

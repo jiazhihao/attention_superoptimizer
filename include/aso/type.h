@@ -31,6 +31,8 @@ const uint16_t FP_PQ = 25651;
 const uint16_t FP_P_MUL_Q_MOD_1 = 227;
 // FP_Q_MUL_P_MOD_1 is a multiplier of Q and is 1 module P
 const uint16_t FP_Q_MUL_P_MOD_1 = 25425;
+const size_t MAX_SMEM_SIZE = 64 * 1024; // 64 KB
+int const TB_REDUCTION_DIMX = 64;
 
 enum DataType {
   DT_INT8,
@@ -66,6 +68,9 @@ enum TBOperatorType {
   TB_REDUCTION_2_OP = 2006,
   TB_EXP_OP = 2007,
   TB_DIV_OP = 2008,
+  TB_REDUCTION_0_TO_DIMX_OP = 2104,
+  TB_REDUCTION_1_TO_DIMX_OP = 2105,
+  TB_REDUCTION_2_TO_DIMX_OP = 2106,
   TB_CUSTOMIZED_OP = 2999
 };
 

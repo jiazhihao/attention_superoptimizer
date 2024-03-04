@@ -35,35 +35,57 @@ TBOperator *Graph::create_reduction_op(STensor const &input, int dim) {
   if (dim < output.num_dims - 2) {
     return nullptr;
   }
-  // for (int i = output.num_dims - 1; i >= 0; i--) {
-  //   output.stride[i] = (i == output.num_dims - 1)
-  //                          ? 1
-  //                          : output.stride[i + 1] * output.dim[i + 1];
-  // }
-
-  if (smem_offset + (off_t)output.size() > (off_t)MAX_SMEM_SIZE) {
+  
+  if (smem_offset + (off_t)output.size() > (off_t)aso::type::MAX_SMEM_SIZE) {
     return nullptr;
   }
 
-  TBOperator *op = new TBReductionOp(this, input, dim);
+  TBOperator *op = new TBReductionOp(this, input, dim, 1 /*size*/);
 
   return op;
 }
 
-TBReductionOp::TBReductionOp(Graph *bgraph, STensor const &input, int dim)
-    : TBOperator(bgraph, aso::type::TB_REDUCTION_0_OP, input), reduce_dim(dim) {
+STensor Graph::reduction_to_dimx(STensor const &input, int dim) {
+  TBOperator *op = create_reduction_to_dimx_op(input, dim);
+  assert(op != nullptr);
+  operators.push_back(op);
+  return op->output_tensors[0];
+}
+
+TBOperator *Graph::create_reduction_to_dimx_op(STensor const &input, int dim) {
+  STensor output = input;
+  assert(output.num_dims > dim);
+  assert(output.layout == aso::layout::SmemRowMajor);
+  output.dim[dim] = aso::type::TB_REDUCTION_DIMX;
+
+  if (smem_offset + (off_t)output.size() > (off_t)aso::type::MAX_SMEM_SIZE) {
+    return nullptr;
+  }
+
+  TBOperator *op =
+      new TBReductionOp(this, input, dim, aso::type::TB_REDUCTION_DIMX);
+
+  return op;
+}
+
+TBReductionOp::TBReductionOp(Graph *bgraph,
+                             STensor const &input,
+                             int dim,
+                             int size)
+    : TBOperator(bgraph,
+                 size == 1 ? (aso::type::TBOperatorType)(
+                                 aso::type::TB_REDUCTION_0_OP + dim)
+                           : (aso::type::TBOperatorType)(
+                                 aso::type::TB_REDUCTION_0_TO_DIMX_OP + dim),
+                 input),
+      reduce_dim(dim), reduce_size(size) {
   aso::type::TBOperatorType type = static_cast<aso::type::TBOperatorType>(
       aso::type::TB_REDUCTION_0_OP + dim);
   this->op_type = type;
   STensor output = input;
   assert(output.num_dims > reduce_dim);
   assert(output.layout == aso::layout::SmemRowMajor);
-  output.dim[reduce_dim] = 1;
-  // for (int i = output.num_dims - 1; i >= 0; i--) {
-  //   output.stride[i] = (i == output.num_dims - 1)
-  //                          ? 1
-  //                          : output.stride[i + 1] * output.dim[i + 1];
-  // }
+  output.dim[reduce_dim] = reduce_size;
   output.owner_op = this;
   output.owner_ts_idx = 0;
   output.smem_offset = bgraph->allocate(output);

@@ -22,7 +22,7 @@ namespace kernel {
 
 class KNReductionOp : public aso::kernel::KNOperator {
 public:
-  KNReductionOp(DTensor const &input, int reduction_dim, int reduction_factor);
+  KNReductionOp(DTensor const &input, int dim, int size);
   ~KNReductionOp();
   bool profile(ProfileResult &profile) override;
   bool fingerprint(void) override;
@@ -30,7 +30,7 @@ public:
   operator json() const override;
 
 public:
-  int reduction_dim, reduction_factor;
+  int reduction_dim_idx, reduction_dim_size;
 };
 
 } // namespace kernel
