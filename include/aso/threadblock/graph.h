@@ -110,7 +110,7 @@ public:
   off_t smem_offset;
   std::vector<std::pair<off_t, size_t>> allocated_tensors;
 
-  const size_t MAX_SMEM_SIZE = 96 * 1024; // 96 KB
+  const size_t MAX_SMEM_SIZE = 64 * 1024; // 96 KB
 };
 
 } // namespace threadblock

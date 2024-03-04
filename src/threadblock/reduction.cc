@@ -32,6 +32,9 @@ TBOperator *Graph::create_reduction_op(STensor const &input, int dim) {
   assert(output.num_dims > dim);
   assert(output.layout == aso::layout::SmemRowMajor);
   output.dim[dim] = 1;
+  if (dim < output.num_dims - 2) {
+    return nullptr;
+  }
   // for (int i = output.num_dims - 1; i >= 0; i--) {
   //   output.stride[i] = (i == output.num_dims - 1)
   //                          ? 1

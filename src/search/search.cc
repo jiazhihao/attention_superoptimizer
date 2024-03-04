@@ -25,6 +25,18 @@ bool Order::operator<(Order const &other) const {
   return true;
 }
 
+std::vector<std::vector<int>> get_matches(int num_outputs) {
+  std::vector<std::vector<int>> results;
+  std::vector<int> perm;
+  for (int i = 0; i < num_outputs; ++i) {
+    perm.push_back(i);
+  }
+  do {
+    results.push_back(perm);
+  } while (std::next_permutation(perm.begin(), perm.end()));
+  return results;
+}
+
 std::vector<int> to_dim_vector(int num_dims, int *dim) {
   std::vector<int> dims;
   for (int i = 0; i < num_dims; ++i) {
@@ -64,6 +76,11 @@ bool KernelGraphGenerator::finish_tb_graph(
 
   for (size_t i = 0; i < c.all_tensors.size(); ++i) {
     if (c.num_consumers[i] == 0) {
+      if (c.all_tensors[i].owner_op->op_type ==
+          type::TBOperatorType::TB_INPUT_OP) {
+        fail_to_finish();
+        return false;
+      }
       STensor input = c.all_tensors[i];
       std::shared_ptr<AlgebraicPattern> pattern =
           g.forloop_range > 1
@@ -249,7 +266,7 @@ void KernelGraphGenerator::generate_next_kn_operator(
             continue;
           }
           Order order{{i, j}};
-          if (order < c.op_order.back()){
+          if (order < c.op_order.back()) {
             continue;
           }
           DTensor input1 = c.all_tensors[i], input2 = c.all_tensors[j];
@@ -455,6 +472,7 @@ void KernelGraphGenerator::generate_next_kn_operator(
 
 void KernelGraphGenerator::generate_kernel_graphs() {
   pattern_eval();
+  fingerprint_eval();
 
   kernel::Graph g;
   SearchContext<KNOperator, DTensor> c;
@@ -472,11 +490,17 @@ void KernelGraphGenerator::generate_kernel_graphs() {
     }
   }
 
-  find_final_patterns();
+  process_outputs();
   generate_next_kn_operator(c, g);
 }
 
-void KernelGraphGenerator::find_final_patterns() {
+void KernelGraphGenerator::fingerprint_eval() {
+  for (auto const &op : computation_graph.operators) {
+    op->fingerprint();
+  }
+}
+
+void KernelGraphGenerator::process_outputs() {
   std::unordered_map<DTensor, int> num_consumers;
   for (kernel::KNOperator *op : computation_graph.operators) {
     for (DTensor const &input : op->input_tensors) {
@@ -487,6 +511,7 @@ void KernelGraphGenerator::find_final_patterns() {
   for (kernel::KNOperator *op : computation_graph.operators) {
     for (DTensor const &output : op->output_tensors) {
       if (num_consumers[output] == 0) {
+        output_tensors.push_back(output);
         final_patterns.push_back(computation_graph_patterns.at(output));
       }
     }
@@ -549,6 +574,19 @@ void KernelGraphGenerator::pattern_eval() {
                  op->input_tensors[0].dim[2],
                  computation_graph_patterns.at(op->input_tensors[0]))});
         break;
+      case type::KNOperatorType::KN_DIV_OP:
+        computation_graph_patterns.insert(
+            {op->output_tensors[0],
+             std::make_shared<Div>(
+                 computation_graph_patterns.at(op->input_tensors[0]),
+                 computation_graph_patterns.at(op->input_tensors[1]))});
+        break;
+      case type::KNOperatorType::KN_EXP_OP:
+        computation_graph_patterns.insert(
+            {op->output_tensors[0],
+             std::make_shared<Exp>(
+                 computation_graph_patterns.at(op->input_tensors[0]))});
+        break;
       default:
         assert(false && "Unsupported computation graph operator");
     }
@@ -557,21 +595,49 @@ void KernelGraphGenerator::pattern_eval() {
 
 bool KernelGraphGenerator::verify(kernel::Graph const &g,
                                   SearchContext<KNOperator, DTensor> &c) {
-  size_t num_output = 0;
+  size_t num_outputs = 0;
   for (size_t i = 0; i < c.all_tensors.size(); ++i) {
     if (c.num_consumers[i] == 0) {
-      if (num_output >= final_patterns.size() ||
-          !(*c.algebraic_pattern[i] == *final_patterns[num_output])) {
+      if (num_outputs >= final_patterns.size() ||
+          !(*c.algebraic_pattern[i] == *final_patterns[num_outputs])) {
         return false;
       }
-      ++num_output;
+      ++num_outputs;
     }
   }
-  if (num_output != final_patterns.size()) {
+  if (num_outputs != final_patterns.size()) {
     return false;
   }
 
-  // assert(false && "TBD");
+  std::vector<DTensor> outputs;
+  for (size_t i = 0; i < c.all_tensors.size(); ++i) {
+    if (c.num_consumers[i] == 0) {
+      outputs.push_back(c.all_tensors[i]);
+    }
+  }
+
+  std::cerr << "evaluating: " << json(g) << std::endl;
+  for (auto const &op : g.operators) {
+    op->fingerprint();
+  }
+
+  for (auto const &match : get_matches(outputs.size())) {
+    if (have_same_fingerprint(outputs, match)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool KernelGraphGenerator::have_same_fingerprint(
+    std::vector<DTensor> const &outputs, std::vector<int> const &match) const {
+  assert(outputs.size() == match.size());
+  for (int i = 0; i < match.size(); ++i) {
+    if (!output_tensors[i].has_same_fingerprint(outputs[match[i]])) {
+      return false;
+    }
+  }
   return true;
 }
 

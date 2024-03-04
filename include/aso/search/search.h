@@ -10,10 +10,10 @@
 namespace aso {
 namespace search {
 
-const int MAX_NUM_THREADBLOCK_GRAPH_OP = 9;
-const int MAX_NUM_KERNEL_GRAPH_OP = 6;
-const int MAX_NUM_THREADBLOCK = 2;
-const int MAX_NUM_THREADBLOCK_OUTPUT = 3;
+int const MAX_NUM_THREADBLOCK_GRAPH_OP = 9;
+int const MAX_NUM_KERNEL_GRAPH_OP = 6;
+int const MAX_NUM_THREADBLOCK = 2;
+int const MAX_NUM_THREADBLOCK_OUTPUT = 3;
 
 using kernel::DTensor;
 using kernel::KNOperator;
@@ -52,6 +52,8 @@ private:
   std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>>
       computation_graph_patterns;
 
+  std::vector<DTensor> output_tensors;
+
   int num_kernels;
 
   void generate_next_tb_operator(SearchContext<TBOperator, STensor> &c,
@@ -63,11 +65,14 @@ private:
   bool finish_tb_graph(SearchContext<TBOperator, STensor> &c,
                        threadblock::Graph &g);
 
-  void find_final_patterns();
+  void process_outputs();
 
   bool check_pattern(std::shared_ptr<AlgebraicPattern> pattern);
 
   void pattern_eval();
+  void fingerprint_eval();
+  bool have_same_fingerprint(std::vector<DTensor> const &outputs,
+                             std::vector<int> const &match) const;
 
   bool verify(kernel::Graph const &g, SearchContext<KNOperator, DTensor> &c);
 };
