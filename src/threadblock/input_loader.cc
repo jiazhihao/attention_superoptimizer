@@ -70,7 +70,10 @@ TBOperator *Graph::create_input_op(aso::kernel::DTensor const &dtensor,
   // our data loader only supports 2D matrices
   // (i.e., only the last two dims can be larger than 1
   for (int i = 0; i < tensor.num_dims - 2; i++) {
-    assert(tensor.dim[i] == 1);
+    if (tensor.dim[i] != 1) {
+      return nullptr;
+    }
+    // assert(tensor.dim[i] == 1);
   }
 
   if (smem_offset + (off_t)tensor.size() > (off_t)MAX_SMEM_SIZE) {

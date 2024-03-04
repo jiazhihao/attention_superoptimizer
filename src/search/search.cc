@@ -60,7 +60,6 @@ bool KernelGraphGenerator::finish_tb_graph(
       delete output_ops.back();
       output_ops.pop_back();
     }
-    return false;
   };
 
   for (size_t i = 0; i < c.all_tensors.size(); ++i) {
@@ -72,11 +71,13 @@ bool KernelGraphGenerator::finish_tb_graph(
               : c.algebraic_pattern[i];
       if (!check_pattern(pattern)) {
         fail_to_finish();
+        return false;
       }
       for (int3 output_map : {int3{0, 2, -1}}) {
         TBOperator *new_op = g.create_output_op(input, output_map);
         if (!new_op) {
           fail_to_finish();
+          return false;
         }
         output_ops.push_back(new_op);
         patterns.push_back(pattern);
@@ -86,6 +87,7 @@ bool KernelGraphGenerator::finish_tb_graph(
 
   if (output_ops.size() > MAX_NUM_THREADBLOCK_OUTPUT) {
     fail_to_finish();
+    return false;
   }
 
   for (size_t i = 0; i < output_ops.size(); ++i) {
@@ -131,6 +133,10 @@ void KernelGraphGenerator::generate_next_tb_operator(
           if (contains(c.existing_op_hash, hash)) {
             continue;
           }
+          Order order{{i, j}};
+          if (order < c.op_order.back()) {
+            continue;
+          }
           STensor input1 = c.all_tensors[i], input2 = c.all_tensors[j];
           std::shared_ptr<AlgebraicPattern> pattern =
               get_pattern(op_type,
@@ -158,7 +164,9 @@ void KernelGraphGenerator::generate_next_tb_operator(
           c.num_consumers[i]++;
           c.num_consumers[j]++;
           c.existing_op_hash.insert(hash);
+          c.op_order.push_back(order);
           generate_next_tb_operator(c, g, callback);
+          c.op_order.pop_back();
           c.existing_op_hash.erase(hash);
           c.num_consumers[j]--;
           c.num_consumers[i]--;
@@ -173,6 +181,10 @@ void KernelGraphGenerator::generate_next_tb_operator(
       for (size_t i = 0; i < c.all_tensors.size(); ++i) {
         size_t hash = get_operator_hash(i, op_type);
         if (contains(c.existing_op_hash, hash)) {
+          continue;
+        }
+        Order order{{i}};
+        if (order < c.op_order.back()) {
           continue;
         }
         STensor input = c.all_tensors[i];
@@ -194,7 +206,9 @@ void KernelGraphGenerator::generate_next_tb_operator(
         c.num_consumers.push_back(0);
         c.num_consumers[i]++;
         c.existing_op_hash.insert(hash);
+        c.op_order.push_back(order);
         generate_next_tb_operator(c, g, callback);
+        c.op_order.pop_back();
         c.existing_op_hash.erase(hash);
         c.num_consumers[i]--;
         c.num_consumers.pop_back();
@@ -234,6 +248,10 @@ void KernelGraphGenerator::generate_next_kn_operator(
           if (contains(c.existing_op_hash, hash)) {
             continue;
           }
+          Order order{{i, j}};
+          if (order < c.op_order.back()){
+            continue;
+          }
           DTensor input1 = c.all_tensors[i], input2 = c.all_tensors[j];
           std::shared_ptr<AlgebraicPattern> pattern =
               get_pattern(op_type,
@@ -257,7 +275,9 @@ void KernelGraphGenerator::generate_next_kn_operator(
           c.num_consumers[i]++;
           c.num_consumers[j]++;
           c.existing_op_hash.insert(hash);
+          c.op_order.push_back(order);
           generate_next_kn_operator(c, g);
+          c.op_order.pop_back();
           c.existing_op_hash.erase(hash);
           c.num_consumers[j]--;
           c.num_consumers[i]--;
@@ -272,6 +292,10 @@ void KernelGraphGenerator::generate_next_kn_operator(
       for (size_t i = 0; i < c.all_tensors.size(); ++i) {
         size_t hash = get_operator_hash(i, op_type);
         if (contains(c.existing_op_hash, hash)) {
+          continue;
+        }
+        Order order{{i}};
+        if (order < c.op_order.back()) {
           continue;
         }
         DTensor input = c.all_tensors[i];
@@ -294,7 +318,9 @@ void KernelGraphGenerator::generate_next_kn_operator(
         c.num_consumers.push_back(0);
         c.num_consumers[i]++;
         c.existing_op_hash.insert(hash);
+        c.op_order.push_back(order);
         generate_next_kn_operator(c, g);
+        c.op_order.pop_back();
         c.existing_op_hash.erase(hash);
         c.num_consumers[i]--;
         c.num_consumers.pop_back();
@@ -325,6 +351,10 @@ void KernelGraphGenerator::generate_next_kn_operator(
         std::vector<DTensor> input_tensors;
         for (int i : input_tensor_idx) {
           input_tensors.push_back(c.all_tensors[i]);
+        }
+        Order order{input_tensor_idx};
+        if (order < c.op_order.back()) {
+          continue;
         }
         for (std::vector<int3> const &input_map :
              get_input_map_cand(input_tensors)) {
@@ -360,10 +390,12 @@ void KernelGraphGenerator::generate_next_kn_operator(
                     tb_context.algebraic_pattern.push_back(
                         c.algebraic_pattern[input_tensor_idx[i]]);
                     tb_context.num_consumers.push_back(0);
+                    tb_context.op_order.push_back({{-1}});
                   }
                   if (!input_created) {
-                    for (int i = tb_graph.operators.size() - 1; i >= 0; --i) {
-                      delete tb_graph.operators[i];
+                    while (!tb_graph.operators.empty()) {
+                      delete tb_graph.operators.back();
+                      tb_graph.operators.pop_back();
                     }
                     continue;
                   }
@@ -387,9 +419,11 @@ void KernelGraphGenerator::generate_next_kn_operator(
                     for (int input_idx : input_tensor_idx) {
                       c.num_consumers[input_idx]++;
                     }
+                    c.op_order.push_back(order);
                     num_kernels++;
                     generate_next_kn_operator(c, g);
                     num_kernels--;
+                    c.op_order.pop_back();
                     for (int input_idx : input_tensor_idx) {
                       c.num_consumers[input_idx]--;
                     }
@@ -434,6 +468,7 @@ void KernelGraphGenerator::generate_kernel_graphs() {
       c.algebraic_pattern.push_back(
           computation_graph_patterns.at(output_tensor));
       c.num_consumers.push_back(0);
+      c.op_order.push_back({{-1}});
     }
   }
 
