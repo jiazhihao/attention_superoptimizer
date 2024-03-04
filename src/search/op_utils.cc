@@ -58,13 +58,13 @@ std::shared_ptr<AlgebraicPattern>
     case type::TBOperatorType::TB_EXP_OP:
       return std::make_shared<Exp>(opd);
     case type::TBOperatorType::TB_REDUCTION_0_OP:
-      assert(tensor.dim[0] > 1);
+      // assert(tensor.dim[0] > 1);
       return std::make_shared<Red>(tensor.dim[0], opd);
     case type::TBOperatorType::TB_REDUCTION_1_OP:
-      assert(tensor.dim[1] > 1);
+      // assert(tensor.dim[1] > 1);
       return std::make_shared<Red>(tensor.dim[1], opd);
     case type::TBOperatorType::TB_REDUCTION_2_OP:
-      assert(tensor.dim[2] > 1);
+      // assert(tensor.dim[2] > 1);
       return std::make_shared<Red>(tensor.dim[2], opd);
     case type::TBOperatorType::TB_OUTPUT_OP:
       return opd;
@@ -112,6 +112,69 @@ std::shared_ptr<AlgebraicPattern>
       return std::make_shared<Div>(lhs, rhs);
     default:
       assert(false);
+  }
+}
+
+KNOperator *create_op(kernel::Graph &g,
+                      type::KNOperatorType type,
+                      DTensor const &input) {
+  switch (type) {
+    case type::KNOperatorType::KN_REDUCTION_0_OP:
+    case type::KNOperatorType::KN_REDUCTION_1_OP:
+    case type::KNOperatorType::KN_REDUCTION_2_OP:
+      assert(false && "TBD");
+    default:
+      assert(false && "Unsupported operator");
+  }
+}
+
+KNOperator *create_op(kernel::Graph &g,
+                      type::KNOperatorType type,
+                      DTensor const &input1,
+                      DTensor const &input2) {
+  switch (type) {
+    case type::KNOperatorType::KN_MATMUL_OP:
+      return g.create_matmul_op(input1, input2);
+      break;
+    default:
+      assert(false && "Unsupported operator");
+  }
+}
+
+TBOperator *create_op(threadblock::Graph &g,
+                      type::TBOperatorType type,
+                      STensor const &input) {
+  switch (type) {
+    case type::TBOperatorType::TB_EXP_OP:
+      return g.create_elementunary_op(input, type);
+      break;
+    case type::TBOperatorType::TB_REDUCTION_0_OP:
+      return g.create_reduction_op(input, 0);
+      break;
+    case type::TBOperatorType::TB_REDUCTION_1_OP:
+      return g.create_reduction_op(input, 1);
+      break;
+    case type::TBOperatorType::TB_REDUCTION_2_OP:
+      return g.create_reduction_op(input, 2);
+      break;
+    default:
+      assert(false && "Unsupported operator");
+  }
+}
+
+TBOperator *create_op(threadblock::Graph &g,
+                      type::TBOperatorType type,
+                      STensor const &input1,
+                      STensor const &input2) {
+  switch (type) {
+    case type::TBOperatorType::TB_MATMUL_OP:
+      return g.create_matmul_op(input1, input2);
+      break;
+    case type::TBOperatorType::TB_DIV_OP:
+      assert(false && "TBD");
+      break;
+    default:
+      assert(false && "Unsupported operator");
   }
 }
 

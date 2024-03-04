@@ -36,7 +36,7 @@ public:
   TBOperator(Graph *graph,
              aso::type::TBOperatorType,
              std::vector<STensor> const &inputs);
-  ~TBOperator();
+  virtual ~TBOperator();
 
   virtual operator json() const = 0;
 

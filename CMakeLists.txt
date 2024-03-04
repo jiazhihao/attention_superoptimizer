@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.19 FATAL_ERROR)
-project(ASO LANGUAGES CXX CUDA)
+project(ASO LANGUAGES C CXX CUDA)
 
 message(STATUS "CMake Version: ${CMAKE_VERSION}")
 
@@ -115,7 +115,17 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/include
 if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   set(CPP_EXAMPLES_DIR cpp_examples)
   set(CPP_EXAMPLES_BIN dnn)
-  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/*.cc)
+  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
+  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
+  set_target_properties(${CPP_EXAMPLES_BIN}
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
+  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+endif()
+
+if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
+  set(CPP_EXAMPLES_DIR cpp_examples)
+  set(CPP_EXAMPLES_BIN example1)
+  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})

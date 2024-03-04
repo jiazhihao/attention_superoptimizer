@@ -10,10 +10,20 @@
 namespace aso {
 namespace search {
 
+int const MAX_NUM_THREADBLOCK_GRAPH_OP = 9;
+int const MAX_NUM_KERNEL_GRAPH_OP = 6;
+int const MAX_NUM_THREADBLOCK = 2;
+int const MAX_NUM_THREADBLOCK_OUTPUT = 3;
+
 using kernel::DTensor;
 using kernel::KNOperator;
 using threadblock::STensor;
 using threadblock::TBOperator;
+
+struct Order {
+  std::vector<int> v;
+  bool operator<(Order const &) const;
+};
 
 class KernelGraphGenerator {
 public:
@@ -28,38 +38,41 @@ public:
 private:
   template <typename OpType, typename TensorType>
   struct SearchContext {
-    std::unordered_map<TensorType, std::shared_ptr<AlgebraicPattern>>
-        algebraic_pattern;
+    std::vector<TensorType> all_tensors;
+    std::vector<std::shared_ptr<AlgebraicPattern>> algebraic_pattern;
+    std::vector<int> num_consumers;
+
     std::unordered_set<size_t> existing_op_hash;
-    std::unordered_map<OpType *, int> output_degree; // Output degree
+    std::vector<Order> op_order;
+
+    std::vector<std::shared_ptr<AlgebraicPattern>> output_pattern;
   };
 
   std::vector<std::shared_ptr<AlgebraicPattern>> final_patterns;
   std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>>
       computation_graph_patterns;
 
+  std::vector<DTensor> output_tensors;
+
   int num_kernels;
 
-  void generate_threadblock_graphs(
-      SearchContext<TBOperator, STensor> &c,
-      threadblock::Graph g,
-      std::vector<std::shared_ptr<AlgebraicPattern>> output_patterns,
-      std::vector<threadblock::Graph> &result_graphs,
-      std::vector<std::vector<std::shared_ptr<AlgebraicPattern>>>
-          &result_output_patterns);
-  void generate_next_kernel(SearchContext<KNOperator, DTensor> &c,
-                            kernel::Graph &g);
+  void generate_next_tb_operator(SearchContext<TBOperator, STensor> &c,
+                                 threadblock::Graph &g,
+                                 std::function<void()> const &callback);
+  void generate_next_kn_operator(SearchContext<KNOperator, DTensor> &c,
+                                 kernel::Graph &g);
 
-  bool is_finished_graph(SearchContext<TBOperator, STensor> &c,
-                         threadblock::Graph const &g);
+  bool finish_tb_graph(SearchContext<TBOperator, STensor> &c,
+                       threadblock::Graph &g);
 
-  void find_final_patterns(
-      std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>> const
-          &input_pattern);
+  void process_outputs();
 
   bool check_pattern(std::shared_ptr<AlgebraicPattern> pattern);
 
   void pattern_eval();
+  void fingerprint_eval();
+  bool have_same_fingerprint(std::vector<DTensor> const &outputs,
+                             std::vector<int> const &match) const;
 
   bool verify(kernel::Graph const &g, SearchContext<KNOperator, DTensor> &c);
 };

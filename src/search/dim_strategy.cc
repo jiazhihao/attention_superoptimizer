@@ -9,6 +9,7 @@ unsigned int get_num_threadblock(dim3 const &grid_dim) {
 
 std::vector<dim3> get_grid_dim_cand(std::vector<DTensor> const &tensors,
                                     std::vector<int3> const &input_map) {
+  return {{16, 2, 1}};
   std::vector<dim3> results;
   for (unsigned int x = 16; x <= 64; x *= 2) {
     for (size_t i = 0; i < tensors.size(); ++i) {
@@ -38,7 +39,7 @@ std::vector<dim3> get_grid_dim_cand(std::vector<DTensor> const &tensors,
 std::vector<dim3> get_block_dim_cand(std::vector<DTensor> const &tensors,
                                      std::vector<int3> const &input_map,
                                      dim3 grid_dim) {
-  return std::vector<dim3>{{32, 1, 1}};
+  return std::vector<dim3>{{128, 1, 1}};
   // std::vector<dim3> results;
   // for (unsigned int x : {32, 64, 128}) {
   //   bool feasible = true;
@@ -155,7 +156,7 @@ std::vector<int>
                            std::vector<int> const &forloop_dim) {
   std::vector<int> results;
 
-  for (int x = 16; x <= 64; x *= 2) {
+  for (int x = 4; x <= 8; x *= 2) {
     bool feasible = true;
     for (size_t i = 0; i < input_tensors.size(); ++i) {
       if (forloop_dim[i] == -1) {

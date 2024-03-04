@@ -28,6 +28,9 @@ aso::kernel::DTensor Graph::new_output(STensor const &stensor,
 }
 
 TBOperator *Graph::create_output_op(STensor const &stensor, int3 output_map) {
+  if (smem_offset + stensor.size() >= MAX_SMEM_SIZE) {
+    return nullptr;
+  }
   TBOutputOp *op = new TBOutputOp(this, stensor, output_map);
   return op;
 }
@@ -73,7 +76,9 @@ TBOutputOp::TBOutputOp(Graph *_graph, STensor const &input, int3 _output_map)
   }
 }
 
-TBOutputOp::~TBOutputOp() {}
+TBOutputOp::~TBOutputOp() {
+  bgraph->free(output_tensors);
+}
 
 TBOutputOp::operator json() const {
   return json{{"op_type", "output"},

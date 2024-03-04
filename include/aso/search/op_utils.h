@@ -48,5 +48,21 @@ std::shared_ptr<AlgebraicPattern>
                 std::shared_ptr<AlgebraicPattern> lhs,
                 std::shared_ptr<AlgebraicPattern> rhs);
 
+KNOperator *create_op(kernel::Graph &g,
+                      type::KNOperatorType type,
+                      DTensor const &input);
+KNOperator *create_op(kernel::Graph &g,
+                      type::KNOperatorType type,
+                      DTensor const &input1,
+                      DTensor const &input2);
+
+TBOperator *create_op(threadblock::Graph &g,
+                      type::TBOperatorType type,
+                      STensor const &input);
+TBOperator *create_op(threadblock::Graph &g,
+                      type::TBOperatorType type,
+                      STensor const &input1,
+                      STensor const &input2);
+
 } // namespace search
 } // namespace aso
