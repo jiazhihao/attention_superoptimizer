@@ -244,6 +244,11 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         bgraph.reduction(my_inputs[0], reduce_dim);
         break;
       }
+      case aso::type::TB_DIV_OP: {
+        assert(my_inputs.size() == 2);
+        bgraph.div(my_inputs[0], my_inputs[1]);
+        break;
+      }
       default: {
         assert(false && "Unsupported kernel operator");
       }

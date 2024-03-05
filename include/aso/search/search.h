@@ -11,9 +11,10 @@ namespace aso {
 namespace search {
 
 int const MAX_NUM_THREADBLOCK_GRAPH_OP = 9;
-int const MAX_NUM_KERNEL_GRAPH_OP = 6;
+int const MAX_NUM_KERNEL_GRAPH_OP = 5;
 int const MAX_NUM_THREADBLOCK = 2;
-int const MAX_NUM_THREADBLOCK_OUTPUT = 3;
+int const MAX_NUM_THREADBLOCK_INPUT = 3;
+int const MAX_NUM_THREADBLOCK_OUTPUT = 2;
 
 using kernel::DTensor;
 using kernel::KNOperator;
