@@ -30,7 +30,6 @@ STensor Graph::div(STensor const &input1, STensor const &input2) {
 TBOperator *Graph::create_elementbinary_op(STensor const &input1,
                                            STensor const &input2,
                                            aso::type::TBOperatorType _type) {
-  TBElementBinaryOp *op = new TBElementBinaryOp(this, input1, input2, _type);
   if (input1.num_dims != input2.num_dims) {
     return nullptr;
   }
@@ -49,6 +48,7 @@ TBOperator *Graph::create_elementbinary_op(STensor const &input1,
     return nullptr;
   }
 
+  TBElementBinaryOp *op = new TBElementBinaryOp(this, input1, input2, _type);
   return op;
 }
 

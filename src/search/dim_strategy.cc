@@ -9,16 +9,15 @@ unsigned int get_num_threadblock(dim3 const &grid_dim) {
 
 std::vector<dim3> get_grid_dim_cand(std::vector<DTensor> const &tensors,
                                     std::vector<int3> const &input_map) {
-  return {{16, 2, 1}};
   std::vector<dim3> results;
-  for (unsigned int x = 16; x <= 64; x *= 2) {
+  for (unsigned int x = 16; x <= 16; x *= 2) {
     for (size_t i = 0; i < tensors.size(); ++i) {
       if (input_map[i].x != -1 && tensors[i].num_dims > input_map[i].x &&
           tensors[i].dim[input_map[i].x] % x != 0) {
         return results;
       }
     }
-    for (unsigned int y = x; y <= 64; y *= 2) {
+    for (unsigned int y = 8; y <= 8; y *= 2) {
       bool feasible = true;
       for (size_t i = 0; i < tensors.size(); ++i) {
         if (input_map[i].y != -1 && tensors[i].num_dims > input_map[i].y &&
@@ -97,10 +96,17 @@ void generate_input_map_cand(std::vector<DTensor> const &tensors,
 
 std::vector<std::vector<int3>>
     get_input_map_cand(std::vector<DTensor> const &tensors) {
+  // To save time to generate example
+  // if (tensors.size() == 3) {
+  //   return {{{0, -1, -1}, {0, 2, -1}, {0, 1, -1}}};
+  // }
+  // if (tensors.size() == 2) {
+  //   return {{{0, -1, -1}, {0, 2, -1}}};
+  // }
   std::vector<std::vector<int3>> results;
   // Assume two-dimentional inputs
   // TODO: There are invalid input maps, how to prune them out?
-  for (int3 input_map_pattern : {int3{0, 1, -1} /*, int3{1, 0, -1}*/}) {
+  for (int3 input_map_pattern : {int3{0, 2, -1} /*, int3{1, 0, -1}*/}) {
     generate_input_map_cand(tensors, input_map_pattern, {}, results);
   }
   return results;
@@ -135,15 +141,15 @@ void generate_forloop_dim(std::vector<DTensor> const &input_tensors,
 
 std::vector<std::vector<int>>
     get_forloop_dim_cand(std::vector<DTensor> const &input_tensors) {
-  std::vector<std::vector<int>> results;
-
-  // DEBUG CODES
-  // results.push_back(std::vector<int>{});
-  // for (auto const &_ : input_tensors) {
-  //   results.back().push_back(0);
+  // To save time to generate example
+  // if (input_tensors.size() == 2) {
+  //   return {{2, 1}};
   // }
-  // return results;
+  // if (input_tensors.size() == 3) {
+  //   return {{-1, 2, 1}};
+  // }
 
+  std::vector<std::vector<int>> results;
   generate_forloop_dim(input_tensors, {}, results);
   return results;
 }
@@ -154,9 +160,19 @@ std::vector<int>
                            dim3 grid_dim,
                            dim3 block_dim,
                            std::vector<int> const &forloop_dim) {
+  bool no_use = true;
+  for (int dim : forloop_dim) {
+    if (dim >= 0) {
+      no_use = false;
+    }
+  }
+  if (no_use) {
+    return {1};
+  }
+
   std::vector<int> results;
 
-  for (int x = 4; x <= 8; x *= 2) {
+  for (int x = 4; x <= 4; x *= 2) {
     bool feasible = true;
     for (size_t i = 0; i < input_tensors.size(); ++i) {
       if (forloop_dim[i] == -1) {

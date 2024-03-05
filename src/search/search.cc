@@ -55,7 +55,9 @@ std::vector<std::vector<int>>
         inputs.push_back(i);
       }
     }
-    results.push_back(inputs);
+    if (inputs.size() <= MAX_NUM_THREADBLOCK_INPUT) {
+      results.push_back(inputs);
+    }
   }
   return results;
 }
@@ -130,7 +132,7 @@ void KernelGraphGenerator::generate_next_tb_operator(
     }
   }
 
-  if (g.operators.size() >= MAX_NUM_KERNEL_GRAPH_OP) {
+  if (g.operators.size() >= MAX_NUM_THREADBLOCK_GRAPH_OP) {
     return;
   }
 
@@ -140,6 +142,9 @@ void KernelGraphGenerator::generate_next_tb_operator(
       type::TBOperatorType::TB_REDUCTION_1_OP,
       type::TBOperatorType::TB_REDUCTION_2_OP,
       type::TBOperatorType::TB_EXP_OP,
+      type::TBOperatorType::TB_REDUCTION_0_TO_DIMX_OP,
+      type::TBOperatorType::TB_REDUCTION_1_TO_DIMX_OP,
+      type::TBOperatorType::TB_REDUCTION_2_TO_DIMX_OP,
       type::TBOperatorType::TB_DIV_OP};
 
   for (type::TBOperatorType op_type : op_to_explore) {
@@ -252,9 +257,11 @@ void KernelGraphGenerator::generate_next_kn_operator(
   // TODO(@wmdi): make it user-defined
   std::vector<type::KNOperatorType> op_to_explore{
       type::KNOperatorType::KN_MATMUL_OP,
-      // type::KNOperatorType::KN_REDUCTION_0_OP,
-      // type::KNOperatorType::KN_REDUCTION_1_OP,
-      // type::KNOperatorType::KN_REDUCTION_2_OP,
+      type::KNOperatorType::KN_REDUCTION_0_OP,
+      type::KNOperatorType::KN_REDUCTION_1_OP,
+      type::KNOperatorType::KN_REDUCTION_2_OP,
+      type::KNOperatorType::KN_EXP_OP,
+      type::KNOperatorType::KN_DIV_OP,
       type::KNOperatorType::KN_CUSTOMIZED_OP};
 
   for (type::KNOperatorType op_type : op_to_explore) {
@@ -347,7 +354,7 @@ void KernelGraphGenerator::generate_next_kn_operator(
         g.operators.pop_back();
       }
     } else if (op_type == type::KNOperatorType::KN_CUSTOMIZED_OP) {
-      if (num_kernels >= 1) {
+      if (num_kernels >= MAX_NUM_THREADBLOCK) {
         continue;
       }
 
@@ -516,6 +523,9 @@ void KernelGraphGenerator::process_outputs() {
       }
     }
   }
+  for (auto const &pattern : final_patterns) {
+    std::cout << "final pattern: " << pattern->to_string() << std::endl;
+  }
 }
 
 bool KernelGraphGenerator::check_pattern(
@@ -550,7 +560,7 @@ void KernelGraphGenerator::pattern_eval() {
         computation_graph_patterns.insert(
             {op->output_tensors[0],
              std::make_shared<Red>(
-                 op->input_tensors[0].dim[1],
+                 op->input_tensors[0].dim[op->input_tensors[0].num_dims - 1],
                  std::make_shared<Mul>(
                      computation_graph_patterns.at(op->input_tensors[0]),
                      computation_graph_patterns.at(op->input_tensors[1])))});
@@ -598,10 +608,6 @@ bool KernelGraphGenerator::verify(kernel::Graph const &g,
   size_t num_outputs = 0;
   for (size_t i = 0; i < c.all_tensors.size(); ++i) {
     if (c.num_consumers[i] == 0) {
-      if (num_outputs >= final_patterns.size() ||
-          !(*c.algebraic_pattern[i] == *final_patterns[num_outputs])) {
-        return false;
-      }
       ++num_outputs;
     }
   }
@@ -616,7 +622,7 @@ bool KernelGraphGenerator::verify(kernel::Graph const &g,
     }
   }
 
-  std::cerr << "evaluating: " << json(g) << std::endl;
+  std::cout << "random testing: " << json(g) << std::endl;
   for (auto const &op : g.operators) {
     op->fingerprint();
   }

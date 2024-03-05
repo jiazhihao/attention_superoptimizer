@@ -160,7 +160,7 @@ struct STensor {
   // bool accum_output;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(STensor, data_type, layout, num_dims, dim)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(STensor, data_type, layout, num_dims, dim, smem_offset)
 
 } // namespace threadblock
 } // namespace aso
