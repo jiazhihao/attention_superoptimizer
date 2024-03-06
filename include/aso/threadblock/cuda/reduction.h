@@ -17,6 +17,7 @@
 
 #include "cutlass/cutlass.h"
 #include "cutlass/fast_math.h"
+#include "aso/utils/cuda_helper.h"
 
 namespace aso {
 namespace threadblock {
@@ -46,7 +47,7 @@ public:
                            STensor const &output,
                            int thread_id,
                            int num_threads) {
-    int reduction_dim = type - aso::type::TB_REDUCTION_0_OP;
+    int reduction_dim = aso::utils::get_reduction_dim(type);
     int num_dims = output.num_dims;
     FPType *input_ptr = (FPType *)(smem_buffer + input.smem_offset);
     FPType *output_ptr = (FPType *)(smem_buffer + output.smem_offset);
