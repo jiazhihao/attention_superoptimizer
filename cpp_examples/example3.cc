@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
     threadblock::STensor red = tb_graph.reduction_to_dimx(matmul2, 2);
     kernel::DTensor output = tb_graph.new_output(red, {0, 2, -1});
 
-    auto op = graph.create_customized_op({Q, K}, tb_graph);
+    auto op = graph.create_customized_op({Q, K, V}, tb_graph);
     graph.operators.push_back(op);
   }
   for (auto const &op : graph.operators) {

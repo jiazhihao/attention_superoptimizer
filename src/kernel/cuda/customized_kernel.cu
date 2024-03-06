@@ -417,7 +417,7 @@ __global__ void
         }
         case aso::type::TB_REDUCTION_0_OP:
         case aso::type::TB_REDUCTION_1_OP:
-        case aso::type::TB_REDUCTION_2_OP: 
+        case aso::type::TB_REDUCTION_2_OP:
         case aso::type::TB_REDUCTION_0_TO_DIMX_OP:
         case aso::type::TB_REDUCTION_1_TO_DIMX_OP:
         case aso::type::TB_REDUCTION_2_TO_DIMX_OP: {
