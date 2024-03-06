@@ -79,9 +79,9 @@ TBReductionOp::TBReductionOp(Graph *bgraph,
                                  aso::type::TB_REDUCTION_0_TO_DIMX_OP + dim),
                  input),
       reduce_dim(dim), reduce_size(size) {
-  aso::type::TBOperatorType type = static_cast<aso::type::TBOperatorType>(
-      aso::type::TB_REDUCTION_0_OP + dim);
-  this->op_type = type;
+  // aso::type::TBOperatorType type = static_cast<aso::type::TBOperatorType>(
+  //     aso::type::TB_REDUCTION_0_OP + dim);
+  // this->op_type = type;
   STensor output = input;
   assert(output.num_dims > reduce_dim);
   assert(output.layout == aso::layout::SmemRowMajor);
@@ -100,7 +100,8 @@ TBReductionOp::operator json() const {
   return json{{"op_type", "reduction"},
               {"input_tensors", input_tensors},
               {"output_tensors", output_tensors},
-              {"reduce_dim", reduce_dim}};
+              {"reduce_dim", reduce_dim},
+              {"reduce_size", reduce_size}};
 }
 } // namespace threadblock
 } // namespace aso
