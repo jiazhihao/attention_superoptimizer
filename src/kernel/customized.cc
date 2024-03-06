@@ -175,7 +175,6 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
                                aso::threadblock::Graph const &_graph)
     : KNOperator(aso::type::KN_CUSTOMIZED_OP, _inputs),
       bgraph(_graph.grid_dim, _graph.block_dim, _graph.forloop_range) {
-  ExecutionPlan plan;
   plan.grid_dim = _graph.grid_dim;
   plan.block_dim = _graph.block_dim;
   plan.forloop_range = _graph.forloop_range;
@@ -210,6 +209,7 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
                          input_op->output_tensors[0].layout);
         plan.input_map.push_back(input_op->input_map);
         plan.forloop_dim.push_back(input_op->forloop_dim);
+        plan.input_smem_layouts.push_back(input_op->output_tensors[0].layout);
         break;
       }
       case aso::type::TB_OUTPUT_OP: {
@@ -222,6 +222,14 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         dtensor.owner_ts_idx = static_cast<int>(output_tensors.size());
         DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
         dmm->allocate(dtensor);
+        // Update dtensor saved by the output operator
+        {
+          assert(bgraph.operators.back()->op_type == aso::type::TB_OUTPUT_OP);
+          aso::threadblock::TBOutputOp *output =
+              static_cast<aso::threadblock::TBOutputOp *>(
+                  bgraph.operators.back());
+          output->dtensor = dtensor;
+        }
         output_tensors.push_back(dtensor);
         plan.output_map = output_op->output_map;
         break;
@@ -236,6 +244,11 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         bgraph.exp(my_inputs[0]);
         break;
       }
+      case aso::type::TB_DIV_OP: {
+        assert(my_inputs.size() == 2);
+        bgraph.div(my_inputs[0], my_inputs[1]);
+        break;
+      }
       case aso::type::TB_REDUCTION_0_OP:
       case aso::type::TB_REDUCTION_1_OP:
       case aso::type::TB_REDUCTION_2_OP: {
@@ -244,9 +257,12 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         bgraph.reduction(my_inputs[0], reduce_dim);
         break;
       }
-      case aso::type::TB_DIV_OP: {
-        assert(my_inputs.size() == 2);
-        bgraph.div(my_inputs[0], my_inputs[1]);
+      case aso::type::TB_REDUCTION_0_TO_DIMX_OP:
+      case aso::type::TB_REDUCTION_1_TO_DIMX_OP:
+      case aso::type::TB_REDUCTION_2_TO_DIMX_OP: {
+        assert(my_inputs.size() == 1);
+        int reduce_dim = op->op_type - aso::type::TB_REDUCTION_0_TO_DIMX_OP;
+        bgraph.reduction_to_dimx(my_inputs[0], reduce_dim);
         break;
       }
       default: {
