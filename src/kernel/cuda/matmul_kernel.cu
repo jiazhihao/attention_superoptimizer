@@ -123,7 +123,7 @@ __global__ void compute_matmul_fingerprint(aso::type::FPType *A_ptr,
         uint32_t B_value = B_ptr[b * nk + i * n + col_idx];
         result = (result + A_value * B_value) % FP_PQ;
       }
-      if (threadIdx.x == 0) {
+      if (threadIdx.x == 0 && blockIdx.x == 0 && blockIdx.y == 0) {
         printf("C[%d] = %d\n",
                b * mn + threadIdx.x + blockIdx.x * blockDim.x,
                result);
