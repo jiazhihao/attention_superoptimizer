@@ -149,8 +149,8 @@ void KernelGraphGenerator::generate_next_tb_operator(
 
   for (type::TBOperatorType op_type : op_to_explore) {
     if (is_binary(op_type)) {
-      for (size_t i = 0; i < c.all_tensors.size(); ++i) {
-        for (size_t j = 0; j < c.all_tensors.size(); ++j) {
+      for (int i = 0; i < static_cast<int>(c.all_tensors.size()); ++i) {
+        for (int j = 0; j < static_cast<int>(c.all_tensors.size()); ++j) {
           size_t hash = get_operator_hash(i, j, op_type);
           if (contains(c.existing_op_hash, hash)) {
             continue;
@@ -200,7 +200,7 @@ void KernelGraphGenerator::generate_next_tb_operator(
         }
       }
     } else if (is_unary(op_type)) {
-      for (size_t i = 0; i < c.all_tensors.size(); ++i) {
+      for (int i = 0; i < static_cast<int>(c.all_tensors.size()); ++i) {
         size_t hash = get_operator_hash(i, op_type);
         if (contains(c.existing_op_hash, hash)) {
           continue;
@@ -266,8 +266,8 @@ void KernelGraphGenerator::generate_next_kn_operator(
 
   for (type::KNOperatorType op_type : op_to_explore) {
     if (is_binary(op_type)) {
-      for (size_t i = 0; i < c.all_tensors.size(); ++i) {
-        for (size_t j = 0; j < c.all_tensors.size(); ++j) {
+      for (int i = 0; i < static_cast<int>(c.all_tensors.size()); ++i) {
+        for (int j = 0; j < static_cast<int>(c.all_tensors.size()); ++j) {
           size_t hash = get_operator_hash(i, j, op_type);
           if (contains(c.existing_op_hash, hash)) {
             continue;
@@ -313,7 +313,7 @@ void KernelGraphGenerator::generate_next_kn_operator(
         }
       }
     } else if (is_unary(op_type)) {
-      for (size_t i = 0; i < c.all_tensors.size(); ++i) {
+      for (int i = 0; i < static_cast<int>(c.all_tensors.size()); ++i) {
         size_t hash = get_operator_hash(i, op_type);
         if (contains(c.existing_op_hash, hash)) {
           continue;
@@ -639,7 +639,7 @@ bool KernelGraphGenerator::verify(kernel::Graph const &g,
 bool KernelGraphGenerator::have_same_fingerprint(
     std::vector<DTensor> const &outputs, std::vector<int> const &match) const {
   assert(outputs.size() == match.size());
-  for (int i = 0; i < match.size(); ++i) {
+  for (int i = 0; i < static_cast<int>(match.size()); ++i) {
     if (!output_tensors[i].has_same_fingerprint(outputs[match[i]])) {
       return false;
     }

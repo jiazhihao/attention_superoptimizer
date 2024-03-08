@@ -558,7 +558,7 @@ bool KNCustomizedOp::fingerprint(void) {
   assert(bgraph.smem_offset <= max_smem_size);
   aso::kernel::DeviceMemoryManager *dmm =
       aso::kernel::DeviceMemoryManager::get_instance();
-  if (bgraph.smem_offset > 64 * 1024) {
+  if (bgraph.smem_offset > 48 * 1024) {
     checkCUDA(cudaFuncSetAttribute(compute_customizedop_fingerprint,
                                    cudaFuncAttributeMaxDynamicSharedMemorySize,
                                    bgraph.smem_offset));

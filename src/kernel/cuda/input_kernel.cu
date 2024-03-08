@@ -29,7 +29,7 @@ template <typename DT>
 __global__ void init_input(DTensor const A, size_t num_elements) {
   int idx = (threadIdx.x + blockIdx.x * blockDim.x);
   int kColumn = A.dim[A.num_dims - 1];
-  int myRow = idx / kColumn;
+  //int myRow = idx / kColumn;
   int myColumn = idx % kColumn;
   if (idx < num_elements) {
     ((DT *)A.data_ptr)[idx] = ((float)myColumn);
