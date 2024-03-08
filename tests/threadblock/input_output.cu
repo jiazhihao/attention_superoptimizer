@@ -20,9 +20,9 @@ __global__ void
 
   int tb_offset_row = 0;
   int tb_offset_column = 0;
+  int global_offset = blockIdx.x * (64 * 64);
 
   cutlass::MatrixCoord matrix_offset = {tb_offset_row, tb_offset_column};
-  int global_offset = 0;
   aso::threadblock::GenericInputLoader loader(smem_buffer,
                                               D_In,
                                               S_tensor,
@@ -45,13 +45,19 @@ TEST(threadblock_tests, input_output) {
   aso::kernel::Graph kgraph;
 
   // single thread block test
-  aso::threadblock::Graph bgraph({1, 1, 1}, {128, 1, 1}, 4);
-  aso::kernel::DTensor Input = kgraph.new_input(
-      {64, 64}, aso::type::DT_FLOAT16, aso::layout::DmemLayout::DmemRowMajor);
-  aso::kernel::DTensor Output = kgraph.new_input(
-      {64, 64}, aso::type::DT_FLOAT16, aso::layout::DmemLayout::DmemRowMajor);
-  aso::kernel::DTensor Output_Ref = kgraph.new_input(
-      {64, 64}, aso::type::DT_FLOAT16, aso::layout::DmemLayout::DmemRowMajor);
+  aso::threadblock::Graph bgraph({16, 1, 1}, {128, 1, 1}, 1);
+  aso::kernel::DTensor Input =
+      kgraph.new_input({16, 64, 64},
+                       aso::type::DT_FLOAT16,
+                       aso::layout::DmemLayout::DmemRowMajor);
+  aso::kernel::DTensor Output =
+      kgraph.new_input({16, 64, 64},
+                       aso::type::DT_FLOAT16,
+                       aso::layout::DmemLayout::DmemRowMajor);
+  aso::kernel::DTensor Output_Ref =
+      kgraph.new_input({16, 64, 64},
+                       aso::type::DT_FLOAT16,
+                       aso::layout::DmemLayout::DmemRowMajor);
 
   int const num_threads_per_blk = 1024;
   int num_blocks =
@@ -71,20 +77,21 @@ TEST(threadblock_tests, input_output) {
   launch_input_output_kernel<<<bgraph.grid_dim, bgraph.block_dim, smem_size>>>(
       Input, Output, Input_S);
 
+  cudaDeviceSynchronize();
+
   // check Output and Output_Ref
-  int h_isEqual = 0;
-  int *d_isEqual;
+  int h_notEqual = 0;
+  int *d_notEqual;
 
-  cudaMalloc(&d_isEqual, sizeof(int));
-  cudaMemcpy(d_isEqual, &h_isEqual, sizeof(int), cudaMemcpyHostToDevice);
+  cudaMalloc(&d_notEqual, sizeof(int));
+  cudaMemcpy(d_notEqual, &h_notEqual, sizeof(int), cudaMemcpyHostToDevice);
 
-  // Launch the kernel with the adapted parameters
   checkTensorsEqual<cutlass::half_t><<<num_blocks, num_threads_per_blk>>>(
-      Output.data_ptr, Output_Ref.data_ptr, d_isEqual, Output.num_elements());
+      Output.data_ptr, Output_Ref.data_ptr, d_notEqual, Output.num_elements());
 
-  // Copy the result back to host
-  cudaMemcpy(&h_isEqual, d_isEqual, sizeof(int), cudaMemcpyDeviceToHost);
+  cudaMemcpy(&h_notEqual, d_notEqual, sizeof(int), cudaMemcpyDeviceToHost);
 
-  std::cout << "Unequal number of elements: " << h_isEqual << std::endl;
-  cudaFree(d_isEqual);
+  std::cout << "Unequal number of elements: " << h_notEqual << std::endl;
+  ASSERT_TRUE(h_notEqual == 0);
+  cudaFree(d_notEqual);
 }

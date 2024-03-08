@@ -112,17 +112,18 @@ __global__ void random_fill_device_tensor(aso::kernel::DTensor const dtensor,
 
 template <typename DT>
 __global__ void
-    checkTensorsEqual(void *A, void *B, int *equals, int num_elements) {
+    checkTensorsEqual(void *A, void *B, int *not_equals, size_t num_elements) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
   if (i < num_elements) {
     if (fabs((float)((DT *)A)[i] - (float)((DT *)B)[i]) >= 1e-6) {
       // printf("not equal %d, %f, %f\n", i, (float)((DT *)A)[i], (float)((DT
       // *)B)[i]);
-      atomicAdd(equals, 1);
+      atomicAdd(not_equals, 1);
     }
     // else{
     //   printf(" equal %d, %f, %f\n", i, (float)((DT *)A)[i], (float)((DT
-    //   *)B)[i]); atomicAdd(equals, 1);
+    //   *)B)[i]);
+    //   // atomicAdd(not_equals, 1);
     // }
   }
 }

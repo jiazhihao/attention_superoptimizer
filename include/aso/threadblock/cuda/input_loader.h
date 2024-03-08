@@ -207,7 +207,8 @@ public:
     assert(num_threads == kThreads);
     assert(stensor.data_type == aso::type::DT_FLOAT16);
     assert(dtensor.data_type == aso::type::DT_FLOAT16);
-    MatrixCoord extent({dtensor.dim[0], dtensor.dim[1]});
+    MatrixCoord extent(
+        {dtensor.dim[stensor.num_dims - 2], dtensor.dim[stensor.num_dims - 1]});
     if (dtensor.layout == aso::layout::DmemRowMajor) {
       using DmemLayout = cutlass::layout::RowMajor;
       switch (stensor.layout) {
@@ -221,7 +222,7 @@ public:
                                                   SmemLayout>;
           InputLoader loader(
               ((cutlass::half_t *)dtensor.data_ptr) + global_offset,
-              (cutlass::half_t *)(stensor.smem_offset + smem_buffer),
+              (cutlass::half_t *)(smem_buffer + stensor.smem_offset),
               extent,
               thread_id,
               matrix_offset);
@@ -241,7 +242,7 @@ public:
                                                   SmemLayout>;
           InputLoader loader(
               ((cutlass::half_t *)dtensor.data_ptr) + global_offset,
-              (cutlass::half_t *)(stensor.smem_offset + smem_buffer),
+              (cutlass::half_t *)(smem_buffer + stensor.smem_offset),
               extent,
               thread_id,
               matrix_offset);
@@ -267,7 +268,7 @@ public:
                                                      SmemLayout>;
           InputLoader loader(
               ((cutlass::half_t *)dtensor.data_ptr) + global_offset,
-              (cutlass::half_t *)(stensor.smem_offset + smem_buffer),
+              (cutlass::half_t *)(smem_buffer + stensor.smem_offset),
               extent,
               thread_id,
               matrix_offset);
@@ -287,7 +288,7 @@ public:
                                                      SmemLayout>;
           InputLoader loader(
               ((cutlass::half_t *)dtensor.data_ptr) + global_offset,
-              (cutlass::half_t *)(stensor.smem_offset + smem_buffer),
+              (cutlass::half_t *)(smem_buffer + stensor.smem_offset),
               extent,
               thread_id,
               matrix_offset);
