@@ -32,5 +32,13 @@ cudaDataType_t to_cuda_datatype(aso::type::DataType type) {
   return CUDA_R_16F;
 }
 
+size_t get_max_shared_mem() {
+  int device;
+  cudaGetDevice(&device);
+  cudaDeviceProp deviceProps;
+  cudaGetDeviceProperties(&deviceProps, device);
+  return deviceProps.sharedMemPerBlock;
+}
+
 } // namespace utils
 } // namespace aso

@@ -31,6 +31,7 @@ namespace aso {
 namespace threadblock {
 
 using namespace cutlass;
+using namespace aso::type;
 
 template <typename ElementType,
           int kRow,
@@ -200,7 +201,7 @@ public:
     assert(num_threads == kThreads);
     assert(stensor.data_type == aso::type::DT_FLOAT16);
     assert(dtensor.data_type == aso::type::DT_FLOAT16);
-    MatrixCoord extent({dtensor.dim[0], dtensor.dim[1]});
+    MatrixCoord extent({dtensor.dim[stensor.num_dims - 2], dtensor.dim[stensor.num_dims - 1]});
     if (dtensor.layout == aso::layout::DmemRowMajor) {
       using DmemLayout = cutlass::layout::RowMajor;
       switch (stensor.layout) {

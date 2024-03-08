@@ -93,6 +93,8 @@ namespace utils {
 
 cudaDataType_t to_cuda_datatype(aso::type::DataType type);
 
+size_t get_max_shared_mem();
+
 using namespace aso::type;
 
 CUTLASS_HOST_DEVICE
