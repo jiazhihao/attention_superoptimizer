@@ -257,7 +257,7 @@ __global__ void
   // 1
   assert(blockDim.y == 1);
   assert(blockDim.z == 1);
-  if (threadIdx.x == 0) {
+  if (false && threadIdx.x == 0) {
     printf("threadIdx(%d) blockIdx(%d %d %d) num_operators(%d)\n",
            threadIdx.x,
            blockIdx.x,
@@ -278,7 +278,7 @@ __global__ void
           aso::kernel::DTensor dtensor = params.dmem_inputs[dmem_input_idx];
           aso::threadblock::STensor stensor =
               params.smem_outputs[smem_output_idx];
-          if (threadIdx.x == 0 && blockIdx.x == 0 && blockIdx.y == 0) {
+          if (false && threadIdx.x == 0 && blockIdx.x == 0 && blockIdx.y == 0) {
             printf("op(%d) num_ops(%d) smem_output_idx(%d) "
                    "stensor.smem_offset(%d)\n",
                    op,
@@ -550,7 +550,7 @@ bool KNCustomizedOp::profile(ProfileResult &result) {
 bool KNCustomizedOp::fingerprint(void) {
   int max_smem_size = aso::type::MAX_SMEM_SIZE;
   aso::threadblock::KernelParams params = bgraph.get_kernel_params();
-  for (int i = 0; i < params.num_smem_outputs; i++) {
+  for (int i = 0; false && i < params.num_smem_outputs; i++) {
     printf("params.smem_outputs[%d].smem_offset = %d\n",
            i,
            params.smem_outputs[i].smem_offset);

@@ -48,6 +48,24 @@ std::shared_ptr<AlgebraicPattern>
                 std::shared_ptr<AlgebraicPattern> lhs,
                 std::shared_ptr<AlgebraicPattern> rhs);
 
+template<typename OpType, typename TensorType>
+std::shared_ptr<AlgebraicPattern>
+    get_pattern(OpType op,
+                std::vector<TensorType> const &input_tensors,
+                std::vector<std::shared_ptr<AlgebraicPattern>> const &input_patterns) {
+  if (input_patterns.size() == 1) {
+    return get_pattern(op, input_tensors[0], input_patterns[0]);
+  }
+  if (input_tensors.size() == 2) {
+    return get_pattern(op,
+                       input_tensors[0],
+                       input_tensors[1],
+                       input_patterns[0],
+                       input_patterns[1]);
+  }
+  assert(false && "Unsupported op");
+}
+
 KNOperator *create_op(kernel::Graph &g,
                       type::KNOperatorType type,
                       DTensor const &input);
@@ -55,6 +73,9 @@ KNOperator *create_op(kernel::Graph &g,
                       type::KNOperatorType type,
                       DTensor const &input1,
                       DTensor const &input2);
+KNOperator *create_op(kernel::Graph &g,
+                      type::KNOperatorType type,
+                      std::vector<DTensor> const &inputs);
 
 TBOperator *create_op(threadblock::Graph &g,
                       type::TBOperatorType type,
@@ -63,6 +84,9 @@ TBOperator *create_op(threadblock::Graph &g,
                       type::TBOperatorType type,
                       STensor const &input1,
                       STensor const &input2);
+TBOperator *create_op(threadblock::Graph &g,
+                      type::TBOperatorType type,
+                      std::vector<STensor> const &inputs);
 
 } // namespace search
 } // namespace aso

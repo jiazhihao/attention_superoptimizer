@@ -164,6 +164,18 @@ KNOperator *create_op(kernel::Graph &g,
   }
 }
 
+KNOperator *create_op(kernel::Graph &g,
+                      type::KNOperatorType type,
+                      std::vector<DTensor> const &inputs) {
+  if (inputs.size() == 1) {
+    return create_op(g, type, inputs[0]);
+  }
+  if (inputs.size() == 2) {
+    return create_op(g, type, inputs[0], inputs[1]);
+  }
+  return nullptr;
+}
+
 TBOperator *create_op(threadblock::Graph &g,
                       type::TBOperatorType type,
                       STensor const &input) {
@@ -217,6 +229,18 @@ TBOperator *create_op(threadblock::Graph &g,
     default:
       assert(false && "Unsupported operator");
   }
+}
+
+TBOperator *create_op(threadblock::Graph &g,
+                      type::TBOperatorType type,
+                      std::vector<STensor> const &inputs) {
+  if (inputs.size() == 1) {
+    return create_op(g, type, inputs[0]);
+  }
+  if (inputs.size() == 2) {
+    return create_op(g, type, inputs[0], inputs[1]);
+  }
+  return nullptr;
 }
 
 } // namespace search

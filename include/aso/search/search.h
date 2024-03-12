@@ -10,7 +10,7 @@
 namespace aso {
 namespace search {
 
-int const MAX_NUM_THREADBLOCK_GRAPH_OP = 9;
+int const MAX_NUM_THREADBLOCK_GRAPH_OP = 7; // Outputs not counted
 int const MAX_NUM_KERNEL_GRAPH_OP = 5;
 int const MAX_NUM_THREADBLOCK = 2;
 int const MAX_NUM_THREADBLOCK_INPUT = 3;
@@ -23,27 +23,27 @@ using threadblock::TBOperator;
 
 struct Order {
   std::vector<int> v;
+  int type;
+  Order(std::vector<int> const &v, int type);
   bool operator<(Order const &) const;
+  bool operator<=(Order const &) const;
 };
 
 class KernelGraphGenerator {
 public:
-  KernelGraphGenerator(kernel::Graph const &computation_graph,
-                       size_t device_mem_size,
-                       size_t shared_mem_size);
+  KernelGraphGenerator(kernel::Graph const &computation_graph);
   void generate_kernel_graphs();
 
   kernel::Graph computation_graph;
-  size_t device_mem_size, shared_mem_size;
 
-private:
+public:
   template <typename OpType, typename TensorType>
   struct SearchContext {
     std::vector<TensorType> all_tensors;
     std::vector<std::shared_ptr<AlgebraicPattern>> algebraic_pattern;
     std::vector<int> num_consumers;
 
-    std::unordered_set<size_t> existing_op_hash;
+    // std::unordered_set<size_t> existing_op_hash;
     std::vector<Order> op_order;
 
     std::vector<std::shared_ptr<AlgebraicPattern>> output_pattern;
@@ -64,7 +64,8 @@ private:
                                  kernel::Graph &g);
 
   bool finish_tb_graph(SearchContext<TBOperator, STensor> &c,
-                       threadblock::Graph &g);
+                       threadblock::Graph &g,
+                       int3 output_map);
 
   void process_outputs();
 
@@ -75,7 +76,7 @@ private:
   bool have_same_fingerprint(std::vector<DTensor> const &outputs,
                              std::vector<int> const &match) const;
 
-  bool verify(kernel::Graph const &g, SearchContext<KNOperator, DTensor> &c);
+  bool verify(SearchContext<KNOperator, DTensor> &c, kernel::Graph const &g);
 };
 
 } // namespace search

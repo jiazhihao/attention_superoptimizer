@@ -1,6 +1,7 @@
 #pragma once
 
 #include "aso/search/search.h"
+#include "aso/search/op_utils.h"
 
 namespace aso {
 namespace search {
@@ -24,6 +25,24 @@ std::vector<int>
                            dim3 grid_dim,
                            dim3 block_dim,
                            std::vector<int> const &forloop_dim);
+
+std::vector<std::vector<int>> get_unary_input(int num_tensors);
+std::vector<std::vector<int>> get_binary_input(int num_tensors);
+
+template <typename OpType, typename TensorType>
+std::vector<std::vector<int>>
+    get_input_cand_idx(OpType op_type, std::vector<TensorType> const &all_inputs) {
+  if (is_unary(op_type)) {
+    return get_unary_input(all_inputs.size());
+  }
+  if (is_binary(op_type)) {
+    return get_binary_input(all_inputs.size());
+  }
+  assert(false && "Unsupported operator");
+}
+
+std::vector<std::vector<int>>
+    get_customized_input_cand_idx(std::vector<DTensor> const &all_inputs);
 
 } // namespace search
 } // namespace aso

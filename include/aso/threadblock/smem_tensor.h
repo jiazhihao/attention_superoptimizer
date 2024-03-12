@@ -148,6 +148,7 @@ struct STensor {
   aso::layout::SmemLayout layout;
   int num_dims;
   int dim[MAX_TENSOR_DIMS];
+  int guid;
   // int stride[MAX_TENSOR_DIMS];
   //  STensor fields
   TBOperator *owner_op;
@@ -158,9 +159,11 @@ struct STensor {
   // by an output saver to indicate its input should
   // be accumulated
   // bool accum_output;
+
+  static int next_guid;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(STensor, data_type, layout, num_dims, dim, smem_offset)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(STensor, data_type, layout, num_dims, dim, smem_offset, guid)
 
 } // namespace threadblock
 } // namespace aso

@@ -81,6 +81,7 @@ KNMatmulOp::KNMatmulOp(DTensor const &A, DTensor const &B)
   C.data_type = A.data_type;
   C.owner_op = this;
   C.owner_ts_idx = 0;
+  C.guid = DTensor::next_guid++;
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
   dmm->allocate(C);
   assert(output_tensors.size() == 0);

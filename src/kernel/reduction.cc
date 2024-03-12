@@ -60,6 +60,7 @@ KNReductionOp::KNReductionOp(DTensor const &input, int dim, int size)
   output.dim[dim] = size;
   output.owner_op = this;
   output.owner_ts_idx = 0;
+  output.guid = DTensor::next_guid++;
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
   dmm->allocate(output);
   assert(output_tensors.size() == 0);
@@ -74,7 +75,7 @@ KNReductionOp::~KNReductionOp() {
 }
 
 KNReductionOp::operator json() const {
-  return json{{"op_type", op_type},
+  return json{{"op_type", "reduction"},
               {"input_tensors", input_tensors},
               {"output_tensors", output_tensors}};
 }

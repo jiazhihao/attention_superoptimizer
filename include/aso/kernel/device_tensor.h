@@ -110,6 +110,7 @@ struct DTensor {
   aso::layout::DmemLayout layout;
   int num_dims;
   int dim[MAX_TENSOR_DIMS];
+  size_t guid;
   // int stride[MAX_TENSOR_DIMS];
   //  DTensor fields
   KNOperator *owner_op;
@@ -118,9 +119,11 @@ struct DTensor {
   void *data_ptr;
   // pointer to fingerprint
   aso::type::FPType *fp_ptr;
+
+  static int next_guid;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(DTensor, data_type, layout, num_dims, dim)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(DTensor, data_type, layout, num_dims, dim, guid)
 
 } // namespace kernel
 } // namespace aso

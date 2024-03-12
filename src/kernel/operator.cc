@@ -92,6 +92,7 @@ KNInputOp::KNInputOp(std::vector<int> const &dims,
   tensor.layout = layout;
   tensor.owner_op = this;
   tensor.owner_ts_idx = 0;
+  tensor.guid = DTensor::next_guid++;
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
   dmm->allocate(tensor);
   output_tensors.push_back(tensor);
@@ -103,7 +104,7 @@ KNInputOp::~KNInputOp() {
 }
 
 KNInputOp::operator json() const {
-  return json{{"op_type", op_type},
+  return json{{"op_type", "input"},
               {"input_tensors", input_tensors},
               {"output_tensors", output_tensors}};
 }

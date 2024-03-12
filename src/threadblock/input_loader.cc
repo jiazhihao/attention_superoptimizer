@@ -133,6 +133,7 @@ TBInputOp::TBInputOp(Graph *_graph,
   }
   tensor.owner_op = this;
   tensor.owner_ts_idx = 0;
+  tensor.guid = STensor::next_guid++;
   tensor.smem_offset = bgraph->allocate(tensor);
   output_tensors.push_back(tensor);
 }

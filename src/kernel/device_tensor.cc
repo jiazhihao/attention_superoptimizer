@@ -46,6 +46,8 @@ DTensorShape DTensor::get_shape() const {
 }
 */
 
+int DTensor::next_guid = 20000;
+
 } // namespace kernel
 } // namespace aso
 

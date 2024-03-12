@@ -75,6 +75,7 @@ TBMatmulOp::TBMatmulOp(Graph *_graph, STensor const &A, STensor const &B)
   C.data_type = A.data_type;
   C.owner_op = this;
   C.owner_ts_idx = 0;
+  C.guid = STensor::next_guid++;
   C.smem_offset = bgraph->allocate(C);
   assert(output_tensors.size() == 0);
   output_tensors.push_back(C);

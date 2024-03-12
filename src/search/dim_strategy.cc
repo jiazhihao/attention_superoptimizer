@@ -17,9 +17,12 @@ std::vector<dim3> get_grid_dim_cand(std::vector<DTensor> const &tensors,
         return results;
       }
     }
-    for (unsigned int y = 8; y <= 8; y *= 2) {
-      bool feasible = true;
+    for (unsigned int y = 1; y <= 2; y *= 2) {
+      bool feasible = true, all_replicate = true;
       for (size_t i = 0; i < tensors.size(); ++i) {
+        if (input_map[i].y != -1) {
+          all_replicate = false;
+        }
         if (input_map[i].y != -1 && tensors[i].num_dims > input_map[i].y &&
             tensors[i].dim[input_map[i].y] % y != 0) {
           feasible = false;
@@ -28,6 +31,9 @@ std::vector<dim3> get_grid_dim_cand(std::vector<DTensor> const &tensors,
       }
       if (!feasible) {
         break;
+      }
+      if (all_replicate && y != 1) {
+        continue;
       }
       results.push_back(dim3{x, y, 1});
     }
@@ -67,7 +73,7 @@ bool is_all_replicate(std::vector<int3> const &input_maps) {
 }
 
 void generate_input_map_cand(std::vector<DTensor> const &tensors,
-                             int3 input_map_pattern,
+                             std::vector<int3> input_map_patterns,
                              std::vector<int3> cur,
                              std::vector<std::vector<int3>> &results) {
   if (cur.size() == tensors.size()) {
@@ -76,39 +82,47 @@ void generate_input_map_cand(std::vector<DTensor> const &tensors,
     }
     return;
   }
-  DTensor const &tensor = tensors[cur.size()];
-  for (unsigned int bitmap = 0; bitmap < (1 << 3); ++bitmap) {
-    int3 input_map{-1, -1, -1};
-    if ((bitmap & 1) && input_map.x < tensor.num_dims) {
-      input_map.x = input_map_pattern.x;
-    }
-    if ((bitmap >> 1 & 1) && input_map.y < tensor.num_dims) {
-      input_map.y = input_map_pattern.y;
-    }
-    if ((bitmap >> 2 & 1) && input_map.z < tensor.num_dims) {
-      input_map.z = input_map_pattern.z;
+  for (int3 input_map : input_map_patterns) {
+    if (cur.empty() && input_map.y != -1 && input_map.z != -1) {
+      continue;
     }
     cur.push_back(input_map);
-    generate_input_map_cand(tensors, input_map, cur, results);
+    generate_input_map_cand(tensors, input_map_patterns, cur, results);
     cur.pop_back();
   }
+  // DTensor const &tensor = tensors[cur.size()];
+  // for (unsigned int bitmap = 0; bitmap < (1 << 3); ++bitmap) {
+  //   int3 input_map{-1, -1, -1};
+  //   if ((bitmap & 1) && input_map.x < tensor.num_dims) {
+  //     input_map.x = input_map_pattern.x;
+  //   }
+  //   if ((bitmap >> 1 & 1) && input_map.y < tensor.num_dims) {
+  //     input_map.y = input_map_pattern.y;
+  //   }
+  //   if ((bitmap >> 2 & 1) && input_map.z < tensor.num_dims) {
+  //     input_map.z = input_map_pattern.z;
+  //   }
+  //   cur.push_back(input_map);
+  //   generate_input_map_cand(tensors, input_map, cur, results);
+  //   cur.pop_back();
+  // }
 }
 
 std::vector<std::vector<int3>>
     get_input_map_cand(std::vector<DTensor> const &tensors) {
   // To save time to generate example
-  // if (tensors.size() == 3) {
-  //   return {{{0, -1, -1}, {0, 2, -1}, {0, 1, -1}}};
-  // }
-  // if (tensors.size() == 2) {
-  //   return {{{0, -1, -1}, {0, 2, -1}}};
-  // }
-  std::vector<std::vector<int3>> results;
-  // Assume two-dimentional inputs
-  // TODO: There are invalid input maps, how to prune them out?
-  for (int3 input_map_pattern : {int3{0, 2, -1} /*, int3{1, 0, -1}*/}) {
-    generate_input_map_cand(tensors, input_map_pattern, {}, results);
+  if (tensors.size() == 3) {
+    return {{{0, -1, -1}, {0, 2, -1}, {0, 1, -1}}};
   }
+  if (tensors.size() == 2) {
+    return {{{0, -1, -1}, {0, -1, -1}}};
+  }
+  std::vector<std::vector<int3>> results;
+  generate_input_map_cand(tensors, {int3{0, 1, -1}, int3{0, 2, -1}, int3{0, -1, -1}}, {}, results);
+  // TODO: There are invalid input maps, how to prune them out?
+  // for (int3 input_map_pattern : {int3{0, 2, -1} , int3{1, 0, -1}}) {
+  //   generate_input_map_cand(tensors, input_map_pattern, {}, results);
+  // }
   return results;
 }
 
@@ -116,22 +130,16 @@ void generate_forloop_dim(std::vector<DTensor> const &input_tensors,
                           std::vector<int> cur,
                           std::vector<std::vector<int>> &results) {
   if (cur.size() == input_tensors.size()) {
-    bool is_none = true;
-    for (int dim : cur) {
-      if (dim != -1) {
-        is_none = false;
-        break;
-      }
-    }
-    if (!is_none) {
-      results.push_back(cur);
-    }
+    results.push_back(cur);
     return;
   }
 
-  for (int dim = -1; dim <= 2; ++dim) {
+  for (int dim : {-1, 1, 2}) {
+    if (cur.empty() && dim != -1) {
+      continue;
+    }
     DTensor const &tensor = input_tensors[cur.size()];
-    if (dim < tensor.num_dims && tensor.dim[dim] > 1) {
+    if ((dim == -1) || (dim != -1 && dim < tensor.num_dims && tensor.dim[dim] > 1)) {
       cur.push_back(dim);
       generate_forloop_dim(input_tensors, cur, results);
       cur.pop_back();
@@ -143,7 +151,7 @@ std::vector<std::vector<int>>
     get_forloop_dim_cand(std::vector<DTensor> const &input_tensors) {
   // To save time to generate example
   // if (input_tensors.size() == 2) {
-  //   return {{2, 1}};
+  //   return {{-1, -1}};
   // }
   // if (input_tensors.size() == 3) {
   //   return {{-1, 2, 1}};
@@ -203,6 +211,50 @@ std::vector<int>
     }
   }
   return results;
+}
+
+std::vector<std::vector<int>> get_unary_input(int num_tensors) {
+  std::vector<std::vector<int>> result;
+  for (int i = 0; i < num_tensors; ++i) {
+    result.push_back({i});
+  }
+  return result;
+}
+
+std::vector<std::vector<int>> get_binary_input(int num_tensors) {
+  std::vector<std::vector<int>> result;
+  for (int i = 0; i < num_tensors; ++i) {
+    for (int j = 0; j < num_tensors; ++j) {
+      result.push_back({i, j});
+    }
+  }
+  return result;
+}
+
+std::vector<std::vector<int>>
+    get_customized_input_cand_idx(std::vector<DTensor> const &all_inputs) {
+
+  std::vector<std::vector<int>> results;
+  for (int n = 2; n <= 3; ++n) {
+    std::vector<int> result;
+    for (int i = n; i > 0; --i) {
+      result.push_back(all_inputs.size() - i);
+    }
+    results.push_back(result);
+  }
+  return results;
+  // for (int bitmap = 1; bitmap < (1 << all_inputs.size()); ++bitmap) {
+  //   std::vector<int> inputs;
+  //   for (size_t i = 0; i < all_inputs.size(); ++i) {
+  //     if ((bitmap >> i) & 1) {
+  //       inputs.push_back(i);
+  //     }
+  //   }
+  //   if (inputs.size() <= MAX_NUM_THREADBLOCK_INPUT) {
+  //     results.push_back(inputs);
+  //   }
+  // }
+  // return results;
 }
 
 } // namespace search

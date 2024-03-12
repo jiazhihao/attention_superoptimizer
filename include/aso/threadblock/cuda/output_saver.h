@@ -355,25 +355,25 @@ public:
         output_ptr[idx] = input_ptr[idx];
       }
       if (thread_id == 0) {
-        printf("Accumu(0): block(%d %d %d) output(%d) input(%d)\n",
-               blockIdx.x,
-               blockIdx.y,
-               blockIdx.z,
-               output_ptr[thread_id],
-               input_ptr[thread_id]);
+        // printf("Accumu(0): block(%d %d %d) output(%d) input(%d)\n",
+        //        blockIdx.x,
+        //        blockIdx.y,
+        //        blockIdx.z,
+        //        output_ptr[thread_id],
+        //        input_ptr[thread_id]);
       }
     } else {
       for (int idx = thread_id; idx < num_elements; idx += num_threads) {
         uint32_t value = input_ptr[idx];
         if (thread_id == 0) {
-          printf("Accumu(1): block(%d %d %d) output_old(%d) input(%d) "
-                 "output_new(%d)\n",
-                 blockIdx.x,
-                 blockIdx.y,
-                 blockIdx.z,
-                 output_ptr[thread_id],
-                 input_ptr[thread_id],
-                 (value + output_ptr[idx]) % FP_PQ);
+          // printf("Accumu(1): block(%d %d %d) output_old(%d) input(%d) "
+          //        "output_new(%d)\n",
+          //        blockIdx.x,
+          //        blockIdx.y,
+          //        blockIdx.z,
+          //        output_ptr[thread_id],
+          //        input_ptr[thread_id],
+          //        (value + output_ptr[idx]) % FP_PQ);
         }
         output_ptr[idx] = (value + output_ptr[idx]) % FP_PQ;
       }
@@ -402,22 +402,22 @@ public:
       int dmem_column_idx = matrix_offset.column() + idx % smem_num_column;
       assert(dmem_column_idx < dmem_num_column);
       if (thread_id == 0) {
-        printf("output:fp_ptr(%p) global_offset(%d) idx(%d) blc(%d %d %d) "
-               "val(%d) smem_offset(%d)"
-               "dmem_row_idx(%d) dmem_column_idx(%d) smem_num_column(%d) "
-               "dmem_num_column(%d)\n",
-               dtensor.fp_ptr,
-               global_offset,
-               idx,
-               blockIdx.x,
-               blockIdx.y,
-               blockIdx.z,
-               (int)smem_ptr[idx],
-               stensor.smem_offset,
-               dmem_row_idx,
-               dmem_column_idx,
-               smem_num_column,
-               dmem_num_column);
+        // printf("output:fp_ptr(%p) global_offset(%d) idx(%d) blc(%d %d %d) "
+        //        "val(%d) smem_offset(%d)"
+        //        "dmem_row_idx(%d) dmem_column_idx(%d) smem_num_column(%d) "
+        //        "dmem_num_column(%d)\n",
+        //        dtensor.fp_ptr,
+        //        global_offset,
+        //        idx,
+        //        blockIdx.x,
+        //        blockIdx.y,
+        //        blockIdx.z,
+        //        (int)smem_ptr[idx],
+        //        stensor.smem_offset,
+        //        dmem_row_idx,
+        //        dmem_column_idx,
+        //        smem_num_column,
+        //        dmem_num_column);
       }
       dmem_ptr[dmem_row_idx * dmem_num_column + dmem_column_idx] =
           smem_ptr[idx];

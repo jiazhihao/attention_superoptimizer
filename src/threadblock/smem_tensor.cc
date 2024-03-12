@@ -18,7 +18,9 @@
 #include <functional>
 
 namespace aso {
-namespace threadblock {} // namespace threadblock
+namespace threadblock {
+  int STensor::next_guid = 10000;
+} // namespace threadblock
 } // namespace aso
 
 namespace std {

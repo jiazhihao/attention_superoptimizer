@@ -124,9 +124,9 @@ __global__ void compute_matmul_fingerprint(aso::type::FPType *A_ptr,
         result = (result + A_value * B_value) % FP_PQ;
       }
       if (threadIdx.x == 0 && blockIdx.x == 0 && blockIdx.y == 0) {
-        printf("C[%d] = %d\n",
-               b * mn + threadIdx.x + blockIdx.x * blockDim.x,
-               result);
+        // printf("C[%d] = %d\n",
+        //        b * mn + threadIdx.x + blockIdx.x * blockDim.x,
+        //        result);
       }
       C_ptr[b * mn + threadIdx.x + blockIdx.x * blockDim.x] = result;
     }

@@ -42,6 +42,7 @@ TBOutputOp::TBOutputOp(Graph *_graph, STensor const &input, int3 _output_map)
   STensor accum = input;
   accum.owner_op = this;
   accum.owner_ts_idx = 0;
+  accum.guid = STensor::next_guid++;
   accum.smem_offset = bgraph->allocate(accum);
   assert(output_tensors.size() == 0);
   output_tensors.push_back(accum);

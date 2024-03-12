@@ -88,6 +88,7 @@ TBReductionOp::TBReductionOp(Graph *bgraph,
   output.dim[reduce_dim] = reduce_size;
   output.owner_op = this;
   output.owner_ts_idx = 0;
+  output.guid = STensor::next_guid++;
   output.smem_offset = bgraph->allocate(output);
   output_tensors.push_back(output);
 }

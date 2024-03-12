@@ -69,6 +69,7 @@ TBElementBinaryOp::TBElementBinaryOp(Graph *_graph,
   }
   output.owner_op = this;
   output.owner_ts_idx = 0;
+  output.guid = STensor::next_guid++;
   output.smem_offset = bgraph->allocate(output);
   assert(output_tensors.size() == 0);
   output_tensors.push_back(output);
@@ -79,7 +80,7 @@ TBElementBinaryOp::~TBElementBinaryOp() {
 }
 
 TBElementBinaryOp::operator json() const {
-  return json{{"op_type", "element_binary"},
+  return json{{"op_type", op_type},
               {"input_tensors", input_tensors},
               {"output_tensors", output_tensors}};
 }

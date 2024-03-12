@@ -49,6 +49,7 @@ KNElementUnaryOp::KNElementUnaryOp(DTensor const &input,
   DTensor output = input;
   output.owner_op = this;
   output.owner_ts_idx = 0;
+  output.guid = DTensor::next_guid++;
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
   dmm->allocate(output);
   assert(output_tensors.size() == 0);

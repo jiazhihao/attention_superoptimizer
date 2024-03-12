@@ -152,7 +152,7 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         // TODO: change output tensor_shape
         STensor stensor = op->output_tensors[i];
         DTensor dtensor = bgraph.new_output(stensor, plan.output_map);
-        printf("stensor.offset(%d)\n", stensor.smem_offset);
+        // printf("stensor.offset(%d)\n", stensor.smem_offset);
         dtensor.owner_op = this;
         dtensor.owner_ts_idx = static_cast<int>(output_tensors.size());
         DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
@@ -220,6 +220,7 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
             bgraph.new_output(my_inputs[0], output_op->output_map);
         dtensor.owner_op = this;
         dtensor.owner_ts_idx = static_cast<int>(output_tensors.size());
+        dtensor.guid = DTensor::next_guid++;
         DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
         dmm->allocate(dtensor);
         // Update dtensor saved by the output operator
@@ -280,7 +281,10 @@ KNCustomizedOp::~KNCustomizedOp() {
 }
 
 KNCustomizedOp::operator json() const {
-  return bgraph;
+  return json{{"op_type", "customized"},
+              {"input_tensors", input_tensors},
+              {"output_tensors", output_tensors},
+              {"bgraph", bgraph}};
 }
 
 } // namespace kernel

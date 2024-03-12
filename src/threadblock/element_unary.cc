@@ -40,6 +40,7 @@ TBElementUnaryOp::TBElementUnaryOp(Graph *_graph,
   STensor output = input;
   output.owner_op = this;
   output.owner_ts_idx = 0;
+  output.guid = STensor::next_guid++;
   // Note that we inplace the output by default
   // output.smem_offset = bgraph->allocate(output);
   output.smem_offset = input.smem_offset;
@@ -53,7 +54,7 @@ TBElementUnaryOp::~TBElementUnaryOp() {
 }
 
 TBElementUnaryOp::operator json() const {
-  return json{{"op_type", "element_unary"},
+  return json{{"op_type", op_type},
               {"input_tensors", input_tensors},
               {"output_tensors", output_tensors}};
 }
