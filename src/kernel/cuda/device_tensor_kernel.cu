@@ -45,6 +45,8 @@ bool DTensor::has_same_fingerprint(DTensor const &ref) const {
       return false;
     }
   }
+  free(A);
+  free(B);
   return true;
 }
 
