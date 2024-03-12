@@ -42,6 +42,8 @@ bool DTensor::has_same_fingerprint(DTensor const &ref) const {
   int num_elements = (int)this->num_elements();
   for (int i = 0; i < num_elements; i++) {
     if (A[i] != B[i]) {
+      free(A);
+      free(B);
       return false;
     }
   }
