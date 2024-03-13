@@ -35,7 +35,7 @@ __global__ void launch_matmul_kernel(STensor A,
 }
 
 TEST(threadblock_tests, matmul) {
-  Graph bgraph = create_single_graph(128);
+  Graph bgraph = create_single_threadblock_graph(128);
 
   constexpr int m = 64, n = 64, k = 64;
 
@@ -99,8 +99,13 @@ TEST(threadblock_tests, matmul) {
 int wtf(int argc, char **argv) {
   using namespace aso;
   kernel::Graph graph;
-  kernel::DTensor A = graph.new_input({4096, 1024}, aso::type::DT_FLOAT16);
-  kernel::DTensor B = graph.new_input({1024, 4096}, aso::type::DT_FLOAT16);
+  kernel::DTensor A = graph.new_input({4096, 1024},
+                                      aso::type::DT_FLOAT16,
+                                      aso::layout::DmemLayout::DmemRowMajor);
+  kernel::DTensor B = graph.new_input({1024, 4096},
+                                      aso::type::DT_FLOAT16,
+                                      aso::layout::DmemLayout::DmemColumnMajor);
+
   {
     threadblock::ExecutionPlan plan;
     plan.ops.push_back({aso::type::TB_MATMUL_OP, {{0, 0}, {1, 0}}});

@@ -28,7 +28,7 @@ namespace kernel {
 
 class KNOperator;
 
-struct DTensor {
+struct alignas(16) DTensor {
   DTensor(void);
   inline bool operator==(DTensor const &b) const {
     if (data_type != b.data_type) {
