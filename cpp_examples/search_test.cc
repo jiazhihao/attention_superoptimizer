@@ -2,9 +2,13 @@
 #include "aso/search/search.h"
 #include "aso/threadblock/graph.h"
 
+#include <iostream>
+
 using namespace aso;
+using namespace aso::search;
 
 int main(int argc, char **argv) {
+  clock_t st = clock();
   kernel::Graph ref_graph;
   {
     kernel::DTensor Q = ref_graph.new_input(
@@ -15,21 +19,18 @@ int main(int argc, char **argv) {
         {16, 512, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor A = ref_graph.matmul(Q, K);
     kernel::DTensor E = ref_graph.exp(A);
-    // kernel::DTensor S = ref_graph.reduction(E, 2 /*dim*/);
-    // kernel::DTensor D = ref_graph.div(E, S);
-    // ref_graph.matmul(D, V);
-    ref_graph.matmul(E, V);
-    // for (const auto &op : ref_graph.operators) {
-    //   op->fingerprint();
-    // }
+    kernel::DTensor S = ref_graph.reduction(E, 2 /*dim*/);
+    kernel::DTensor D = ref_graph.div(E, S);
+    ref_graph.matmul(D, V);
   }
 
-  size_t device_mem_size = (size_t)10 * 1024 * 1024 * 1024; // 10 GB
-  size_t shared_mem_size = (size_t)64 * 1024;               // 64 KB
-
-  search::KernelGraphGenerator gen(ref_graph, device_mem_size, shared_mem_size);
+  search::KernelGraphGenerator gen(ref_graph);
 
   gen.generate_kernel_graphs();
+
+  clock_t et = clock();
+
+  std::cout << "running time: " << (double)(et - st) / CLOCKS_PER_SEC << " sec" << std::endl;
 
   return 0;
 }

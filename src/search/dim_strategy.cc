@@ -23,19 +23,22 @@ std::vector<dim3> get_grid_dim_cand(std::vector<DTensor> const &tensors,
         if (input_map[i].y != -1) {
           all_replicate = false;
         }
+        if (y == 1 && input_map[i].y != -1) {
+          feasible = false;
+          break;
+        }
         if (input_map[i].y != -1 && tensors[i].num_dims > input_map[i].y &&
             tensors[i].dim[input_map[i].y] % y != 0) {
           feasible = false;
           break;
         }
       }
-      if (!feasible) {
-        break;
-      }
       if (all_replicate && y != 1) {
         continue;
       }
-      results.push_back(dim3{x, y, 1});
+      if (feasible) {
+        results.push_back(dim3{x, y, 1});
+      }
     }
   }
   return results;
@@ -83,9 +86,6 @@ void generate_input_map_cand(std::vector<DTensor> const &tensors,
     return;
   }
   for (int3 input_map : input_map_patterns) {
-    if (cur.empty() && input_map.y != -1 && input_map.z != -1) {
-      continue;
-    }
     cur.push_back(input_map);
     generate_input_map_cand(tensors, input_map_patterns, cur, results);
     cur.pop_back();
@@ -114,9 +114,9 @@ std::vector<std::vector<int3>>
   if (tensors.size() == 3) {
     return {{{0, -1, -1}, {0, 2, -1}, {0, 1, -1}}};
   }
-  if (tensors.size() == 2) {
-    return {{{0, -1, -1}, {0, -1, -1}}};
-  }
+  // if (tensors.size() == 2) {
+  //   return {{{0, -1, -1}, {0, -1, -1}}};
+  // }
   std::vector<std::vector<int3>> results;
   generate_input_map_cand(tensors, {int3{0, 1, -1}, int3{0, 2, -1}, int3{0, -1, -1}}, {}, results);
   // TODO: There are invalid input maps, how to prune them out?

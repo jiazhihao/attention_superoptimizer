@@ -107,14 +107,14 @@ void KernelGraphGenerator::generate_next_tb_operator(
 
   // Finish threadblock graph search and continue to search the next kernel
   // operator
-  for (int3 output_map : {int3{0, 2, -1}, int3{0, -1, -1}}) {
-    if (g.grid_dim.x == 1 && output_map.x != -1) {
+  for (int3 output_map : {int3{0, 2, -1}, int3{0, 1, -1}, int3{0, -1, -1}}) {
+    if ((g.grid_dim.x == 1 && output_map.x != -1) || (g.grid_dim.x > 1 && output_map.x == -1)) {
       continue;
     }
-    if (g.grid_dim.y == 1 && output_map.y != -1) {
+    if ((g.grid_dim.y == 1 && output_map.y != -1) || (g.grid_dim.y > 1 && output_map.y == -1)) {
       continue;
     }
-    if (g.grid_dim.z == 1 && output_map.z != -1) {
+    if ((g.grid_dim.z == 1 && output_map.z != -1) || (g.grid_dim.z > 1 && output_map.z == -1)) {
       continue;
     }
     if (finish_tb_graph(c, g, output_map)) {
