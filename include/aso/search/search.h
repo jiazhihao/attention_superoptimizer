@@ -35,6 +35,8 @@ public:
   void generate_kernel_graphs();
 
   kernel::Graph computation_graph;
+  kernel::Graph best_graph;
+  ProfileResult best_profile_result;
 
 public:
   template <typename OpType, typename TensorType>
@@ -63,6 +65,8 @@ public:
   void generate_next_kn_operator(SearchContext<KNOperator, DTensor> &c,
                                  kernel::Graph &g);
 
+  void update_best_graph(kernel::Graph &g);
+
   bool finish_tb_graph(SearchContext<TBOperator, STensor> &c,
                        threadblock::Graph &g,
                        int3 output_map);
@@ -77,6 +81,10 @@ public:
                              std::vector<int> const &match) const;
 
   bool verify(SearchContext<KNOperator, DTensor> &c, kernel::Graph const &g);
+
+  int random_test_counter;
+  int verify_counter;
+  int tbgraph_counter;
 };
 
 } // namespace search

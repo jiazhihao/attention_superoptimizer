@@ -131,6 +131,12 @@ void KernelGraphGenerator::generate_next_tb_operator(
     return;
   }
 
+  tbgraph_counter++;
+  if (tbgraph_counter % 10000 == 0) {
+    std::cerr << "tbgraph counter: " << tbgraph_counter << std::endl;
+    std::cerr << sizeof(c) << std::endl;
+  }
+
   std::vector<type::TBOperatorType> op_to_explore{
       type::TBOperatorType::TB_MATMUL_OP,
       // type::TBOperatorType::TB_REDUCTION_0_OP,
@@ -185,6 +191,7 @@ void KernelGraphGenerator::generate_next_tb_operator(
         c.num_consumers.pop_back();
         c.algebraic_pattern.pop_back();
         c.all_tensors.pop_back();
+        assert(g.operators.back() == new_op);
         delete g.operators.back();
         g.operators.pop_back();
     }
@@ -252,6 +259,7 @@ void KernelGraphGenerator::generate_next_kn_operator(
         c.num_consumers.pop_back();
         c.algebraic_pattern.pop_back();
         c.all_tensors.pop_back();
+        assert(g.operators.back() == new_op);
         delete g.operators.back();
         g.operators.pop_back();
       }
@@ -352,6 +360,7 @@ void KernelGraphGenerator::generate_next_kn_operator(
                       c.algebraic_pattern.pop_back();
                       c.num_consumers.pop_back();
                     }
+                    assert(g.operators.back() == new_op);
                     delete g.operators.back();
                     g.operators.pop_back();
                   };
@@ -395,6 +404,8 @@ void KernelGraphGenerator::generate_kernel_graphs() {
 
   process_outputs();
   generate_next_kn_operator(c, g);
+
+  std::cerr << "random test counter: " << random_test_counter << std::endl;
 }
 
 void KernelGraphGenerator::fingerprint_eval() {
@@ -436,7 +447,7 @@ bool KernelGraphGenerator::check_pattern(
 
 KernelGraphGenerator::KernelGraphGenerator(
     kernel::Graph const &computation_graph)
-    : computation_graph(computation_graph), num_kernels(0) {}
+    : computation_graph(computation_graph), num_kernels(0), random_test_counter(0), verify_counter(0), tbgraph_counter(0) {}
 
 void KernelGraphGenerator::pattern_eval() {
   // Assume operators are in topological order
@@ -498,6 +509,11 @@ void KernelGraphGenerator::pattern_eval() {
 
 bool KernelGraphGenerator::verify(SearchContext<KNOperator, DTensor> &c,
                                   kernel::Graph const &g) {
+  verify_counter++;
+  if (verify_counter % 1000 == 0) {
+    std::cerr << "verify counter: " << verify_counter << std::endl;
+    std::cerr << sizeof(c) << std::endl;
+  }
   size_t num_outputs = 0;
   for (size_t i = 0; i < c.all_tensors.size(); ++i) {
     if (c.num_consumers[i] == 0) {
@@ -513,6 +529,11 @@ bool KernelGraphGenerator::verify(SearchContext<KNOperator, DTensor> &c,
     if (c.num_consumers[i] == 0) {
       outputs.push_back(c.all_tensors[i]);
     }
+  }
+
+  random_test_counter++;
+  if (random_test_counter % 1000 == 0) {
+    std::cerr << "random test counter: " << random_test_counter << std::endl;
   }
 
   for (auto const &op : g.operators) {
@@ -537,6 +558,21 @@ bool KernelGraphGenerator::have_same_fingerprint(
     }
   }
   return true;
+}
+
+void KernelGraphGenerator::update_best_graph(kernel::Graph &g) {
+  std::cerr << "kernel graph candidate: " << json(g) << std::endl;
+  ProfileResult result;
+  for (auto op : g.operators) {
+    ProfileResult op_result;
+    op->profile(op_result);
+    result.run_time += op_result.run_time;
+  }
+  if (result.run_time < best_profile_result.run_time) {
+    best_graph = g;
+    best_profile_result = result;
+  }
+  return;
 }
 
 } // namespace search

@@ -111,9 +111,9 @@ void generate_input_map_cand(std::vector<DTensor> const &tensors,
 std::vector<std::vector<int3>>
     get_input_map_cand(std::vector<DTensor> const &tensors) {
   // To save time to generate example
-  if (tensors.size() == 3) {
-    return {{{0, -1, -1}, {0, 2, -1}, {0, 1, -1}}};
-  }
+  // if (tensors.size() == 3) {
+  //   return {{{0, -1, -1}, {0, 2, -1}, {0, 1, -1}}};
+  // }
   // if (tensors.size() == 2) {
   //   return {{{0, -1, -1}, {0, -1, -1}}};
   // }
