@@ -201,14 +201,23 @@ TBOperator *create_op(threadblock::Graph &g,
       if (input.num_dims > 0 && input.dim[0] % type::TB_REDUCTION_DIMX != 0) {
         return nullptr;
       }
+      if (input.num_dims > 0 && input.dim[0] <= type::TB_REDUCTION_DIMX) {
+        return nullptr;
+      }
       return g.create_reduction_to_dimx_op(input, 0);
     case type::TBOperatorType::TB_REDUCTION_1_TO_DIMX_OP:
       if (input.num_dims > 1 && input.dim[1] % type::TB_REDUCTION_DIMX != 0) {
         return nullptr;
       }
+      if (input.num_dims > 1 && input.dim[1] <= type::TB_REDUCTION_DIMX) {
+        return nullptr;
+      }
       return g.create_reduction_to_dimx_op(input, 1);
     case type::TBOperatorType::TB_REDUCTION_2_TO_DIMX_OP:
       if (input.num_dims > 2 && input.dim[2] % type::TB_REDUCTION_DIMX != 0) {
+        return nullptr;
+      }
+      if (input.num_dims > 2 && input.dim[2] <= type::TB_REDUCTION_DIMX) {
         return nullptr;
       }
       return g.create_reduction_to_dimx_op(input, 2);
