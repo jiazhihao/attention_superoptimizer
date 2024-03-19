@@ -134,7 +134,7 @@ void KernelGraphGenerator::generate_next_tb_operator(
   tbgraph_counter++;
   if (tbgraph_counter % 10000 == 0) {
     std::cerr << "tbgraph counter: " << tbgraph_counter << std::endl;
-    std::cerr << sizeof(c) << std::endl;
+    std::cerr << c.algebraic_pattern.size() << " " << c.all_tensors.size() << " " << c.num_consumers.size() << " " << c.op_order.size() << " " << c.output_pattern.size() << std::endl;
   }
 
   std::vector<type::TBOperatorType> op_to_explore{
@@ -512,7 +512,7 @@ bool KernelGraphGenerator::verify(SearchContext<KNOperator, DTensor> &c,
   verify_counter++;
   if (verify_counter % 1000 == 0) {
     std::cerr << "verify counter: " << verify_counter << std::endl;
-    std::cerr << sizeof(c) << std::endl;
+    std::cerr << c.algebraic_pattern.size() << " " << c.all_tensors.size() << " " << c.num_consumers.size() << " " << c.op_order.size() << " " << c.output_pattern.size() << std::endl;
   }
   size_t num_outputs = 0;
   for (size_t i = 0; i < c.all_tensors.size(); ++i) {
@@ -532,7 +532,7 @@ bool KernelGraphGenerator::verify(SearchContext<KNOperator, DTensor> &c,
   }
 
   random_test_counter++;
-  if (random_test_counter % 1000 == 0) {
+  if (random_test_counter < 10 || random_test_counter % 10 == 0) {
     std::cerr << "random test counter: " << random_test_counter << std::endl;
   }
 
