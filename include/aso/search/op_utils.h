@@ -1,7 +1,8 @@
 #pragma once
 
-#include "aso/search/search.h"
+#include "aso/search/algebraic_pattern.h"
 #include "aso/utils/hash_utils.h"
+#include "aso/search/config.h"
 
 namespace aso {
 namespace search {
