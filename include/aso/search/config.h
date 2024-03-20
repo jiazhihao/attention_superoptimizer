@@ -34,5 +34,15 @@ struct GeneratorConfig {
   static GeneratorConfig get_default_config();
 };
 
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(GeneratorConfig,
+                                   knop_to_explore,
+                                   tbop_to_explore,
+                                   imap_to_explore,
+                                   omap_to_explore,
+                                   grid_dim_to_explore,
+                                   block_dim_to_explore,
+                                   fmap_to_explore,
+                                   frange_to_explore)
+
 } // namespace search
 } // namespace aso
