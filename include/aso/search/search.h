@@ -6,6 +6,7 @@
 #include "aso/search/config.h"
 #include "aso/search/dim_strategy.h"
 #include "aso/search/order.h"
+#include "aso/utils/json_utils.h"
 
 namespace aso {
 namespace search {
@@ -31,28 +32,38 @@ struct LayerCheckpoint {
   std::unordered_set<int3> output_map_explored;
 };
 
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LayerCheckpoint,
+                                   knop_explored,
+                                   tbop_explored,
+                                   input_idx_explored,
+                                   grid_dim_explored,
+                                   block_dim_explored,
+                                   input_map_explored,
+                                   forloop_dim_explored,
+                                   forloop_range_explored,
+                                   output_map_explored);
+
 struct Checkpoint {
+  kernel::Graph computation_graph;
   kernel::Graph best_graph;
   ProfileResult best_profile_result;
-
   GeneratorConfig config;
-
-  std::vector<std::shared_ptr<AlgebraicPattern>> final_patterns;
-  std::vector<DTensor> output_tensors;
-
-  int random_test_counter;
-  int verify_counter;
-  int tbgraph_counter;
-
   std::vector<LayerCheckpoint> callstack;
 };
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Checkpoint,
+                                   computation_graph,
+                                   best_graph,
+                                   best_profile_result,
+                                   config,
+                                   callstack);
 
 class KernelGraphGenerator {
 public:
   KernelGraphGenerator(kernel::Graph const &computation_graph,
                        GeneratorConfig const &config,
-                       const char* checkpoint_filename);
-  KernelGraphGenerator(Checkpoint const &checkpoint, const char* checkpoint_filename);
+                       const char *filename);
+  KernelGraphGenerator(const char *filename);
 
   void generate_kernel_graphs();
 
@@ -63,6 +74,8 @@ public:
   GeneratorConfig config;
   DimStrategy dim_strategy;
 
+  const char* filename;
+
 private:
   std::vector<std::shared_ptr<AlgebraicPattern>> final_patterns;
   std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>>
@@ -70,9 +83,9 @@ private:
 
   std::vector<DTensor> output_tensors;
 
-  int random_test_counter;
-  int verify_counter;
-  int tbgraph_counter;
+  int num_total_kernel_graphs;
+  int num_total_random_tests;
+  int num_valid_kernel_graphs;
 
   std::vector<LayerCheckpoint> callstack;
 
@@ -97,6 +110,7 @@ private:
                              std::vector<int> const &match) const;
   bool verify(SearchContext<DTensor> &c, kernel::Graph const &g);
   void save_checkpoint() const;
+  void recovery_from_checkpoint(Checkpoint const &checkpoint);
 };
 
 } // namespace search

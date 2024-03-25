@@ -98,7 +98,7 @@ TBReductionOp::~TBReductionOp() {
 }
 
 TBReductionOp::operator json() const {
-  return json{{"op_type", "reduction"},
+  return json{{"op_type", op_type},
               {"input_tensors", input_tensors},
               {"output_tensors", output_tensors},
               {"reduce_dim", reduce_dim},

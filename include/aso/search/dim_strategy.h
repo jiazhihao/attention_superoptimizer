@@ -7,6 +7,7 @@ namespace aso {
 namespace search {
 
 struct DimStrategy {
+  DimStrategy() = default;
   DimStrategy(GeneratorConfig const &config);
 
   std::vector<std::vector<int3>>

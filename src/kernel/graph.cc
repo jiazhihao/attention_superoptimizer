@@ -28,12 +28,98 @@ size_t Graph::pair_hash::operator()(std::pair<int, int> const &p) const {
   return h1;
 }
 
-Graph::operator json() const {
-  json j;
-  for (KNOperator *const op : operators) {
+void to_json(json &j, Graph const &g) {
+  for (KNOperator *const op : g.operators) {
     j.push_back(json(*op));
   }
-  return j;
+}
+
+void from_json(json const &j, Graph &g) {
+  auto get_tensor_from_guid = [&](size_t guid) {
+    for (auto const &op : g.operators) {
+      for (DTensor const &dtensor : op->output_tensors) {
+        if (dtensor.guid == guid) {
+          return dtensor;
+        }
+      }
+    }
+  };
+
+  for (json const &jop : j) {
+    type::KNOperatorType op_type;
+    jop.at("op_type").get_to(op_type);
+    switch (op_type) {
+      case type::KNOperatorType::KN_INPUT_OP: {
+        int num_dim, dim[MAX_TENSOR_DIMS];
+        type::DataType data_type;
+        layout::DmemLayout layout;
+        size_t guidO;
+        jop.at("output_tensors")[0].at("num_dims").get_to(num_dim);
+        jop.at("output_tensors")[0].at("dims").get_to(dim);
+        jop.at("output_tensors")[0].at("data_type").get_to(data_type);
+        jop.at("output_tensors")[0].at("layout").get_to(layout);
+        jop.at("output_tensors")[0].at("guid").get_to(guidO);
+        std::vector<int> dims = to_vector(num_dim, dim);
+        DTensor const &output = g.new_input(dims, data_type, layout);
+        assert(output.guid == guidO);
+        break;
+      }
+      case type::KNOperatorType::KN_MATMUL_OP: {
+        size_t guidA, guidB, guidO;
+        jop.at("input_tensors")[0].at("guid").get_to(guidA);
+        jop.at("input_tensors")[1].at("guid").get_to(guidB);
+        jop.at("output_tensors")[0].at("guid").get_to(guidO);
+        DTensor const &output =
+            g.matmul(get_tensor_from_guid(guidA), get_tensor_from_guid(guidB));
+        assert(output.guid == guidO);
+        break;
+      }
+      case type::KNOperatorType::KN_EXP_OP: {
+        size_t guid, guidO;
+        jop.at("input_tensors")[0].at("guid").get_to(guid);
+        jop.at("output_tensors")[0].at("guid").get_to(guidO);
+        DTensor const &output = g.exp(get_tensor_from_guid(guid));
+        assert(output.guid == guidO);
+        break;
+      }
+      case type::KNOperatorType::KN_DIV_OP: {
+        size_t guidA, guidB, guidO;
+        jop.at("input_tensors")[0].at("guid").get_to(guidA);
+        jop.at("input_tensors")[1].at("guid").get_to(guidB);
+        jop.at("output_tensors")[0].at("guid").get_to(guidO);
+        DTensor const &output =
+            g.div(get_tensor_from_guid(guidA), get_tensor_from_guid(guidB));
+        assert(output.guid == guidO);
+        break;
+      }
+      case type::KNOperatorType::KN_REDUCTION_0_OP:
+      case type::KNOperatorType::KN_REDUCTION_1_OP:
+      case type::KNOperatorType::KN_REDUCTION_2_OP: {
+        size_t guid, guidO;
+        jop.at("input_tensors")[0].at("guid").get_to(guid);
+        jop.at("output_tensors")[0].at("guid").get_to(guidO);
+        DTensor const &output = g.reduction(
+            get_tensor_from_guid(guid),
+            op_type - type::KNOperatorType::KN_REDUCTION_0_OP);
+        assert(output.guid == guidO);
+        break;
+      }
+      case type::KNOperatorType::KN_CUSTOMIZED_OP: {
+        std::vector<DTensor> inputs;
+        for (auto const &jinput : jop.at("input_tensors")) {
+          size_t guid;
+          jinput.at("guid").get_to(guid);
+          inputs.push_back(get_tensor_from_guid(guid));
+        }
+        threadblock::ExecutionPlan plan;
+        jop.at("plan").get_to(plan);
+        g.customized(inputs, plan);
+        break;
+      }
+      default:
+        assert(false && "Cannot deserialize this operator");
+    }
+  }
 }
 
 } // namespace kernel

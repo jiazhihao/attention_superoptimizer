@@ -86,7 +86,7 @@ TBMatmulOp::~TBMatmulOp() {
 }
 
 TBMatmulOp::operator json() const {
-  return json{{"op_type", "matmul"},
+  return json{{"op_type", op_type},
               {"input_tensors", input_tensors},
               {"output_tensors", output_tensors}};
 }
