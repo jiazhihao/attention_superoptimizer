@@ -391,13 +391,7 @@ public:
       : iterator_A(Params_A(ref_A.layout()), ref_A.data(), {1, k}, 0, {0, 0}),
         iterator_B(
             Params_B(ref_B.layout()), ref_B.data(), {k, n}, thread_idx, {0, 0}),
-        gemm_k(k) {
-    // Params_A params_A(ref_A.layout());
-    // Params_B params_B(ref_B.layout());
-    // IteratorA iterator_A(params_A, ref_A.data(), {1, k}, 0, {0, 0});
-    // IteratorB iterator_B(params_B, ref_B.data(), {k, n}, thread_idx, {0, 0});
-    // gemm_k = k;
-  }
+        gemm_k(k) {}
   CUTLASS_DEVICE
   void execute_kernel(void) {
     FragmentA frag_A;
@@ -632,15 +626,16 @@ public:
                              warp_frag_A[warp_mma_k % 2],
                              warp_frag_B[warp_mma_k % 2]);
         }
-        
+
         if (false && _lane_idx == 0) {
-        printf("warp_idx(%d) warp_mma_k(%d) lane_idx(%d) got A = %f, B = %f\n",
-               _warp_idx,
-               warp_mma_k,
-               _lane_idx,
-               static_cast<float>(warp_frag_A[warp_mma_k % 2].front()),
-               static_cast<float>(warp_frag_B[warp_mma_k % 2].front()));
-      }
+          printf(
+              "warp_idx(%d) warp_mma_k(%d) lane_idx(%d) got A = %f, B = %f\n",
+              _warp_idx,
+              warp_mma_k,
+              _lane_idx,
+              static_cast<float>(warp_frag_A[warp_mma_k % 2].front()),
+              static_cast<float>(warp_frag_B[warp_mma_k % 2].front()));
+        }
 
         warp_mma(accum,
                  warp_transformed_frag_A_[warp_mma_k % 2],
