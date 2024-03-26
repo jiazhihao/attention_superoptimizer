@@ -1,5 +1,7 @@
 #include "aso/kernel/graph.h"
+#include "aso/threadblock/cuda/input_loader.h"
 #include "aso/threadblock/cuda/matmul.h"
+#include "aso/threadblock/cuda/output_saver.h"
 #include "aso/threadblock/graph.h"
 
 #include <fstream>
@@ -10,18 +12,42 @@
 #include "common.h"
 
 using namespace aso::threadblock;
+using namespace aso::kernel;
 
-__global__ void launch_matmul_kernel(STensor A,
-                                     cutlass::half_t *A_data,
-                                     STensor B,
-                                     cutlass::half_t *B_data,
-                                     STensor C,
-                                     cutlass::half_t *C_data) {
+__global__ void launch_matmul_kernel(
+    DTensor D_A, STensor A, DTensor D_B, STensor B, DTensor D_C, STensor C) {
   extern __shared__ char smem_buffer[];
 
-  copy_global_to_shared(smem_buffer, A, A_data);
-  copy_global_to_shared(smem_buffer, B, B_data);
-  copy_global_to_shared(smem_buffer, C, C_data);
+  // copy_global_to_shared(smem_buffer, A, A_data);
+  // copy_global_to_shared(smem_buffer, B, B_data);
+  // copy_global_to_shared(smem_buffer, C, C_data);
+
+  //   printf("A smem offset %d\n", A.smem_offset);
+  //   printf("B smem offset %d\n", B.smem_offset);
+  //   printf("C smem offset %d\n", C.smem_offset);
+
+  int tb_offset_row = 0;
+  int tb_offset_column = 0;
+  int global_offset = blockIdx.x * (64 * 64);
+
+  cutlass::MatrixCoord matrix_offset = {tb_offset_row, tb_offset_column};
+
+  // load A & B
+  aso::threadblock::GenericInputLoader loader_A(smem_buffer,
+                                                D_A,
+                                                A,
+                                                threadIdx.x,
+                                                blockDim.x,
+                                                matrix_offset,
+                                                global_offset);
+  aso::threadblock::GenericInputLoader loader_B(smem_buffer,
+                                                D_B,
+                                                B,
+                                                threadIdx.x,
+                                                blockDim.x,
+                                                matrix_offset,
+                                                global_offset);
+  __syncthreads();
 
   GenericMatmulExecutor executor(smem_buffer,
                                  A,
@@ -31,11 +57,21 @@ __global__ void launch_matmul_kernel(STensor A,
                                  cutlass::canonical_warp_idx_sync(),
                                  cutlass::canonical_lane_idx());
 
-  copy_shared_to_global(smem_buffer, C, C_data);
+  // output C
+  aso::threadblock::GenericOutputSaver saver(smem_buffer,
+                                             D_C,
+                                             C,
+                                             threadIdx.x,
+                                             blockDim.x,
+                                             matrix_offset,
+                                             global_offset);
+  __syncthreads();
 }
 
 TEST(threadblock_tests, matmul) {
-  Graph bgraph = create_single_threadblock_graph(128);
+
+  aso::kernel::Graph kgraph;
+  aso::threadblock::Graph bgraph = create_single_threadblock_graph(128);
 
   constexpr int m = 64, n = 64, k = 64;
 
@@ -44,10 +80,8 @@ TEST(threadblock_tests, matmul) {
       C_ours(cutlass::MatrixCoord(m, n)), C_ref(cutlass::MatrixCoord(m, n));
   cutlass::HostTensor<cutlass::half_t, cutlass::layout::ColumnMajor> B(
       cutlass::MatrixCoord(k, n));
-
   random_fill_tensor(A, 'A');
   random_fill_tensor(B, 'B');
-  // random_fill_tensor(C_ours, 'C');
   zero_fill_tensor(C_ours);
 
   // Copy C_ours into C_ref because we do accumulation.
@@ -55,14 +89,44 @@ TEST(threadblock_tests, matmul) {
       C_ref.device_data(), C_ours.device_data(), C_ours.capacity());
   C_ref.sync_host();
 
-  STensor A_s = allocate_stensor(bgraph, A), B_s = allocate_stensor(bgraph, B),
-          C_s = allocate_stensor(bgraph, C_ours);
+  aso::kernel::DTensor D_A = kgraph.new_input(
+      {m, k}, aso::type::DT_FLOAT16, aso::layout::DmemLayout::DmemRowMajor);
+  aso::kernel::DTensor D_B = kgraph.new_input(
+      {k, n}, aso::type::DT_FLOAT16, aso::layout::DmemLayout::DmemColumnMajor);
+  aso::kernel::DTensor D_C_ours = kgraph.new_input(
+      {m, n}, aso::type::DT_FLOAT16, aso::layout::DmemLayout::DmemRowMajor);
+
+  // copy inputs
+  cutlass::device_memory::copy_device_to_device(
+      static_cast<cutlass::half_t *>(D_A.data_ptr),
+      A.device_data(),
+      A.capacity());
+  cutlass::device_memory::copy_device_to_device(
+      static_cast<cutlass::half_t *>(D_B.data_ptr),
+      B.device_data(),
+      B.capacity());
+
+  aso::threadblock::STensor A_s = bgraph.new_input(
+      D_A,
+      {0, -1, -1},
+      -1,
+      aso::layout::SmemRowMajorTensorOpMultiplicand_Crosswise64);
+  aso::threadblock::STensor B_s = bgraph.new_input(
+      D_B,
+      {0, -1, -1},
+      -1,
+      aso::layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64);
+  aso::threadblock::STensor C_s =
+      bgraph.new_input(D_C_ours, {0, -1, -1}, -1, aso::layout::SmemRowMajor);
 
   int smem_size = 48 * 1024; // 48 KB
   launch_matmul_kernel<<<bgraph.grid_dim, bgraph.block_dim, smem_size>>>(
-      A_s, A.device_data(), B_s, B.device_data(), C_s, C_ours.device_data());
+      D_A, A_s, D_B, B_s, D_C_ours, C_s);
 
-  cudaDeviceSynchronize();
+  cutlass::device_memory::copy_device_to_device(
+      C_ours.device_data(),
+      static_cast<cutlass::half_t *>(D_C_ours.data_ptr),
+      C_ours.capacity());
 
   A.sync_host();
   B.sync_host();
@@ -75,7 +139,7 @@ TEST(threadblock_tests, matmul) {
                                  cutlass::half_t,
                                  cutlass::layout::RowMajor,
                                  cutlass::half_t,
-                                 cutlass::half_t>
+                                 float>
       gemm_ref;
   gemm_ref(
       {m, n, k}, 1.0_hf, A.host_ref(), B.host_ref(), 1.0_hf, C_ref.host_ref());
