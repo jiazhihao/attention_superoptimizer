@@ -20,7 +20,8 @@ KernelGraphGenerator::KernelGraphGenerator(
       num_valid_kernel_graphs(0) {}
 
 KernelGraphGenerator::KernelGraphGenerator(char const *filename)
-    : filename(filename) {
+    : filename(filename), num_total_kernel_graphs(0), num_total_random_tests(0),
+      num_valid_kernel_graphs(0) {
   std::ifstream ifs(filename);
   json j;
   ifs >> j;
@@ -96,29 +97,29 @@ bool KernelGraphGenerator::create_tb_outputs(SearchContext<STensor> &c,
 void KernelGraphGenerator::generate_next_tb_operator(
     SearchContext<STensor> &c,
     threadblock::Graph &g,
-    std::function<void()> const &create_customized_then_next_kn,
+    std::function<void(int)> const &create_customized_then_next_kn,
     int depth) {
 
   if (depth >= (int)callstack.size()) {
     callstack.push_back(LayerCheckpoint{});
   }
-  LayerCheckpoint &checkpoint = callstack.back();
+  assert(!callstack.empty());
 
   // Finish threadblock graph search and continue to search the next kernel
   // operator
   for (int3 output_map : dim_strategy.get_output_map_cand(g.grid_dim)) {
-    if (contains(checkpoint.output_map_explored, output_map)) {
+    if (contains(callstack.back().output_map_explored, output_map)) {
       continue;
     }
     if (create_tb_outputs(c, g, output_map)) {
-      create_customized_then_next_kn();
+      create_customized_then_next_kn(depth);
     }
     while (!c.output_pattern.empty()) {
       c.output_pattern.pop_back();
       delete g.operators.back();
       g.operators.pop_back();
     }
-    checkpoint.output_map_explored.insert(output_map);
+    callstack.back().output_map_explored.insert(output_map);
   }
 
   if (g.operators.size() >= MAX_NUM_THREADBLOCK_GRAPH_OP) {
@@ -127,18 +128,18 @@ void KernelGraphGenerator::generate_next_tb_operator(
   }
 
   for (type::TBOperatorType op_type : config.tbop_to_explore) {
-    if (contains(checkpoint.tbop_explored, op_type)) {
+    if (contains(callstack.back().tbop_explored, op_type)) {
       continue;
     }
-    checkpoint.input_idx_explored.clear();
+    callstack.back().input_idx_explored.clear();
     for (auto const &input_idx :
          dim_strategy.get_input_cand_idx(op_type, c.all_tensors)) {
-      if (contains(checkpoint.input_idx_explored, input_idx)) {
+      if (contains(callstack.back().input_idx_explored, input_idx)) {
         continue;
       }
       Order order(input_idx, static_cast<int>(op_type));
       if (order <= c.op_order.back()) {
-        checkpoint.input_idx_explored.insert(input_idx);
+        callstack.back().input_idx_explored.insert(input_idx);
         continue;
       }
       std::vector<STensor> input_tensors;
@@ -150,14 +151,14 @@ void KernelGraphGenerator::generate_next_tb_operator(
       std::shared_ptr<AlgebraicPattern> pattern =
           get_pattern(op_type, input_tensors, input_patterns);
       if (!check_pattern(pattern)) {
-        checkpoint.input_idx_explored.insert(input_idx);
+        callstack.back().input_idx_explored.insert(input_idx);
         continue;
       }
 
       threadblock::TBOperator *new_op = create_op(g, op_type, input_tensors);
 
       if (!new_op) {
-        checkpoint.input_idx_explored.insert(input_idx);
+        callstack.back().input_idx_explored.insert(input_idx);
         continue;
       }
 
@@ -183,9 +184,9 @@ void KernelGraphGenerator::generate_next_tb_operator(
       assert(g.operators.back() == new_op);
       delete g.operators.back();
       g.operators.pop_back();
-      checkpoint.input_idx_explored.insert(input_idx);
+      callstack.back().input_idx_explored.insert(input_idx);
     }
-    checkpoint.tbop_explored.insert(op_type);
+    callstack.back().tbop_explored.insert(op_type);
   }
 
   callstack.pop_back();
@@ -197,7 +198,6 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
   if (depth >= (int)callstack.size()) {
     callstack.push_back(LayerCheckpoint{});
   }
-  LayerCheckpoint &checkpoint = callstack.back();
 
   if (verify(c, g)) {
     ++num_valid_kernel_graphs;
@@ -212,19 +212,19 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
   }
 
   for (type::KNOperatorType op_type : config.knop_to_explore) {
-    if (contains(checkpoint.knop_explored, op_type)) {
+    if (contains(callstack.back().knop_explored, op_type)) {
       continue;
     }
-    checkpoint.input_idx_explored.clear();
+    callstack.back().input_idx_explored.clear();
     if (op_type != type::KNOperatorType::KN_CUSTOMIZED_OP) {
       for (auto const &input_idx :
            dim_strategy.get_input_cand_idx(op_type, c.all_tensors)) {
-        if (contains(checkpoint.input_idx_explored, input_idx)) {
+        if (contains(callstack.back().input_idx_explored, input_idx)) {
           continue;
         }
         Order order(input_idx, static_cast<int>(op_type));
         if (order <= c.op_order.back()) {
-          checkpoint.input_idx_explored.insert(input_idx);
+          callstack.back().input_idx_explored.insert(input_idx);
           continue;
         }
         std::vector<DTensor> input_tensors;
@@ -236,12 +236,12 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
         std::shared_ptr<AlgebraicPattern> pattern =
             get_pattern(op_type, input_tensors, input_patterns);
         if (!check_pattern(pattern)) {
-          checkpoint.input_idx_explored.insert(input_idx);
+          callstack.back().input_idx_explored.insert(input_idx);
           continue;
         }
         KNOperator *new_op = create_op(g, op_type, input_tensors);
         if (!new_op) {
-          checkpoint.input_idx_explored.insert(input_idx);
+          callstack.back().input_idx_explored.insert(input_idx);
           continue;
         }
         DTensor output = new_op->output_tensors[0];
@@ -265,61 +265,62 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
         assert(g.operators.back() == new_op);
         delete g.operators.back();
         g.operators.pop_back();
-        checkpoint.input_idx_explored.insert(input_idx);
+        callstack.back().input_idx_explored.insert(input_idx);
       }
     } else {
       if (count_op(type::KNOperatorType::KN_CUSTOMIZED_OP, g) >=
           MAX_NUM_THREADBLOCK) {
-        checkpoint.knop_explored.insert(op_type);
+        callstack.back().knop_explored.insert(op_type);
         continue;
       }
 
       for (auto const &input_tensor_idx :
            dim_strategy.get_customized_input_cand_idx(
                c.all_tensors, get_open_tensor_idx(c, g))) {
-        if (contains(checkpoint.input_idx_explored, input_tensor_idx)) {
+        if (contains(callstack.back().input_idx_explored, input_tensor_idx)) {
           continue;
         }
-        checkpoint.grid_dim_explored.clear();
+        callstack.back().grid_dim_explored.clear();
         std::vector<DTensor> input_tensors;
         for (int i : input_tensor_idx) {
           input_tensors.push_back(c.all_tensors[i]);
         }
         Order order(input_tensor_idx, static_cast<int>(op_type));
         if (order <= c.op_order.back()) {
-          checkpoint.input_idx_explored.insert(input_tensor_idx);
+          callstack.back().input_idx_explored.insert(input_tensor_idx);
           continue;
         }
         for (dim3 grid_dim : dim_strategy.get_grid_dim_cand(input_tensors)) {
-          if (contains(checkpoint.grid_dim_explored, grid_dim)) {
+          if (contains(callstack.back().grid_dim_explored, grid_dim)) {
             continue;
           }
-          checkpoint.block_dim_explored.clear();
+          callstack.back().block_dim_explored.clear();
           for (dim3 block_dim :
                dim_strategy.get_block_dim_cand(input_tensors, grid_dim)) {
-            if (contains(checkpoint.block_dim_explored, block_dim)) {
+            if (contains(callstack.back().block_dim_explored, block_dim)) {
               continue;
             }
-            checkpoint.input_map_explored.clear();
+            callstack.back().input_map_explored.clear();
             for (std::vector<int3> const &input_map :
                  dim_strategy.get_input_map_cand(input_tensors, grid_dim)) {
-              if (contains(checkpoint.input_map_explored, input_map)) {
+              if (contains(callstack.back().input_map_explored, input_map)) {
                 continue;
               }
-              checkpoint.forloop_dim_explored.clear();
+              callstack.back().forloop_dim_explored.clear();
               for (std::vector<int> const &forloop_dim :
                    dim_strategy.get_forloop_dim_cand(input_tensors)) {
-                if (contains(checkpoint.forloop_dim_explored, forloop_dim)) {
+                if (contains(callstack.back().forloop_dim_explored,
+                             forloop_dim)) {
                   continue;
                 }
-                checkpoint.forloop_range_explored.clear();
+                callstack.back().forloop_range_explored.clear();
                 for (int forloop_range :
                      dim_strategy.get_forloop_range_cand(input_tensors,
                                                          input_map,
                                                          grid_dim,
                                                          block_dim,
                                                          forloop_dim)) {
-                  if (contains(checkpoint.forloop_range_explored,
+                  if (contains(callstack.back().forloop_range_explored,
                                forloop_range)) {
                     continue;
                   }
@@ -354,7 +355,7 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
                     generate_next_tb_operator(
                         tb_context,
                         tb_graph,
-                        [&]() {
+                        [&](int depth) {
                           KNOperator *new_op =
                               g.create_customized_op(input_tensors, tb_graph);
                           if (!new_op) {
@@ -396,20 +397,20 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
                     delete tb_graph.operators.back();
                     tb_graph.operators.pop_back();
                   }
-                  checkpoint.forloop_range_explored.insert(forloop_range);
+                  callstack.back().forloop_range_explored.insert(forloop_range);
                 }
-                checkpoint.forloop_dim_explored.insert(forloop_dim);
+                callstack.back().forloop_dim_explored.insert(forloop_dim);
               }
-              checkpoint.input_map_explored.insert(input_map);
+              callstack.back().input_map_explored.insert(input_map);
             }
-            checkpoint.block_dim_explored.insert(block_dim);
+            callstack.back().block_dim_explored.insert(block_dim);
           }
-          checkpoint.grid_dim_explored.insert(grid_dim);
+          callstack.back().grid_dim_explored.insert(grid_dim);
         }
-        checkpoint.input_idx_explored.insert(input_tensor_idx);
+        callstack.back().input_idx_explored.insert(input_tensor_idx);
       }
     }
-    checkpoint.knop_explored.insert(op_type);
+    callstack.back().knop_explored.insert(op_type);
   }
 
   callstack.pop_back();
@@ -541,7 +542,8 @@ bool KernelGraphGenerator::verify(SearchContext<DTensor> &c,
   ++num_total_kernel_graphs;
   if (num_total_kernel_graphs % 1000 == 1) {
     save_checkpoint();
-    printf("Checkpoint saved. Total kernel graphs explored: %d\n", num_total_kernel_graphs);
+    printf("Checkpoint saved. Total kernel graphs explored: %d\n",
+           num_total_kernel_graphs);
   }
 
   size_t num_outputs = 0;

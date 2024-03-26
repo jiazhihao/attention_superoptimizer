@@ -55,7 +55,7 @@ void from_json(json const &j, Graph &g) {
         layout::DmemLayout layout;
         size_t guidO;
         jop.at("output_tensors")[0].at("num_dims").get_to(num_dim);
-        jop.at("output_tensors")[0].at("dims").get_to(dim);
+        jop.at("output_tensors")[0].at("dim").get_to(dim);
         jop.at("output_tensors")[0].at("data_type").get_to(data_type);
         jop.at("output_tensors")[0].at("layout").get_to(layout);
         jop.at("output_tensors")[0].at("guid").get_to(guidO);

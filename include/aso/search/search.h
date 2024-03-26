@@ -92,7 +92,7 @@ private:
   void generate_next_tb_operator(
       SearchContext<STensor> &c,
       threadblock::Graph &g,
-      std::function<void()> const &create_customized_then_next_kn,
+      std::function<void(int)> const &create_customized_then_next_kn,
       int depth);
   void generate_next_kn_operator(SearchContext<DTensor> &c,
                                  kernel::Graph &g,
