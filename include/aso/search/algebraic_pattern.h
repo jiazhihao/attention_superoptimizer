@@ -1,6 +1,7 @@
 #pragma once
 
 #include "aso/utils/hash_utils.h"
+#include "aso/utils/json_utils.h"
 #include "z3++.h"
 #include <memory>
 #include <unordered_map>

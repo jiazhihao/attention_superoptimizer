@@ -3,72 +3,40 @@
 namespace aso {
 namespace search {
 
-unsigned int get_num_threadblock(dim3 const &grid_dim) {
-  return grid_dim.x * grid_dim.y * grid_dim.z;
+DimStrategy::DimStrategy(GeneratorConfig const &config) : config(config) {}
+
+std::vector<dim3>
+    DimStrategy::get_grid_dim_cand(std::vector<DTensor> const &tensors) {
+  return config.grid_dim_to_explore;
 }
 
-std::vector<dim3> get_grid_dim_cand(std::vector<DTensor> const &tensors,
-                                    std::vector<int3> const &input_map) {
-  std::vector<dim3> results;
-  for (unsigned int x = 16; x <= 16; x *= 2) {
-    for (size_t i = 0; i < tensors.size(); ++i) {
-      if (input_map[i].x != -1 && tensors[i].num_dims > input_map[i].x &&
-          tensors[i].dim[input_map[i].x] % x != 0) {
-        return results;
-      }
-    }
-    for (unsigned int y = 1; y <= 2; y *= 2) {
-      bool feasible = true, all_replicate = true;
-      for (size_t i = 0; i < tensors.size(); ++i) {
-        if (input_map[i].y != -1) {
-          all_replicate = false;
-        }
-        if (y == 1 && input_map[i].y != -1) {
-          feasible = false;
-          break;
-        }
-        if (input_map[i].y != -1 && tensors[i].num_dims > input_map[i].y &&
-            tensors[i].dim[input_map[i].y] % y != 0) {
-          feasible = false;
-          break;
-        }
-      }
-      if (all_replicate && y != 1) {
-        continue;
-      }
-      if (feasible) {
-        results.push_back(dim3{x, y, 1});
-      }
+std::vector<dim3>
+    DimStrategy::get_block_dim_cand(std::vector<DTensor> const &tensors,
+                                    dim3 grid_dim) {
+  return config.block_dim_to_explore;
+}
+
+bool is_all_replicate_x(std::vector<int3> const &input_maps) {
+  for (int3 const &input_map : input_maps) {
+    if (input_map.x != -1) {
+      return false;
     }
   }
-  return results;
+  return true;
 }
 
-std::vector<dim3> get_block_dim_cand(std::vector<DTensor> const &tensors,
-                                     std::vector<int3> const &input_map,
-                                     dim3 grid_dim) {
-  return std::vector<dim3>{{128, 1, 1}};
-  // std::vector<dim3> results;
-  // for (unsigned int x : {32, 64, 128}) {
-  //   bool feasible = true;
-  //   for (size_t i = 0; i < tensors.size(); ++i) {
-  //     if (input_map[i].x < tensors[i].num_dims &&
-  //         (tensors[i].dim[input_map[i].x] / grid_dim.x) % x != 0) {
-  //       feasible = false;
-  //       break;
-  //     }
-  //   }
-  //   if (feasible) {
-  //     std::cerr << "block_dim cand:" << dim3{x, 1, 1} << std::endl;
-  //     results.push_back(dim3{x, 1, 1});
-  //   }
-  // }
-  // return results;
-}
-
-bool is_all_replicate(std::vector<int3> const &input_maps) {
+bool is_all_replicate_y(std::vector<int3> const &input_maps) {
   for (int3 const &input_map : input_maps) {
-    if (input_map.x != -1 || input_map.y != -1 || input_map.z != -1) {
+    if (input_map.y != -1) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool is_all_replicate_z(std::vector<int3> const &input_maps) {
+  for (int3 const &input_map : input_maps) {
+    if (input_map.z != -1) {
       return false;
     }
   }
@@ -76,57 +44,72 @@ bool is_all_replicate(std::vector<int3> const &input_maps) {
 }
 
 void generate_input_map_cand(std::vector<DTensor> const &tensors,
-                             std::vector<int3> input_map_patterns,
+                             dim3 grid_dim,
+                             std::vector<int3> imap_to_explore,
                              std::vector<int3> cur,
                              std::vector<std::vector<int3>> &results) {
   if (cur.size() == tensors.size()) {
-    if (!is_all_replicate(cur)) {
-      results.push_back(cur);
+    if ((is_all_replicate_x(cur) && grid_dim.x > 1) ||
+        (is_all_replicate_y(cur) && grid_dim.y > 1) ||
+        (is_all_replicate_z(cur) && grid_dim.z > 1)) {
+      return;
     }
+    results.push_back(cur);
     return;
   }
-  for (int3 input_map : input_map_patterns) {
+  DTensor const &tensor = tensors[cur.size()];
+  for (int3 input_map : imap_to_explore) {
+    if (tensor.num_dims <= input_map.x || tensor.num_dims <= input_map.y ||
+        tensor.num_dims <= input_map.z) {
+      continue;
+    }
+    if ((grid_dim.x == 1 && input_map.x != -1) ||
+        (grid_dim.y == 1 && input_map.y != -1) ||
+        (grid_dim.z == 1 && input_map.z != -1)) {
+      continue;
+    }
+    if ((input_map.x != -1 && tensor.dim[input_map.x] % grid_dim.x != 0) ||
+        (input_map.y != -1 && tensor.dim[input_map.y] % grid_dim.y != 0) ||
+        (input_map.z != -1 && tensor.dim[input_map.z] % grid_dim.z != 0)) {
+      continue;
+    }
     cur.push_back(input_map);
-    generate_input_map_cand(tensors, input_map_patterns, cur, results);
+    generate_input_map_cand(tensors, grid_dim, imap_to_explore, cur, results);
     cur.pop_back();
   }
-  // DTensor const &tensor = tensors[cur.size()];
-  // for (unsigned int bitmap = 0; bitmap < (1 << 3); ++bitmap) {
-  //   int3 input_map{-1, -1, -1};
-  //   if ((bitmap & 1) && input_map.x < tensor.num_dims) {
-  //     input_map.x = input_map_pattern.x;
-  //   }
-  //   if ((bitmap >> 1 & 1) && input_map.y < tensor.num_dims) {
-  //     input_map.y = input_map_pattern.y;
-  //   }
-  //   if ((bitmap >> 2 & 1) && input_map.z < tensor.num_dims) {
-  //     input_map.z = input_map_pattern.z;
-  //   }
-  //   cur.push_back(input_map);
-  //   generate_input_map_cand(tensors, input_map, cur, results);
-  //   cur.pop_back();
-  // }
 }
 
 std::vector<std::vector<int3>>
-    get_input_map_cand(std::vector<DTensor> const &tensors) {
-  // To save time to generate example
-  if (tensors.size() == 3) {
-    return {{{0, -1, -1}, {0, 2, -1}, {0, 1, -1}}};
-  }
-  // if (tensors.size() == 2) {
-  //   return {{{0, -1, -1}, {0, -1, -1}}};
-  // }
+    DimStrategy::get_input_map_cand(std::vector<DTensor> const &tensors,
+                                    dim3 grid_dim) {
   std::vector<std::vector<int3>> results;
-  generate_input_map_cand(tensors, {int3{0, 1, -1}, int3{0, 2, -1}, int3{0, -1, -1}}, {}, results);
-  // TODO: There are invalid input maps, how to prune them out?
-  // for (int3 input_map_pattern : {int3{0, 2, -1} , int3{1, 0, -1}}) {
-  //   generate_input_map_cand(tensors, input_map_pattern, {}, results);
-  // }
+  generate_input_map_cand(
+      tensors, grid_dim, config.imap_to_explore, {}, results);
+  return results;
+}
+
+std::vector<int3> DimStrategy::get_output_map_cand(dim3 grid_dim) {
+  std::vector<int3> results;
+  for (int3 output_map : config.omap_to_explore) {
+    if ((grid_dim.x == 1 && output_map.x != -1) ||
+        (grid_dim.x > 1 && output_map.x == -1)) {
+      continue;
+    }
+    if ((grid_dim.y == 1 && output_map.y != -1) ||
+        (grid_dim.y > 1 && output_map.y == -1)) {
+      continue;
+    }
+    if ((grid_dim.z == 1 && output_map.z != -1) ||
+        (grid_dim.z > 1 && output_map.z == -1)) {
+      continue;
+    }
+    results.push_back(output_map);
+  }
   return results;
 }
 
 void generate_forloop_dim(std::vector<DTensor> const &input_tensors,
+                          std::vector<int> fmap_to_explore,
                           std::vector<int> cur,
                           std::vector<std::vector<int>> &results) {
   if (cur.size() == input_tensors.size()) {
@@ -134,40 +117,30 @@ void generate_forloop_dim(std::vector<DTensor> const &input_tensors,
     return;
   }
 
-  for (int dim : {-1, 1, 2}) {
-    if (cur.empty() && dim != -1) {
-      continue;
-    }
-    DTensor const &tensor = input_tensors[cur.size()];
-    if ((dim == -1) || (dim != -1 && dim < tensor.num_dims && tensor.dim[dim] > 1)) {
+  DTensor const &tensor = input_tensors[cur.size()];
+  for (int dim : fmap_to_explore) {
+    if ((dim == -1) ||
+        (dim != -1 && dim < tensor.num_dims && tensor.dim[dim] > 1)) {
       cur.push_back(dim);
-      generate_forloop_dim(input_tensors, cur, results);
+      generate_forloop_dim(input_tensors, fmap_to_explore, cur, results);
       cur.pop_back();
     }
   }
 }
 
-std::vector<std::vector<int>>
-    get_forloop_dim_cand(std::vector<DTensor> const &input_tensors) {
-  // To save time to generate example
-  // if (input_tensors.size() == 2) {
-  //   return {{-1, -1}};
-  // }
-  // if (input_tensors.size() == 3) {
-  //   return {{-1, 2, 1}};
-  // }
-
+std::vector<std::vector<int>> DimStrategy::get_forloop_dim_cand(
+    std::vector<DTensor> const &input_tensors) {
   std::vector<std::vector<int>> results;
-  generate_forloop_dim(input_tensors, {}, results);
+  generate_forloop_dim(input_tensors, config.fmap_to_explore, {}, results);
   return results;
 }
 
-std::vector<int>
-    get_forloop_range_cand(std::vector<DTensor> const &input_tensors,
-                           std::vector<int3> const &input_map,
-                           dim3 grid_dim,
-                           dim3 block_dim,
-                           std::vector<int> const &forloop_dim) {
+std::vector<int> DimStrategy::get_forloop_range_cand(
+    std::vector<DTensor> const &input_tensors,
+    std::vector<int3> const &input_map,
+    dim3 grid_dim,
+    dim3 block_dim,
+    std::vector<int> const &forloop_dim) {
   bool no_use = true;
   for (int dim : forloop_dim) {
     if (dim >= 0) {
@@ -180,7 +153,7 @@ std::vector<int>
 
   std::vector<int> results;
 
-  for (int x = 4; x <= 4; x *= 2) {
+  for (int x : config.frange_to_explore) {
     bool feasible = true;
     for (size_t i = 0; i < input_tensors.size(); ++i) {
       if (forloop_dim[i] == -1) {
@@ -206,14 +179,12 @@ std::vector<int>
     }
     if (feasible) {
       results.push_back(x);
-    } else {
-      return results;
     }
   }
   return results;
 }
 
-std::vector<std::vector<int>> get_unary_input(int num_tensors) {
+std::vector<std::vector<int>> DimStrategy::get_unary_input(int num_tensors) {
   std::vector<std::vector<int>> result;
   for (int i = 0; i < num_tensors; ++i) {
     result.push_back({i});
@@ -221,7 +192,7 @@ std::vector<std::vector<int>> get_unary_input(int num_tensors) {
   return result;
 }
 
-std::vector<std::vector<int>> get_binary_input(int num_tensors) {
+std::vector<std::vector<int>> DimStrategy::get_binary_input(int num_tensors) {
   std::vector<std::vector<int>> result;
   for (int i = 0; i < num_tensors; ++i) {
     for (int j = 0; j < num_tensors; ++j) {
@@ -231,30 +202,25 @@ std::vector<std::vector<int>> get_binary_input(int num_tensors) {
   return result;
 }
 
-std::vector<std::vector<int>>
-    get_customized_input_cand_idx(std::vector<DTensor> const &all_inputs) {
+std::vector<std::vector<int>> DimStrategy::get_customized_input_cand_idx(
+    std::vector<DTensor> const &all_input,
+    std::vector<int> const &open_tensor_idx) {
 
   std::vector<std::vector<int>> results;
-  for (int n = 2; n <= 3; ++n) {
-    std::vector<int> result;
-    for (int i = n; i > 0; --i) {
-      result.push_back(all_inputs.size() - i);
+
+  for (uint bitmap = 1; bitmap < (1u << open_tensor_idx.size()); ++bitmap) {
+    std::vector<int> input_idx;
+    for (size_t i = 0; i < open_tensor_idx.size(); ++i) {
+      if (bitmap >> i & 1) {
+        input_idx.push_back(open_tensor_idx[i]);
+      }
     }
-    results.push_back(result);
+    if (input_idx.size() <= MAX_NUM_THREADBLOCK_INPUT) {
+      results.push_back(input_idx);
+    }
   }
+
   return results;
-  // for (int bitmap = 1; bitmap < (1 << all_inputs.size()); ++bitmap) {
-  //   std::vector<int> inputs;
-  //   for (size_t i = 0; i < all_inputs.size(); ++i) {
-  //     if ((bitmap >> i) & 1) {
-  //       inputs.push_back(i);
-  //     }
-  //   }
-  //   if (inputs.size() <= MAX_NUM_THREADBLOCK_INPUT) {
-  //     results.push_back(inputs);
-  //   }
-  // }
-  // return results;
 }
 
 } // namespace search

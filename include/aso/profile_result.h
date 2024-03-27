@@ -21,4 +21,6 @@ struct ProfileResult {
   float run_time;
 };
 
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ProfileResult, run_time);
+
 } // namespace aso

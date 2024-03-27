@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+#include <vector_types.h>
 
 // tuple hashing pulled from
 // https://www.variadic.xyz/2018/01/15/hashing-stdpair-and-stdtuple/
@@ -57,6 +58,34 @@ struct hash<pair<L, R>> {
     hash_combine(seed, p.second);
 
     return seed;
+  }
+};
+
+template <typename T>
+struct hash<std::vector<T>> {
+  size_t operator()(std::vector<T> const &v) const {
+    size_t seed = 283746;
+
+    hash_combine(seed, v.size());
+    for (auto const &elem : v) {
+      hash_combine(seed, elem);
+    }
+
+    return seed;
+  }  
+};
+
+template <>
+struct hash<dim3> {
+  size_t operator()(dim3 const &d) const {
+    return hash<std::tuple<uint, uint, uint>>{}(std::make_tuple(d.x, d.y, d.z));
+  }
+};
+
+template <>
+struct hash<int3> {
+  size_t operator()(int3 const &d) const {
+    return hash<std::tuple<int, int, int>>{}(std::make_tuple(d.x, d.y, d.z));
   }
 };
 

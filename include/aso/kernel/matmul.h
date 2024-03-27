@@ -30,6 +30,8 @@ public:
   operator json() const override;
 };
 
+void from_json(json const &j, KNMatmulOp &op);
+
 class MatmulKey {
 public:
   MatmulKey(DTensor const &A, DTensor const &B);

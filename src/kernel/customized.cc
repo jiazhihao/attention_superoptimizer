@@ -285,10 +285,11 @@ KNCustomizedOp::~KNCustomizedOp() {
 }
 
 KNCustomizedOp::operator json() const {
-  return json{{"op_type", "customized"},
+  return json{{"op_type", op_type},
               {"input_tensors", input_tensors},
               {"output_tensors", output_tensors},
-              {"bgraph", bgraph}};
+              {"bgraph", bgraph},
+              {"plan", plan}};
 }
 
 } // namespace kernel

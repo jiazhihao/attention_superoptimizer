@@ -102,7 +102,7 @@ Graph::operator json() const {
             {"operators", {}},
             {"smem_offset", smem_offset}};
   for (TBOperator *const op : operators) {
-    j["operators"].push_back(op->operator json());
+    j["operators"].push_back(json(*op));
   }
   return j;
 }

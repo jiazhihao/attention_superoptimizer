@@ -17,6 +17,7 @@
 
 #include "aso/kernel/device_tensor.h"
 #include "aso/profile_result.h"
+#include "aso/utils/json_utils.h"
 #include <vector>
 
 namespace aso {
