@@ -63,6 +63,8 @@ public:
   dim3 grid_dim, block_dim;
 };
 
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ExecutionPlan, ops, input_map, forloop_dim, input_smem_layouts, output_map, forloop_range, grid_dim, block_dim)
+
 class Graph {
 private:
   struct pair_hash {

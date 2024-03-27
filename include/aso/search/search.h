@@ -3,80 +3,114 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "aso/kernel/graph.h"
-#include "aso/search/algebraic_pattern.h"
-#include "aso/threadblock/graph.h"
+#include "aso/search/config.h"
+#include "aso/search/dim_strategy.h"
+#include "aso/search/order.h"
+#include "aso/utils/json_utils.h"
 
 namespace aso {
 namespace search {
 
-int const MAX_NUM_THREADBLOCK_GRAPH_OP = 7; // Outputs not counted
-int const MAX_NUM_KERNEL_GRAPH_OP = 5;
-int const MAX_NUM_THREADBLOCK = 2;
-int const MAX_NUM_THREADBLOCK_INPUT = 3;
-int const MAX_NUM_THREADBLOCK_OUTPUT = 2;
-
-using kernel::DTensor;
-using kernel::KNOperator;
-using threadblock::STensor;
-using threadblock::TBOperator;
-
-struct Order {
-  std::vector<int> v;
-  int type;
-  Order(std::vector<int> const &v, int type);
-  bool operator<(Order const &) const;
-  bool operator<=(Order const &) const;
+template <typename TensorType>
+struct SearchContext {
+  std::vector<TensorType> all_tensors;
+  std::vector<std::shared_ptr<AlgebraicPattern>> algebraic_pattern;
+  std::vector<int> num_consumers;
+  std::vector<Order> op_order;
+  std::vector<std::shared_ptr<AlgebraicPattern>> output_pattern;
 };
+
+struct LayerCheckpoint {
+  std::unordered_set<type::KNOperatorType> knop_explored;
+  std::unordered_set<type::TBOperatorType> tbop_explored;
+  std::unordered_set<std::vector<int>> input_idx_explored;
+  std::unordered_set<dim3> grid_dim_explored;
+  std::unordered_set<dim3> block_dim_explored;
+  std::unordered_set<std::vector<int3>> input_map_explored;
+  std::unordered_set<std::vector<int>> forloop_dim_explored;
+  std::unordered_set<int> forloop_range_explored;
+  std::unordered_set<int3> output_map_explored;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LayerCheckpoint,
+                                   knop_explored,
+                                   tbop_explored,
+                                   input_idx_explored,
+                                   grid_dim_explored,
+                                   block_dim_explored,
+                                   input_map_explored,
+                                   forloop_dim_explored,
+                                   forloop_range_explored,
+                                   output_map_explored);
+
+struct Checkpoint {
+  kernel::Graph computation_graph;
+  kernel::Graph best_graph;
+  ProfileResult best_profile_result;
+  GeneratorConfig config;
+  std::vector<LayerCheckpoint> callstack;
+};
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Checkpoint,
+                                   computation_graph,
+                                   best_graph,
+                                   best_profile_result,
+                                   config,
+                                   callstack);
 
 class KernelGraphGenerator {
 public:
-  KernelGraphGenerator(kernel::Graph const &computation_graph);
+  KernelGraphGenerator(kernel::Graph const &computation_graph,
+                       GeneratorConfig const &config,
+                       const char *filename);
+  KernelGraphGenerator(const char *filename);
+
   void generate_kernel_graphs();
 
   kernel::Graph computation_graph;
+  kernel::Graph best_graph;
+  ProfileResult best_profile_result;
 
-public:
-  template <typename OpType, typename TensorType>
-  struct SearchContext {
-    std::vector<TensorType> all_tensors;
-    std::vector<std::shared_ptr<AlgebraicPattern>> algebraic_pattern;
-    std::vector<int> num_consumers;
+  GeneratorConfig config;
+  DimStrategy dim_strategy;
 
-    // std::unordered_set<size_t> existing_op_hash;
-    std::vector<Order> op_order;
+  const char* filename;
 
-    std::vector<std::shared_ptr<AlgebraicPattern>> output_pattern;
-  };
-
+private:
   std::vector<std::shared_ptr<AlgebraicPattern>> final_patterns;
   std::unordered_map<DTensor, std::shared_ptr<AlgebraicPattern>>
       computation_graph_patterns;
 
   std::vector<DTensor> output_tensors;
 
-  int num_kernels;
+  int num_total_kernel_graphs;
+  int num_total_random_tests;
+  int num_valid_kernel_graphs;
 
-  void generate_next_tb_operator(SearchContext<TBOperator, STensor> &c,
-                                 threadblock::Graph &g,
-                                 std::function<void()> const &callback);
-  void generate_next_kn_operator(SearchContext<KNOperator, DTensor> &c,
-                                 kernel::Graph &g);
+  std::vector<LayerCheckpoint> callstack;
 
-  bool finish_tb_graph(SearchContext<TBOperator, STensor> &c,
-                       threadblock::Graph &g,
-                       int3 output_map);
+  void generate_next_tb_operator(
+      SearchContext<STensor> &c,
+      threadblock::Graph &g,
+      std::function<void(int)> const &create_customized_then_next_kn,
+      int depth);
+  void generate_next_kn_operator(SearchContext<DTensor> &c,
+                                 kernel::Graph &g,
+                                 int depth);
+  void update_best_graph(kernel::Graph &g);
+  bool create_tb_outputs(SearchContext<STensor> &c,
+                         threadblock::Graph &g,
+                         int3 output_map);
 
   void process_outputs();
-
   bool check_pattern(std::shared_ptr<AlgebraicPattern> pattern);
-
   void pattern_eval();
   void fingerprint_eval();
   bool have_same_fingerprint(std::vector<DTensor> const &outputs,
                              std::vector<int> const &match) const;
-
-  bool verify(SearchContext<KNOperator, DTensor> &c, kernel::Graph const &g);
+  bool verify(SearchContext<DTensor> &c, kernel::Graph const &g);
+  void save_checkpoint() const;
+  void recovery_from_checkpoint(Checkpoint const &checkpoint);
 };
 
 } // namespace search
