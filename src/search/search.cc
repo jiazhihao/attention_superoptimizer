@@ -20,8 +20,7 @@ KernelGraphGenerator::KernelGraphGenerator(
       num_valid_kernel_graphs(0) {}
 
 KernelGraphGenerator::KernelGraphGenerator(char const *filename)
-    : filename(filename), num_total_kernel_graphs(0), num_total_random_tests(0),
-      num_valid_kernel_graphs(0) {
+    : filename(filename) {
   std::ifstream ifs(filename);
   json j;
   ifs >> j;
@@ -99,7 +98,7 @@ void KernelGraphGenerator::generate_next_tb_operator(
     threadblock::Graph &g,
     std::function<void(int)> const &create_customized_then_next_kn,
     int depth) {
-
+      
   if (depth >= (int)callstack.size()) {
     callstack.push_back(LayerCheckpoint{});
   }
@@ -201,6 +200,10 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
 
   if (verify(c, g)) {
     ++num_valid_kernel_graphs;
+    std::ofstream ofs;
+    ofs.open("generated_graphs.txt", std::ofstream::out | std::ofstream::app);
+    ofs << json(g) << std::endl;
+    ofs.close();
     std::cerr << "kernel graph candidate: " << json(g) << std::endl;
     callstack.pop_back();
     return;
@@ -280,7 +283,6 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
         if (contains(callstack.back().input_idx_explored, input_tensor_idx)) {
           continue;
         }
-        callstack.back().grid_dim_explored.clear();
         std::vector<DTensor> input_tensors;
         for (int i : input_tensor_idx) {
           input_tensors.push_back(c.all_tensors[i]);
@@ -290,6 +292,7 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
           callstack.back().input_idx_explored.insert(input_tensor_idx);
           continue;
         }
+        callstack.back().grid_dim_explored.clear();
         for (dim3 grid_dim : dim_strategy.get_grid_dim_cand(input_tensors)) {
           if (contains(callstack.back().grid_dim_explored, grid_dim)) {
             continue;
@@ -540,7 +543,7 @@ void KernelGraphGenerator::pattern_eval() {
 bool KernelGraphGenerator::verify(SearchContext<DTensor> &c,
                                   kernel::Graph const &g) {
   ++num_total_kernel_graphs;
-  if (num_total_kernel_graphs % 1000 == 1) {
+  if (num_total_kernel_graphs % 10000 == 1) {
     save_checkpoint();
     printf("Checkpoint saved. Total kernel graphs explored: %d\n",
            num_total_kernel_graphs);
@@ -564,6 +567,8 @@ bool KernelGraphGenerator::verify(SearchContext<DTensor> &c,
   }
 
   ++num_total_random_tests;
+
+  std::cout << "random testing: " << json(g) << std::endl;
 
   for (auto const &op : g.operators) {
     op->fingerprint();
@@ -589,6 +594,18 @@ bool KernelGraphGenerator::have_same_fingerprint(
   return true;
 }
 
+
+void KernelGraphGenerator::optimize_layout(kernel::Graph &g, size_t op_idx, size_t ts_idx) {
+  if (op_idx >= g.operators.size()) {
+    update_best_graph(g);
+    return;
+  }
+  if (ts_idx >= g.operators[op_idx]->output_tensors.size()) {
+    optimize_layout(g, op_idx + 1, 0);
+    return;
+  }
+}
+
 void KernelGraphGenerator::update_best_graph(kernel::Graph &g) {
   std::cerr << "kernel graph candidate: " << json(g) << std::endl;
   ProfileResult result;
@@ -605,8 +622,14 @@ void KernelGraphGenerator::update_best_graph(kernel::Graph &g) {
 }
 
 void KernelGraphGenerator::save_checkpoint() const {
-  Checkpoint checkpoint{
-      computation_graph, best_graph, best_profile_result, config, callstack};
+  Checkpoint checkpoint{computation_graph,
+                        best_graph,
+                        best_profile_result,
+                        config,
+                        callstack,
+                        num_total_kernel_graphs,
+                        num_total_random_tests,
+                        num_valid_kernel_graphs};
   std::ofstream ofs(filename);
   ofs << json(checkpoint);
 }
@@ -619,6 +642,10 @@ void KernelGraphGenerator::recovery_from_checkpoint(
   config = checkpoint.config;
   dim_strategy = DimStrategy(config);
   callstack = checkpoint.callstack;
+
+  num_total_kernel_graphs = checkpoint.num_total_kernel_graphs;
+  num_total_random_tests = checkpoint.num_total_random_tests;
+  num_valid_kernel_graphs = checkpoint.num_valid_kernel_graphs;
 }
 } // namespace search
 } // namespace aso

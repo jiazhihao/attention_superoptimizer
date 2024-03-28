@@ -206,6 +206,28 @@ std::vector<std::vector<int>> DimStrategy::get_customized_input_cand_idx(
     std::vector<DTensor> const &all_input,
     std::vector<int> const &open_tensor_idx) {
 
+  int num_inputs = all_input.size();
+
+  int opt_level = 1;
+  if (opt_level == 0)
+  {
+    if (all_input.size() == 3) {
+      return {{0, 1, 2}};
+    } else {
+      return {{num_inputs - 2, num_inputs - 1}};
+    }
+  } else if (opt_level == 1) {
+    std::vector<std::vector<int>> results {{0, 1}, {0, 1, 2}};
+    if (num_inputs >= 4) {
+      results.push_back({2, num_inputs - 1});
+    }
+    if (num_inputs >= 5) {
+      results.push_back({num_inputs - 2, num_inputs - 1});
+      results.push_back({2, num_inputs - 2, num_inputs - 1});
+    }
+    return results;
+  }
+
   std::vector<std::vector<int>> results;
 
   for (uint bitmap = 1; bitmap < (1u << open_tensor_idx.size()); ++bitmap) {
@@ -215,7 +237,7 @@ std::vector<std::vector<int>> DimStrategy::get_customized_input_cand_idx(
         input_idx.push_back(open_tensor_idx[i]);
       }
     }
-    if (input_idx.size() <= MAX_NUM_THREADBLOCK_INPUT) {
+    if (input_idx.size() > 1 && input_idx.size() <= MAX_NUM_THREADBLOCK_INPUT) {
       results.push_back(input_idx);
     }
   }

@@ -49,6 +49,10 @@ struct Checkpoint {
   ProfileResult best_profile_result;
   GeneratorConfig config;
   std::vector<LayerCheckpoint> callstack;
+
+  int num_total_kernel_graphs;
+  int num_total_random_tests;
+  int num_valid_kernel_graphs;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Checkpoint,
@@ -56,14 +60,17 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Checkpoint,
                                    best_graph,
                                    best_profile_result,
                                    config,
-                                   callstack);
+                                   callstack,
+                                   num_total_kernel_graphs,
+                                   num_total_random_tests,
+                                   num_valid_kernel_graphs);
 
 class KernelGraphGenerator {
 public:
   KernelGraphGenerator(kernel::Graph const &computation_graph,
                        GeneratorConfig const &config,
-                       const char *filename);
-  KernelGraphGenerator(const char *filename);
+                       char const *filename);
+  KernelGraphGenerator(char const *filename);
 
   void generate_kernel_graphs();
 
@@ -74,7 +81,7 @@ public:
   GeneratorConfig config;
   DimStrategy dim_strategy;
 
-  const char* filename;
+  char const *filename;
 
 private:
   std::vector<std::shared_ptr<AlgebraicPattern>> final_patterns;
@@ -97,6 +104,7 @@ private:
   void generate_next_kn_operator(SearchContext<DTensor> &c,
                                  kernel::Graph &g,
                                  int depth);
+  void optimize_layout(kernel::Graph &g, size_t op_idx, size_t ts_idx);
   void update_best_graph(kernel::Graph &g);
   bool create_tb_outputs(SearchContext<STensor> &c,
                          threadblock::Graph &g,
