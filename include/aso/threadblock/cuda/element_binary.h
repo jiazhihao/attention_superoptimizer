@@ -24,6 +24,21 @@ namespace threadblock {
 using namespace cutlass;
 using namespace aso::type;
 
+template <typename ElementType>
+class ElementBinaryExecutor {
+public:
+  ElementType *input1_ptr, *input2_ptr, *output_ptr;
+  aso::type::TBOperatorType op_type;
+  int kElements;
+public:
+  CUTLASS_DEVICE
+  ElementBinaryExecutor(ElementType *input1_ptr,
+                        ElementType *input2_ptr,
+                        ElementType *output_ptr,
+                        aso::type::TBOperatorType) {};
+
+};
+
 class TBElementBinaryFingerPrinter {
 public:
   CUTLASS_DEVICE

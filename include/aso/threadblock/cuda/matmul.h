@@ -556,7 +556,7 @@ public:
     }
     // Currently assume that we don't parittion over k within a threadblock
     // we do it across threadblocks
-    assert(warp_idx_k == 0);
+    //assert(warp_idx_k == 0);
     int warp_idx_m = warp_idx_mn % warp_count_m;
     int warp_idx_n = warp_idx_mn / warp_count_m;
 

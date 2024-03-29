@@ -167,10 +167,7 @@ __global__ void
         }
         case aso::type::TB_REDUCTION_0_OP:
         case aso::type::TB_REDUCTION_1_OP:
-        case aso::type::TB_REDUCTION_2_OP:
-        case aso::type::TB_REDUCTION_0_TO_DIMX_OP:
-        case aso::type::TB_REDUCTION_1_TO_DIMX_OP:
-        case aso::type::TB_REDUCTION_2_TO_DIMX_OP: {
+        case aso::type::TB_REDUCTION_2_OP: {
           aso::threadblock::STensor input = params.smem_inputs[smem_input_idx];
           aso::threadblock::STensor output =
               params.smem_outputs[smem_output_idx];
@@ -182,6 +179,11 @@ __global__ void
               threadIdx.x,
               blockDim.x);
           __syncthreads();
+          break;
+        }
+        case aso::type::TB_REDUCTION_0_TO_DIMX_OP:
+        case aso::type::TB_REDUCTION_1_TO_DIMX_OP:
+        case aso::type::TB_REDUCTION_2_TO_DIMX_OP: {
           break;
         }
         default: {
@@ -548,14 +550,14 @@ bool KNCustomizedOp::profile(ProfileResult &result) {
   checkCUDA(cudaEventCreate(&events[0]));
   checkCUDA(cudaEventCreate(&events[1]));
   checkCUDA(cudaEventRecord(events[0]));
-  for (int i = 0; i < 16; i++) {
+  for (int i = 0; i < ProfileResult::NUM_ITERATIONS; i++) {
     run();
   }
   float runtime_ms = 0;
   checkCUDA(cudaEventRecord(events[1]));
   checkCUDA(cudaEventSynchronize(events[1]));
   checkCUDA(cudaEventElapsedTime(&runtime_ms, events[0], events[1]));
-  result.run_time = runtime_ms / 16;
+  result.run_time = runtime_ms / ProfileResult::NUM_ITERATIONS;
   printf("KNCustomizedOp: runtime(%.8lfms)\n", result.run_time);
   checkCUDA(cudaEventDestroy(events[0]));
   checkCUDA(cudaEventDestroy(events[1]));
