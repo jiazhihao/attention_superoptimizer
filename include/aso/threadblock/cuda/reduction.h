@@ -15,9 +15,9 @@
 
 #pragma once
 
+#include "aso/utils/cuda_helper.h"
 #include "cutlass/cutlass.h"
 #include "cutlass/fast_math.h"
-#include "aso/utils/cuda_helper.h"
 
 namespace aso {
 namespace threadblock {
@@ -31,10 +31,50 @@ public:
   // reference implementation: ReduceSameRow function from
   // cutlass/examples/41_fused_multi_head_attention/gemm/mma_accum_lambda_iterator.h
   CUTLASS_DEVICE
-  RedunctionExecutor() {}
+  RedunctionExecutor(aso::type::TBOperatorType type,
+                     char *smem_buffer,
+                     STensor const &input,
+                     STensor const &output,
+                     int thread_id,
+                     int num_threads) {
+    int reduction_dim = aso::utils::get_reduction_dim(type);
+    int num_dims = output.num_dims;
+    ElementType *input_ptr = (ElementType *)(smem_buffer + input.smem_offset);
+    ElementType *output_ptr = (ElementType *)(smem_buffer + output.smem_offset);
 
-  void CUTLASS_DEVICE execute_kernel(void) {
-    assert(false && "To Be Implemented");
+    int num_elements = output.num_elements();
+    int output_columns = output.dim[num_dims - 1];
+    int input_columns = input.dim[num_dims - 1];
+    if (reduction_dim == num_dims - 2) {
+      // Reduce along the row dim
+      int output_rows = output.dim[num_dims - 2];
+      int kK = input.dim[num_dims - 2] / output.dim[num_dims - 2];
+      for (int i = 0; i < num_elements; i += 1) {
+        int no = i / output_columns;
+        int m = i % output_columns;
+        float sum = 0.0f;
+        for (int j = threadIdx.x; j < kK; j += num_threads) {
+          int ni = no + j * output_rows;
+          sum = static_cast<float>(input_ptr[ni * input_columns + m]);
+          block_sum_fp32(sum);
+        }
+        output_ptr[i] = static_cast<ElementType>(sum);
+      }
+    } else if (reduction_dim == num_dims - 1) {
+      int kK = input.dim[num_dims - 1] / output.dim[num_dims - 1];
+      for (int i = 0; i < num_elements; i += 1) {
+        int n = i / output_columns;
+        float sum = 0.0f;
+        for (int j = threadIdx.x; j < kK; j += num_threads) {
+          int m = (i % output_columns) + j * output_columns;
+          sum = static_cast<float>(input_ptr[n * input_columns + m]);
+          block_sum_fp32(static_cast<float>(sum));
+        }
+        output_ptr[i] = static_cast<ElementType>(sum);
+      }
+    } else {
+      assert(false && "Unimplemented");
+    }
   }
 };
 
