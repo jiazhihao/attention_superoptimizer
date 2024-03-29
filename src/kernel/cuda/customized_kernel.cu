@@ -162,7 +162,7 @@ __global__ void
           break;
         }
         case aso::type::TB_DIV_OP: {
-          //TODO: implement later
+          // TODO: implement later
           break;
         }
         case aso::type::TB_REDUCTION_0_OP:
@@ -171,9 +171,17 @@ __global__ void
         case aso::type::TB_REDUCTION_0_TO_DIMX_OP:
         case aso::type::TB_REDUCTION_1_TO_DIMX_OP:
         case aso::type::TB_REDUCTION_2_TO_DIMX_OP: {
-          // aso::threadblock::STensor input =
-          // params.smem_inputs[smem_input_idx]; aso::threadblock::STensor
-          // output = params.smem_outputs[smem_output_idx];
+          aso::threadblock::STensor input = params.smem_inputs[smem_input_idx];
+          aso::threadblock::STensor output =
+              params.smem_outputs[smem_output_idx];
+          aso::threadblock::RedunctionExecutor<cutlass::half_t> executor(
+              params.operator_types[op],
+              smem_buffer,
+              input,
+              output,
+              threadIdx.x,
+              blockDim.x);
+          __syncthreads();
           break;
         }
         default: {
