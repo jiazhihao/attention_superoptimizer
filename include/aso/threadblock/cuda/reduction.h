@@ -16,9 +16,9 @@
 #pragma once
 
 #include "aso/utils/cuda_helper.h"
+#include "aso/utils/static_switch.h"
 #include "cutlass/cutlass.h"
 #include "cutlass/fast_math.h"
-#include "aso/utils/static_switch.h"
 
 namespace aso {
 namespace threadblock {
@@ -80,11 +80,10 @@ public:
 };
 
 template <typename ElementType, int kK>
-CUTLASS_DEVICE
-void perform_reduction(ElementType *input_ptr,
-                       ElementType *output_ptr,
-                       int num_elements,
-                       int num_threads) {
+CUTLASS_DEVICE void perform_reduction(ElementType *input_ptr,
+                                      ElementType *output_ptr,
+                                      int num_elements,
+                                      int num_threads) {
   for (int i = threadIdx.x; i < num_elements; i += num_threads) {
     ElementType sum = static_cast<ElementType>(0.0f);
     {
@@ -102,11 +101,11 @@ class SimpleRedunctionExecutor {
 public:
   CUTLASS_DEVICE
   SimpleRedunctionExecutor(aso::type::TBOperatorType type,
-                     char *smem_buffer,
-                     STensor const &input,
-                     STensor const &output,
-                     int thread_id,
-                     int num_threads) {
+                           char *smem_buffer,
+                           STensor const &input,
+                           STensor const &output,
+                           int thread_id,
+                           int num_threads) {
     int reduction_dim = aso::utils::get_reduction_dim(type);
     int num_dims = output.num_dims;
     ElementType *input_ptr = (ElementType *)(smem_buffer + input.smem_offset);
@@ -115,13 +114,15 @@ public:
     int num_elements = output.num_elements();
     if (reduction_dim == num_dims - 2) {
       int reduction_degree = input.dim[num_dims - 2] / output.dim[num_dims - 2];
-      K_SWITCH(reduction_degree, [&] {
-        perform_reduction<ElementType, kK>(input_ptr, output_ptr, num_elements, num_threads);
+      INT_SWITCH(reduction_degree, kK, [&] {
+        perform_reduction<ElementType, kK>(
+            input_ptr, output_ptr, num_elements, num_threads);
       });
     } else if (reduction_dim == num_dims - 1) {
       int reduction_degree = input.dim[num_dims - 1] / output.dim[num_dims - 1];
-      K_SWITCH(reduction_degree, [&] {
-        perform_reduction<ElementType, kK>(input_ptr, output_ptr, num_elements, num_threads);
+      INT_SWITCH(reduction_degree, kK, [&] {
+        perform_reduction<ElementType, kK>(
+            input_ptr, output_ptr, num_elements, num_threads);
       });
     } else {
       assert(false && "Unimplemented");

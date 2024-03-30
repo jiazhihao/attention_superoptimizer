@@ -163,7 +163,8 @@ struct STensor {
   static int next_guid;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(STensor, data_type, layout, num_dims, dim, smem_offset, guid)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
+    STensor, data_type, layout, num_dims, dim, smem_offset, guid)
 
 } // namespace threadblock
 } // namespace aso

@@ -18,8 +18,8 @@
 #include "aso/kernel/reduction.h"
 #include "aso/utils/cuda_helper.h"
 #include "aso/utils/hash_utils.h"
-#include <cassert>
 #include "cutlass/fast_math.h"
+#include <cassert>
 
 namespace aso {
 namespace kernel {

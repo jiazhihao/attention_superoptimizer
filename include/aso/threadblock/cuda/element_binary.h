@@ -35,7 +35,7 @@ public:
                         STensor const &output,
                         int thread_id,
                         int num_threads) {
-    //FIXME: currently we assume broadcast the inner-most dim
+    // FIXME: currently we assume broadcast the inner-most dim
     ElementType *input1_ptr = (ElementType *)(smem_buffer + input1.smem_offset);
     ElementType *input2_ptr = (ElementType *)(smem_buffer + input2.smem_offset);
     ElementType *output_ptr = (ElementType *)(smem_buffer + output.smem_offset);

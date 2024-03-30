@@ -123,7 +123,8 @@ struct alignas(16) DTensor {
   static int next_guid;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(DTensor, data_type, layout, num_dims, dim, guid)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
+    DTensor, data_type, layout, num_dims, dim, guid)
 
 } // namespace kernel
 } // namespace aso
