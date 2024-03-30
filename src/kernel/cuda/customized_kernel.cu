@@ -154,24 +154,31 @@ __global__ void
               params.smem_outputs[smem_output_idx];
           // Assert inline
           assert(input.smem_offset == output.smem_offset);
-          cutlass::half_t *input_ptr =
-              (cutlass::half_t *)(smem_buffer + input.smem_offset);
           aso::threadblock::ElementUnaryExecutor<cutlass::half_t> executor(
-              input_ptr, params.operator_types[op], input.size());
-          executor.execute_kernel();
+              params.operator_types[op], smem_buffer, input, output, threadIdx.x, blockDim.x);
+          __syncthreads();
           break;
         }
         case aso::type::TB_DIV_OP: {
-          // TODO: implement later
+          aso::threadblock::STensor input1 = params.smem_inputs[smem_input_idx];
+          aso::threadblock::STensor input2 = params.smem_inputs[smem_input_idx + 1];
+          aso::threadblock::STensor output = params.smem_outputs[smem_output_idx];
+          aso::threadblock::ElementBinaryExecutor<cutlass::half_t> executor(
+              params.operator_types[op], smem_buffer, input1, input2, output,
+              threadIdx.x, blockDim.x);
+          __syncthreads();
           break;
         }
         case aso::type::TB_REDUCTION_0_OP:
         case aso::type::TB_REDUCTION_1_OP:
-        case aso::type::TB_REDUCTION_2_OP: {
+        case aso::type::TB_REDUCTION_2_OP:
+        case aso::type::TB_REDUCTION_0_TO_DIMX_OP:
+        case aso::type::TB_REDUCTION_1_TO_DIMX_OP:
+        case aso::type::TB_REDUCTION_2_TO_DIMX_OP: {
           aso::threadblock::STensor input = params.smem_inputs[smem_input_idx];
           aso::threadblock::STensor output =
               params.smem_outputs[smem_output_idx];
-          aso::threadblock::RedunctionExecutor<cutlass::half_t> executor(
+          aso::threadblock::SimpleRedunctionExecutor<cutlass::half_t> executor(
               params.operator_types[op],
               smem_buffer,
               input,
@@ -179,11 +186,6 @@ __global__ void
               threadIdx.x,
               blockDim.x);
           __syncthreads();
-          break;
-        }
-        case aso::type::TB_REDUCTION_0_TO_DIMX_OP:
-        case aso::type::TB_REDUCTION_1_TO_DIMX_OP:
-        case aso::type::TB_REDUCTION_2_TO_DIMX_OP: {
           break;
         }
         default: {
