@@ -31,10 +31,10 @@ int main(int argc, char **argv) {
   kernel::Graph graph;
   kernel::DTensor Q =
       graph.new_input({8, 32, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
-  kernel::DTensor K = graph.new_input(
-      {8, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
-  kernel::DTensor V = graph.new_input(
-      {8, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
+  kernel::DTensor K =
+      graph.new_input({8, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+  kernel::DTensor V =
+      graph.new_input({8, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
   std::vector<kernel::DTensor> outputs;
   {
     threadblock::ExecutionPlan plan;

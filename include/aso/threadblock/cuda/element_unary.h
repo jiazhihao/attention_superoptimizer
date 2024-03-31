@@ -38,11 +38,9 @@ public:
     int num_elements = output.num_elements();
     ElementType *base_ptr = (ElementType *)(smem_buffer + input.smem_offset);
     if (op_type == aso::type::TB_EXP_OP) {
-      for (int i = 0; i < num_elements; i += num_threads) {
-        base_ptr[i] = cutlass::fast_exp(base_ptr[i]);
+      for (int i = thread_id; i < num_elements; i += num_threads) {
+        base_ptr[thread_id] = cutlass::fast_exp(base_ptr[thread_id]);
       }
-    } else {
-      assert(false && "Unsupported operator");
     }
   }
 };

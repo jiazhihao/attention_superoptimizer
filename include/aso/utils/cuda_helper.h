@@ -136,20 +136,14 @@ using namespace aso::type;
 
 CUTLASS_HOST_DEVICE
 int get_reduction_dim(TBOperatorType type) {
-  switch (type) {
-    case TB_REDUCTION_0_OP:
-    case TB_REDUCTION_0_TO_DIMX_OP:
-      return 0;
-    case TB_REDUCTION_1_OP:
-    case TB_REDUCTION_1_TO_DIMX_OP:
-      return 1;
-    case TB_REDUCTION_2_OP:
-    case TB_REDUCTION_2_TO_DIMX_OP:
-      return 2;
-    default:
-      assert(false && "Not a reduction operator");
+  if (type >= TB_REDUCTION_0_TO_DIMX_OP && type <= TB_REDUCTION_2_TO_DIMX_OP) {
+    return type - TB_REDUCTION_0_TO_DIMX_OP;
+  } else if (type >= TB_REDUCTION_0_OP && type <= TB_REDUCTION_2_OP) {
+    return type - TB_REDUCTION_0_OP;
+  } else {
+    assert(false);
+    return -1;
   }
-  return -1;
 }
 
 } // namespace utils

@@ -18,7 +18,7 @@
 namespace aso {
 
 struct ProfileResult {
-  static int const NUM_ITERATIONS = 128;
+  static int const NUM_ITERATIONS = 1024;
   float run_time;
 };
 

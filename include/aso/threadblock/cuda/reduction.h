@@ -79,19 +79,20 @@ public:
   }
 };
 
-template <typename ElementType, int kK>
+template <typename ElementType>
 CUTLASS_DEVICE void perform_reduction(ElementType *input_ptr,
                                       ElementType *output_ptr,
-                                      int num_elements,
+                                      int num_input_elements,
+                                      int num_output_elements,
                                       int num_threads) {
-  for (int i = threadIdx.x; i < num_elements; i += num_threads) {
-    ElementType sum = static_cast<ElementType>(0.0f);
-    {
-      CUTLASS_PRAGMA_UNROLL
-      for (int k = 0; k < kK; k++) {
-        sum += input_ptr[i * kK + k];
-      }
-    }
+  // FIXME: note that this implementation is an approximate
+  // it access the same as of input/output stensors but does not
+  // correctly calculate the final result
+  ElementType sum = static_cast<ElementType>(0.0f);
+  for (int i = threadIdx.x; i < num_input_elements; i += num_threads) {
+    sum += input_ptr[i];
+  }
+  for (int i = threadIdx.x; i < num_output_elements; i += num_threads) {
     output_ptr[i] = sum;
   }
 }
@@ -106,27 +107,19 @@ public:
                            STensor const &output,
                            int thread_id,
                            int num_threads) {
-    int reduction_dim = aso::utils::get_reduction_dim(type);
-    int num_dims = output.num_dims;
+    // int reduction_dim = aso::utils::get_reduction_dim(type);
+    // int num_dims = output.num_dims;
     ElementType *input_ptr = (ElementType *)(smem_buffer + input.smem_offset);
     ElementType *output_ptr = (ElementType *)(smem_buffer + output.smem_offset);
 
-    int num_elements = output.num_elements();
-    if (reduction_dim == num_dims - 2) {
-      int reduction_degree = input.dim[num_dims - 2] / output.dim[num_dims - 2];
-      INT_SWITCH(reduction_degree, kK, [&] {
-        perform_reduction<ElementType, kK>(
-            input_ptr, output_ptr, num_elements, num_threads);
-      });
-    } else if (reduction_dim == num_dims - 1) {
-      int reduction_degree = input.dim[num_dims - 1] / output.dim[num_dims - 1];
-      INT_SWITCH(reduction_degree, kK, [&] {
-        perform_reduction<ElementType, kK>(
-            input_ptr, output_ptr, num_elements, num_threads);
-      });
-    } else {
-      assert(false && "Unimplemented");
-    }
+    int num_output_elements = output.num_elements();
+    int num_input_elements = input.num_elements();
+    // int reduction_degree = num_input_elements / num_output_elements;
+    perform_reduction<ElementType>(input_ptr,
+                                   output_ptr,
+                                   num_input_elements,
+                                   num_output_elements,
+                                   num_threads);
   }
 };
 
