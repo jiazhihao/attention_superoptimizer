@@ -104,11 +104,15 @@ private:
   void generate_next_kn_operator(SearchContext<DTensor> &c,
                                  kernel::Graph &g,
                                  int depth);
-  void optimize_layout(kernel::Graph &g, size_t op_idx, size_t ts_idx);
+  void optimize_layout(
+      kernel::Graph &g, int op_idx, int ts_idx, int bop_idx, int bts_idx);
   void update_best_graph(kernel::Graph &g);
   bool create_tb_outputs(SearchContext<STensor> &c,
                          threadblock::Graph &g,
                          int3 output_map);
+
+  std::vector<layout::SmemLayout>
+      get_valid_output_layout(threadblock::TBOperator const *op, int idx);
 
   void process_outputs();
   bool check_pattern(std::shared_ptr<AlgebraicPattern> pattern);

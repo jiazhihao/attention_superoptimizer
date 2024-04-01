@@ -208,7 +208,7 @@ std::vector<std::vector<int>> DimStrategy::get_customized_input_cand_idx(
 
   int num_inputs = all_input.size();
 
-  int opt_level = 1;
+  int opt_level = 0;
   if (opt_level == 0)
   {
     if (all_input.size() == 3) {
@@ -223,7 +223,7 @@ std::vector<std::vector<int>> DimStrategy::get_customized_input_cand_idx(
     }
     if (num_inputs >= 5) {
       results.push_back({num_inputs - 2, num_inputs - 1});
-      results.push_back({2, num_inputs - 2, num_inputs - 1});
+      // results.push_back({2, num_inputs - 2, num_inputs - 1});
     }
     return results;
   }

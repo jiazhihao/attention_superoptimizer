@@ -98,7 +98,7 @@ void KernelGraphGenerator::generate_next_tb_operator(
     threadblock::Graph &g,
     std::function<void(int)> const &create_customized_then_next_kn,
     int depth) {
-      
+
   if (depth >= (int)callstack.size()) {
     callstack.push_back(LayerCheckpoint{});
   }
@@ -204,7 +204,8 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
     ofs.open("generated_graphs.txt", std::ofstream::out | std::ofstream::app);
     ofs << json(g) << std::endl;
     ofs.close();
-    std::cerr << "kernel graph candidate: " << json(g) << std::endl;
+    update_best_graph(g);
+    // std::cerr << "kernel graph candidate: " << json(g) << std::endl;
     callstack.pop_back();
     return;
   }
@@ -568,7 +569,7 @@ bool KernelGraphGenerator::verify(SearchContext<DTensor> &c,
 
   ++num_total_random_tests;
 
-  std::cout << "random testing: " << json(g) << std::endl;
+  // std::cout << "random testing: " << json(g) << std::endl;
 
   for (auto const &op : g.operators) {
     op->fingerprint();
@@ -594,15 +595,103 @@ bool KernelGraphGenerator::have_same_fingerprint(
   return true;
 }
 
+std::vector<layout::SmemLayout> KernelGraphGenerator::get_valid_output_layout(
+    threadblock::TBOperator const *op, int idx) {
+  assert(idx == 0);
+  switch (op->op_type) {
+    case type::TBOperatorType::TB_INPUT_OP:
+      return config.smem_layout_to_explore;
+    case type::TBOperatorType::TB_MATMUL_OP: {
+      layout::SmemLayout layout1 = op->input_tensors[0].layout,
+                         layout2 = op->input_tensors[1].layout;
+      if ((layout1 == layout::SmemRowMajor &&
+           layout2 == layout::SmemColumnMajor) ||
+          (layout1 == layout::SmemRowMajorTensorOpMultiplicand_Crosswise32 &&
+           layout2 ==
+               layout::SmemColumnMajorTensorOpMultiplicand_Crosswise32) ||
+          (layout1 == layout::SmemRowMajorTensorOpMultiplicand_Crosswise64 &&
+           layout2 ==
+               layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64)) {
+        return config.smem_layout_to_explore;
+      } else {
+        return {};
+      }
+    }
+    case type::TBOperatorType::TB_OUTPUT_OP:
+    case type::TBOperatorType::TB_EXP_OP: {
+      return {op->input_tensors[0].layout};
+    }
+    case type::TBOperatorType::TB_DIV_OP: {
+      return {op->input_tensors[0].layout};
+    }
+    case type::TBOperatorType::TB_REDUCTION_0_OP:
+    case type::TBOperatorType::TB_REDUCTION_1_OP:
+    case type::TBOperatorType::TB_REDUCTION_2_OP:
+    case type::TBOperatorType::TB_REDUCTION_0_TO_DIMX_OP:
+    case type::TBOperatorType::TB_REDUCTION_1_TO_DIMX_OP:
+    case type::TBOperatorType::TB_REDUCTION_2_TO_DIMX_OP: {
+      if (op->input_tensors[0].layout == layout::SmemRowMajor ||
+          op->input_tensors[0].layout == layout::SmemColumnMajor) {
+        return {op->input_tensors[0].layout};
+      } else {
+        return {};
+      }
+    }
+    default:
+      assert("Unsupported op type");
+  }
+}
 
-void KernelGraphGenerator::optimize_layout(kernel::Graph &g, size_t op_idx, size_t ts_idx) {
+void KernelGraphGenerator::optimize_layout(
+    kernel::Graph &g, int op_idx, int ts_idx, int bop_idx, int bts_idx) {
+  if (bop_idx != -1) {
+    kernel::KNCustomizedOp *op =
+        dynamic_cast<kernel::KNCustomizedOp *>(g.operators[op_idx]);
+    assert(op != nullptr);
+    threadblock::Graph &block_graph = op->bgraph;
+    if (bop_idx >= (int)block_graph.operators.size()) {
+      optimize_layout(g, op_idx + 1, 0, -1, -1);
+      return;
+    }
+    if (bts_idx >= (int)block_graph.operators[bop_idx]->output_tensors.size()) {
+      optimize_layout(g, op_idx, ts_idx, bop_idx + 1, 0);
+    }
+    for (layout::SmemLayout layout : get_valid_output_layout(block_graph.operators[bop_idx], bts_idx)) {
+      block_graph.operators[bop_idx]->output_tensors[bts_idx].layout = layout;
+      for (TBOperator *op : block_graph.operators) {
+        for (STensor &stensor : op->input_tensors) {
+          if (stensor.guid == block_graph.operators[bop_idx]->output_tensors[bts_idx].guid) {
+            stensor.layout = layout;
+          }
+        }
+      }
+      optimize_layout(g, op_idx, ts_idx, bop_idx, bts_idx + 1);
+    }
+  }
+
   if (op_idx >= g.operators.size()) {
     update_best_graph(g);
     return;
   }
   if (ts_idx >= g.operators[op_idx]->output_tensors.size()) {
-    optimize_layout(g, op_idx + 1, 0);
+    if (g.operators[op_idx]->op_type == type::KNOperatorType::KN_CUSTOMIZED_OP) {
+      optimize_layout(g, op_idx, ts_idx, 0, 0);
+    } else {
+      optimize_layout(g, op_idx + 1, 0, bop_idx, bts_idx);
+    }
     return;
+  }
+
+  for (layout::DmemLayout layout : {layout::DmemRowMajor/*, layout::DmemColumnMajor*/}) {
+    g.operators[op_idx]->output_tensors[ts_idx].layout = layout;
+    for (KNOperator *op : g.operators) {
+      for (DTensor &dtensor : op->input_tensors) {
+        if (dtensor.guid == g.operators[op_idx]->output_tensors[ts_idx].guid) {
+          dtensor.layout = layout;
+        }
+      }
+    }
+    optimize_layout(g, op_idx, ts_idx + 1, bop_idx, bts_idx);
   }
 }
 

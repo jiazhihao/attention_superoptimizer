@@ -16,6 +16,8 @@
 #include "aso/kernel/graph.h"
 #include "aso/utils/hash_utils.h"
 
+#include <iostream>
+
 namespace aso {
 namespace kernel {
 
@@ -35,14 +37,17 @@ void to_json(json &j, Graph const &g) {
 }
 
 void from_json(json const &j, Graph &g) {
+  std::unordered_map<size_t, size_t> guid_mapping; // from deseralized guid to json guid
+
   auto get_tensor_from_guid = [&](size_t guid) {
     for (auto const &op : g.operators) {
       for (DTensor const &dtensor : op->output_tensors) {
-        if (dtensor.guid == guid) {
+        if (guid_mapping.at(dtensor.guid) == guid) {
           return dtensor;
         }
       }
     }
+    assert(false);
   };
 
   for (json const &jop : j) {
@@ -61,7 +66,7 @@ void from_json(json const &j, Graph &g) {
         jop.at("output_tensors")[0].at("guid").get_to(guidO);
         std::vector<int> dims = to_vector(num_dim, dim);
         DTensor const &output = g.new_input(dims, data_type, layout);
-        assert(output.guid == guidO);
+        guid_mapping[output.guid] = guidO;
         break;
       }
       case type::KNOperatorType::KN_MATMUL_OP: {
@@ -71,7 +76,7 @@ void from_json(json const &j, Graph &g) {
         jop.at("output_tensors")[0].at("guid").get_to(guidO);
         DTensor const &output =
             g.matmul(get_tensor_from_guid(guidA), get_tensor_from_guid(guidB));
-        assert(output.guid == guidO);
+        guid_mapping[output.guid] = guidO;
         break;
       }
       case type::KNOperatorType::KN_EXP_OP: {
@@ -79,7 +84,7 @@ void from_json(json const &j, Graph &g) {
         jop.at("input_tensors")[0].at("guid").get_to(guid);
         jop.at("output_tensors")[0].at("guid").get_to(guidO);
         DTensor const &output = g.exp(get_tensor_from_guid(guid));
-        assert(output.guid == guidO);
+        guid_mapping[output.guid] = guidO;
         break;
       }
       case type::KNOperatorType::KN_DIV_OP: {
@@ -89,7 +94,7 @@ void from_json(json const &j, Graph &g) {
         jop.at("output_tensors")[0].at("guid").get_to(guidO);
         DTensor const &output =
             g.div(get_tensor_from_guid(guidA), get_tensor_from_guid(guidB));
-        assert(output.guid == guidO);
+        guid_mapping[output.guid] = guidO;
         break;
       }
       case type::KNOperatorType::KN_REDUCTION_0_OP:
@@ -101,7 +106,7 @@ void from_json(json const &j, Graph &g) {
         DTensor const &output = g.reduction(
             get_tensor_from_guid(guid),
             op_type - type::KNOperatorType::KN_REDUCTION_0_OP);
-        assert(output.guid == guidO);
+        guid_mapping[output.guid] = guidO;
         break;
       }
       case type::KNOperatorType::KN_CUSTOMIZED_OP: {
@@ -113,7 +118,12 @@ void from_json(json const &j, Graph &g) {
         }
         threadblock::ExecutionPlan plan;
         jop.at("plan").get_to(plan);
-        g.customized(inputs, plan);
+        std::vector<DTensor> outputs = g.customized(inputs, plan);
+        for (size_t i = 0; i < outputs.size(); ++i) {
+          size_t guidO;
+          jop.at("output_tensors")[i].at("guid").get_to(guidO);
+          guid_mapping[outputs[i].guid] = guidO;
+        }
         break;
       }
       default:
