@@ -19,7 +19,7 @@
 
 namespace aso {
 namespace threadblock {
-  int STensor::next_guid = 10000;
+int STensor::next_guid = 10000;
 } // namespace threadblock
 } // namespace aso
 

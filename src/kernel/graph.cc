@@ -98,9 +98,9 @@ void from_json(json const &j, Graph &g) {
         size_t guid, guidO;
         jop.at("input_tensors")[0].at("guid").get_to(guid);
         jop.at("output_tensors")[0].at("guid").get_to(guidO);
-        DTensor const &output = g.reduction(
-            get_tensor_from_guid(guid),
-            op_type - type::KNOperatorType::KN_REDUCTION_0_OP);
+        DTensor const &output =
+            g.reduction(get_tensor_from_guid(guid),
+                        op_type - type::KNOperatorType::KN_REDUCTION_0_OP);
         assert(output.guid == guidO);
         break;
       }

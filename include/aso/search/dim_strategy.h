@@ -1,7 +1,7 @@
 #pragma once
 
-#include "aso/search/op_utils.h"
 #include "aso/search/config.h"
+#include "aso/search/op_utils.h"
 
 namespace aso {
 namespace search {

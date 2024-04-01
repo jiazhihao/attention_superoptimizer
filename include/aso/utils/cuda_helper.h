@@ -89,6 +89,43 @@ CUTLASS_DEVICE T *warp_uniform(T *ptr) {
   return p.ptr;
 }
 
+template <int WARPS_PER_BLOCK = 4, int WARP_SIZE = 32>
+CUTLASS_DEVICE float block_sum_fp32(float sum) {
+
+  __shared__ float red_smem[WARPS_PER_BLOCK];
+  // Decompose the thread index into warp / lane.
+  int warp = threadIdx.x / WARP_SIZE;
+  int lane = threadIdx.x % WARP_SIZE;
+
+// Compute the sum per warp.
+#pragma unroll
+  for (int mask = WARP_SIZE / 2; mask >= 1; mask /= 2) {
+    sum += __shfl_xor_sync(uint32_t(-1), sum, mask);
+  }
+
+  // Warp leaders store the data to shared memory.
+  if (lane == 0) {
+    red_smem[warp] = sum;
+  }
+
+  // Make sure the data is in shared memory.
+  __syncthreads();
+
+  // The warps compute the final sums.
+  if (lane < WARPS_PER_BLOCK) {
+    sum = red_smem[lane];
+  }
+
+// Parallel reduction inside the warp.
+#pragma unroll
+  for (int mask = WARPS_PER_BLOCK / 2; mask >= 1; mask /= 2) {
+    sum += __shfl_xor_sync(uint32_t(-1), sum, mask);
+  }
+
+  // Broadcast to other threads.
+  return __shfl_sync(uint32_t(-1), sum, 0);
+}
+
 namespace utils {
 
 cudaDataType_t to_cuda_datatype(aso::type::DataType type);
@@ -99,20 +136,14 @@ using namespace aso::type;
 
 CUTLASS_HOST_DEVICE
 int get_reduction_dim(TBOperatorType type) {
-  switch (type) {
-    case TB_REDUCTION_0_OP:
-    case TB_REDUCTION_0_TO_DIMX_OP:
-      return 0;
-    case TB_REDUCTION_1_OP:
-    case TB_REDUCTION_1_TO_DIMX_OP:
-      return 1;
-    case TB_REDUCTION_2_OP:
-    case TB_REDUCTION_2_TO_DIMX_OP:
-      return 2;
-    default:
-      assert(false && "Not a reduction operator");
+  if (type >= TB_REDUCTION_0_TO_DIMX_OP && type <= TB_REDUCTION_2_TO_DIMX_OP) {
+    return type - TB_REDUCTION_0_TO_DIMX_OP;
+  } else if (type >= TB_REDUCTION_0_OP && type <= TB_REDUCTION_2_OP) {
+    return type - TB_REDUCTION_0_OP;
+  } else {
+    assert(false);
+    return -1;
   }
-  return -1;
 }
 
 } // namespace utils

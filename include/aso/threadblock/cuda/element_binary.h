@@ -24,6 +24,34 @@ namespace threadblock {
 using namespace cutlass;
 using namespace aso::type;
 
+template <typename ElementType>
+class ElementBinaryExecutor {
+public:
+  CUTLASS_DEVICE
+  ElementBinaryExecutor(aso::type::TBOperatorType op_type,
+                        char *smem_buffer,
+                        STensor const &input1,
+                        STensor const &input2,
+                        STensor const &output,
+                        int thread_id,
+                        int num_threads) {
+    // FIXME: currently we assume broadcast the inner-most dim
+    ElementType *input1_ptr = (ElementType *)(smem_buffer + input1.smem_offset);
+    ElementType *input2_ptr = (ElementType *)(smem_buffer + input2.smem_offset);
+    ElementType *output_ptr = (ElementType *)(smem_buffer + output.smem_offset);
+    int num_elements = output.num_elements();
+    int factor1 = num_elements / input1.num_elements();
+    int factor2 = num_elements / input2.num_elements();
+    if (op_type == aso::type::TB_DIV_OP) {
+      for (int i = 0; i < num_elements; i += num_threads) {
+        output_ptr[i] = input1_ptr[i / factor1] / input2_ptr[i / factor2];
+      }
+    } else {
+      assert(false && "Unsupported operator");
+    }
+  };
+};
+
 class TBElementBinaryFingerPrinter {
 public:
   CUTLASS_DEVICE

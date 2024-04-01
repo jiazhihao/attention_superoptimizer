@@ -16,6 +16,7 @@
 #pragma once
 
 #include "aso/threadblock/smem_tensor.h"
+#include "aso/utils/static_switch.h"
 
 #include "cutlass/aligned_buffer.h"
 #include "cutlass/cutlass.h"
@@ -442,13 +443,13 @@ class MatmulExecutorV2 {
 public:
   using SmemLayoutA_T = cutlass::layout::RowMajorTensorOpMultiplicandCrosswise<
       sizeof_bits<ElementType>::value,
-      64>;
+      WarpShape::kK>;
 
   // Shared memory layout
   using SmemLayoutB_T =
       cutlass::layout::ColumnMajorTensorOpMultiplicandCrosswise<
           sizeof_bits<ElementType>::value,
-          64>;
+          WarpShape::kK>;
   using MmaTensorOp = typename gemm::warp::DefaultMmaTensorOp<
       WarpShape,
       InstructionShape,
@@ -535,6 +536,8 @@ public:
     int warp_count_n = (n + WarpShape::kN - 1) / WarpShape::kN;
     assert(warp_count_m > 0);
     assert(warp_count_n > 0);
+    // We have exactly 4 warps in a thread block
+    assert(warp_count_m * warp_count_n == 4);
     // Compute warp location within threadblock tile by mapping the warp_id to
     // three coordinates:
     //   warp_idx_m: the warp's position within the threadblock along the M
@@ -556,7 +559,15 @@ public:
     }
     // Currently assume that we don't parittion over k within a threadblock
     // we do it across threadblocks
-    assert(warp_idx_k == 0);
+    if (warp_idx_k > 0) {
+      printf("warp_idx(%d) warp_count_m(%d) warp_count_n(%d) m(%d) n(%d)\n",
+             warp_idx,
+             warp_count_m,
+             warp_count_n,
+             m,
+             n);
+      assert(warp_idx_k == 0);
+    }
     int warp_idx_m = warp_idx_mn % warp_count_m;
     int warp_idx_n = warp_idx_mn / warp_count_m;
 
@@ -657,6 +668,29 @@ public:
   }
 };
 
+CUTLASS_DEVICE
+void calculate_warp_shape(
+    int m, int n, int inst_m, int inst_n, int &warp_m, int &warp_n) {
+  int m_factor = (m + inst_m - 1) / inst_m;
+  int n_factor = (n + inst_n - 1) / inst_n;
+  // We should have at least 4 warps in a thread block
+  assert(m_factor * n_factor >= 4);
+  if (m_factor >= 2 && n_factor >= 2) {
+    assert(m_factor % 2 == 0);
+    assert(n_factor % 2 == 0);
+    m_factor = m_factor / 2;
+    n_factor = n_factor / 2;
+  } else if (m_factor == 1) {
+    assert(n_factor % 4 == 0);
+    n_factor = n_factor / 4;
+  } else if (n_factor == 1) {
+    assert(m_factor % 4 == 0);
+    m_factor = m_factor / 4;
+  }
+  warp_m = m_factor * inst_m;
+  warp_n = n_factor * inst_n;
+}
+
 class GenericMatmulExecutor {
 public:
   CUTLASS_DEVICE
@@ -667,39 +701,52 @@ public:
                         int thread_id,
                         int warp_id,
                         int lane_id) {
-    int m = A.dim[0];
-    int n = B.dim[1];
-    int k = A.dim[1];
-    using WarpShape = gemm::GemmShape<32, 32, 32>;
+    assert(A.num_dims == B.num_dims);
+    int m = A.dim[A.num_dims - 2];
+    int n = B.dim[B.num_dims - 1];
+    int k = A.dim[A.num_dims - 1];
     using InstructionShape = gemm::GemmShape<16, 8, 16>;
-    // TODO: consider cutlass' RowMajorTensorOpMultiplicandCrosswise
-    // layout
-    // using SmemLayoutA = layout::RowMajorTensorOpMultiplicandCrosswise<16,
-    // 32>; using SmemLayoutB =
-    // layout::ColumnMajorTensorOpMultiplicandCrosswise<16, 32>;
-    using Executor = MatmulExecutorV2<WarpShape,
-                                      InstructionShape,
-                                      half_t,
-                                      cutlass::layout::RowMajor,
-                                      cutlass::layout::ColumnMajor,
-                                      cutlass::layout::RowMajor>;
-    // assert(A.layout == STensor::ROW_MAJOR &&
-    //        B.layout == STensor::COLUMN_MAJOR &&
-    //        "Layouts: mismatch between inputs and Executor.");
-    half_t *A_ptr = (half_t *)(smem_buffer + A.smem_offset);
-    half_t *B_ptr = (half_t *)(smem_buffer + B.smem_offset);
-    half_t *C_ptr = (half_t *)(smem_buffer + C.smem_offset);
+    int warp_m = 0;
+    int warp_n = 0;
+    calculate_warp_shape(
+        m, n, InstructionShape::kM, InstructionShape::kN, warp_m, warp_n);
+    // if (thread_id == 0 && blockIdx.x == 0) {
+    //   printf("warp_m(%d) warp_n(%d)\n", warp_m, warp_n);
+    // }
+    WARP_SHAPE_M_SWITCH(warp_m, WARP_M, [&] {
+      WARP_SHAPE_N_SWITCH(warp_n, WARP_N, [&] {
+        using WarpShape = gemm::GemmShape<WARP_M, WARP_N, InstructionShape::kK>;
+        // TODO: consider cutlass' RowMajorTensorOpMultiplicandCrosswise
+        // layout
+        // using SmemLayoutA =
+        // cutlass::layout::RowMajorTensorOpMultiplicandCrosswise<16, 32>; using
+        // SmemLayoutB =
+        // cutlass::layout::ColumnMajorTensorOpMultiplicandCrosswise<16, 32>;
+        using Executor = MatmulExecutorV2<WarpShape,
+                                          InstructionShape,
+                                          half_t,
+                                          cutlass::layout::RowMajor,
+                                          cutlass::layout::ColumnMajor,
+                                          cutlass::layout::RowMajor>;
+        // assert(A.layout == STensor::ROW_MAJOR &&
+        //        B.layout == STensor::COLUMN_MAJOR &&
+        //        "Layouts: mismatch between inputs and Executor.");
+        half_t *A_ptr = (half_t *)(smem_buffer + A.smem_offset);
+        half_t *B_ptr = (half_t *)(smem_buffer + B.smem_offset);
+        half_t *C_ptr = (half_t *)(smem_buffer + C.smem_offset);
 
-    Executor executor({A_ptr, Executor::TensorRefA::Layout::packed({m, k})},
-                      {B_ptr, Executor::TensorRefB::Layout::packed({k, n})},
-                      {C_ptr, Executor::TensorRefC::Layout::packed({m, n})},
-                      m,
-                      n,
-                      k,
-                      thread_id,
-                      warp_id,
-                      lane_id);
-    executor.execute_kernel();
+        Executor executor({A_ptr, Executor::TensorRefA::Layout::packed({m, k})},
+                          {B_ptr, Executor::TensorRefB::Layout::packed({k, n})},
+                          {C_ptr, Executor::TensorRefC::Layout::packed({m, n})},
+                          m,
+                          n,
+                          k,
+                          thread_id,
+                          warp_id,
+                          lane_id);
+        executor.execute_kernel();
+      });
+    });
   }
 };
 

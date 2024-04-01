@@ -1,8 +1,8 @@
 #pragma once
 
 #include "aso/search/algebraic_pattern.h"
-#include "aso/utils/hash_utils.h"
 #include "aso/search/config.h"
+#include "aso/utils/hash_utils.h"
 
 namespace aso {
 namespace search {
@@ -49,11 +49,11 @@ std::shared_ptr<AlgebraicPattern>
                 std::shared_ptr<AlgebraicPattern> lhs,
                 std::shared_ptr<AlgebraicPattern> rhs);
 
-template<typename OpType, typename TensorType>
-std::shared_ptr<AlgebraicPattern>
-    get_pattern(OpType op,
-                std::vector<TensorType> const &input_tensors,
-                std::vector<std::shared_ptr<AlgebraicPattern>> const &input_patterns) {
+template <typename OpType, typename TensorType>
+std::shared_ptr<AlgebraicPattern> get_pattern(
+    OpType op,
+    std::vector<TensorType> const &input_tensors,
+    std::vector<std::shared_ptr<AlgebraicPattern>> const &input_patterns) {
   if (input_patterns.size() == 1) {
     return get_pattern(op, input_tensors[0], input_patterns[0]);
   }
