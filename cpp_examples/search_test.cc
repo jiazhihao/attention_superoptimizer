@@ -24,14 +24,16 @@ int main(int argc, char **argv) {
   //   ref_graph.matmul(D, V);
   // }
 
-  // search::KernelGraphGenerator gen(ref_graph, GeneratorConfig::get_default_config(), "checkpoint.json");
+  // search::KernelGraphGenerator gen(ref_graph,
+  // GeneratorConfig::get_default_config(), "checkpoint.json");
   search::KernelGraphGenerator gen("checkpoint.json");
 
   gen.generate_kernel_graphs();
 
   clock_t et = clock();
 
-  std::cout << "running time: " << (double)(et - st) / CLOCKS_PER_SEC << " sec" << std::endl;
+  std::cout << "running time: " << (double)(et - st) / CLOCKS_PER_SEC << " sec"
+            << std::endl;
 
   return 0;
 }

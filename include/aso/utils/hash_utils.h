@@ -72,7 +72,7 @@ struct hash<std::vector<T>> {
     }
 
     return seed;
-  }  
+  }
 };
 
 template <>

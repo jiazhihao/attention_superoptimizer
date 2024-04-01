@@ -35,7 +35,7 @@ TBOperator *Graph::create_reduction_op(STensor const &input, int dim) {
   if (dim < output.num_dims - 2) {
     return nullptr;
   }
-  
+
   if (smem_offset + (off_t)output.size() > (off_t)aso::type::MAX_SMEM_SIZE) {
     return nullptr;
   }

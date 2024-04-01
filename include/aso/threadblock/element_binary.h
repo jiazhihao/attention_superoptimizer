@@ -25,9 +25,9 @@ using namespace cutlass;
 class TBElementBinaryOp : public TBOperator {
 public:
   TBElementBinaryOp(Graph *_graph,
-                   STensor const &_input1,
-                   STensor const &_input2,
-                   aso::type::TBOperatorType _type);
+                    STensor const &_input1,
+                    STensor const &_input2,
+                    aso::type::TBOperatorType _type);
   ~TBElementBinaryOp();
 
   operator json() const override;

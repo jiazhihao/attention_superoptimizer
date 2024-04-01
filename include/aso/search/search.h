@@ -62,8 +62,8 @@ class KernelGraphGenerator {
 public:
   KernelGraphGenerator(kernel::Graph const &computation_graph,
                        GeneratorConfig const &config,
-                       const char *filename);
-  KernelGraphGenerator(const char *filename);
+                       char const *filename);
+  KernelGraphGenerator(char const *filename);
 
   void generate_kernel_graphs();
 
@@ -74,7 +74,7 @@ public:
   GeneratorConfig config;
   DimStrategy dim_strategy;
 
-  const char* filename;
+  char const *filename;
 
 private:
   std::vector<std::shared_ptr<AlgebraicPattern>> final_patterns;
