@@ -16,9 +16,7 @@ int main(int argc, char **argv) {
     threadblock::ExecutionPlan plan;
     plan.ops.push_back({aso::type::TB_REDUCTION_1_OP, {{0, 0}}});
     plan.input_map.push_back({0, -1, -1});
-    plan.input_smem_layouts = {
-        layout::SmemRowMajor
-    };
+    plan.input_smem_layouts = {layout::SmemRowMajor};
     plan.output_map = {0, 2, -1};
     plan.forloop_dim = {1};
     plan.grid_dim = {16, 2, 1};

@@ -669,11 +669,11 @@ void KernelGraphGenerator::optimize_layout(
     }
   }
 
-  if (op_idx >= g.operators.size()) {
+  if (op_idx >= (int)g.operators.size()) {
     update_best_graph(g);
     return;
   }
-  if (ts_idx >= g.operators[op_idx]->output_tensors.size()) {
+  if (ts_idx >= (int)g.operators[op_idx]->output_tensors.size()) {
     if (g.operators[op_idx]->op_type == type::KNOperatorType::KN_CUSTOMIZED_OP) {
       optimize_layout(g, op_idx, ts_idx, 0, 0);
     } else {

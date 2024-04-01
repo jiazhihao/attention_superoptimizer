@@ -15,28 +15,59 @@
 
 #pragma once
 
-#define K_SWITCH(value, ...)   \
-  [&] {                                    \
-    if (value <= 4) {                      \
-      constexpr static int kK = 4;         \
-      return __VA_ARGS__();                \
-    } else if (value <= 8) {               \
-      constexpr static int kK = 8;         \
-      return __VA_ARGS__();                \
-    } else if (value <= 16) {              \
-      constexpr static int kK = 16;        \
-      return __VA_ARGS__();                \
-    } else if (value <= 32) {              \
-      constexpr static int kK = 32;        \
-      return __VA_ARGS__();                \
-    } else if (value <= 64) {              \
-      constexpr static int kK = 64;        \
-      return __VA_ARGS__();                \
-    } else if (value <= 128) {             \
-      constexpr static int kK = 128;       \
-      return __VA_ARGS__();                \
-    } else if (value <= 256) {             \
-      constexpr static int kK = 256;       \
-      return __VA_ARGS__();                \
-    } else { assert(false); }              \
+#define INT_SWITCH(VARNAME, CONSTNAME, ...)                                    \
+  [&] {                                                                        \
+    if (VARNAME <= 4) {                                                        \
+      constexpr static int CONSTNAME = 4;                                      \
+      return __VA_ARGS__();                                                    \
+    } else if (VARNAME <= 8) {                                                 \
+      constexpr static int CONSTNAME = 8;                                      \
+      return __VA_ARGS__();                                                    \
+    } else if (VARNAME <= 16) {                                                \
+      constexpr static int CONSTNAME = 16;                                     \
+      return __VA_ARGS__();                                                    \
+    } else if (VARNAME <= 32) {                                                \
+      constexpr static int CONSTNAME = 32;                                     \
+      return __VA_ARGS__();                                                    \
+    } else if (VARNAME <= 64) {                                                \
+      constexpr static int CONSTNAME = 64;                                     \
+      return __VA_ARGS__();                                                    \
+    } else if (VARNAME <= 128) {                                               \
+      constexpr static int CONSTNAME = 128;                                    \
+      return __VA_ARGS__();                                                    \
+    } else if (VARNAME <= 256) {                                               \
+      constexpr static int CONSTNAME = 256;                                    \
+      return __VA_ARGS__();                                                    \
+    } else {                                                                   \
+      assert(false);                                                           \
+    }                                                                          \
+  }()
+
+#define WARP_SHAPE_M_SWITCH(VARNAME, CONSTNAME, ...)                           \
+  [&] {                                                                        \
+    if (VARNAME <= 16) {                                                       \
+      constexpr static int CONSTNAME = 16;                                     \
+      return __VA_ARGS__();                                                    \
+    } else if (VARNAME <= 32) {                                                \
+      constexpr static int CONSTNAME = 32;                                     \
+      return __VA_ARGS__();                                                    \
+    } else {                                                                   \
+      assert(false);                                                           \
+    }                                                                          \
+  }()
+
+#define WARP_SHAPE_N_SWITCH(VARNAME, CONSTNAME, ...)                           \
+  [&] {                                                                        \
+    if (VARNAME <= 8) {                                                        \
+      constexpr static int CONSTNAME = 8;                                      \
+      return __VA_ARGS__();                                                    \
+    } else if (VARNAME <= 16) {                                                \
+      constexpr static int CONSTNAME = 16;                                     \
+      return __VA_ARGS__();                                                    \
+    } else if (VARNAME <= 32) {                                                \
+      constexpr static int CONSTNAME = 32;                                     \
+      return __VA_ARGS__();                                                    \
+    } else {                                                                   \
+      assert(false);                                                           \
+    }                                                                          \
   }()

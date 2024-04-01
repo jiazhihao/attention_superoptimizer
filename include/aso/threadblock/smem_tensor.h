@@ -106,7 +106,6 @@ struct STensor {
     return false;
   }
 
-  CUTLASS_HOST_DEVICE
   size_t size() const {
     size_t num_elements = 1;
     using namespace aso::type;
@@ -137,11 +136,15 @@ struct STensor {
 
   CUTLASS_HOST_DEVICE
   size_t num_elements() const {
-    size_t num_elements = 1;
-    for (int i = 0; i < num_dims; i++) {
-      num_elements *= dim[i];
+    if (num_dims == 4) {
+      return dim[0] * dim[1] * dim[2] * dim[3];
+    } else if (num_dims == 3) {
+      return dim[0] * dim[1] * dim[2];
+    } else if (num_dims == 2) {
+      return dim[0] * dim[1];
+    } else {
+      return dim[0];
     }
-    return num_elements;
   }
 
   aso::type::DataType data_type;
@@ -163,7 +166,8 @@ struct STensor {
   static int next_guid;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(STensor, data_type, layout, num_dims, dim, smem_offset, guid)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(
+    STensor, data_type, layout, num_dims, dim, smem_offset, guid)
 
 } // namespace threadblock
 } // namespace aso

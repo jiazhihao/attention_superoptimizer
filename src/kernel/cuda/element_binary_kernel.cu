@@ -18,19 +18,19 @@
 #include "aso/kernel/graph.h"
 #include "aso/utils/cuda_helper.h"
 #include "aso/utils/hash_utils.h"
-#include <cassert>
 #include "cutlass/fast_math.h"
+#include <cassert>
 
 namespace aso {
 namespace kernel {
 
 using namespace aso::type;
 
-template<typename DT>
+template <typename DT>
 __global__ void execute_elementbinary(aso::type::KNOperatorType type,
-                                      DT* input1_ptr,
-                                      DT* input2_ptr,
-                                      DT* output_ptr,
+                                      DT *input1_ptr,
+                                      DT *input2_ptr,
+                                      DT *output_ptr,
                                       int factor1,
                                       int factor2,
                                       int num_elements) {
@@ -45,17 +45,21 @@ __global__ void execute_elementbinary(aso::type::KNOperatorType type,
 }
 
 bool KNElementBinaryOp::profile(ProfileResult &result) {
-  // TODO: to be implemented
   assert(input_tensors[0].data_type == DT_FLOAT16);
   assert(input_tensors[1].data_type == DT_FLOAT16);
   assert(output_tensors[0].data_type == DT_FLOAT16);
-  cutlass::half_t *input1_ptr = static_cast<cutlass::half_t*>(input_tensors[0].data_ptr);
-  cutlass::half_t *input2_ptr = static_cast<cutlass::half_t*>(input_tensors[1].data_ptr);
-  cutlass::half_t *output_ptr = static_cast<cutlass::half_t*>(output_tensors[0].data_ptr);
+  cutlass::half_t *input1_ptr =
+      static_cast<cutlass::half_t *>(input_tensors[0].data_ptr);
+  cutlass::half_t *input2_ptr =
+      static_cast<cutlass::half_t *>(input_tensors[1].data_ptr);
+  cutlass::half_t *output_ptr =
+      static_cast<cutlass::half_t *>(output_tensors[0].data_ptr);
 
   int num_elements = output_tensors[0].num_elements();
-  int factor1 = output_tensors[0].num_elements() / input_tensors[0].num_elements();
-  int factor2 = output_tensors[0].num_elements() / input_tensors[1].num_elements();
+  int factor1 =
+      output_tensors[0].num_elements() / input_tensors[0].num_elements();
+  int factor2 =
+      output_tensors[0].num_elements() / input_tensors[1].num_elements();
   int const num_threads_per_blk = 1024;
   int num_blocks =
       (num_elements + num_threads_per_blk - 1) / num_threads_per_blk;
@@ -65,7 +69,13 @@ bool KNElementBinaryOp::profile(ProfileResult &result) {
   checkCUDA(cudaEventCreate(&events[1]));
   checkCUDA(cudaEventRecord(events[0]));
   for (int i = 0; i < ProfileResult::NUM_ITERATIONS; i++) {
-    execute_elementbinary<<<num_blocks, num_threads_per_blk>>>(op_type, input1_ptr, input2_ptr, output_ptr, factor1, factor2, num_elements);
+    execute_elementbinary<<<num_blocks, num_threads_per_blk>>>(op_type,
+                                                               input1_ptr,
+                                                               input2_ptr,
+                                                               output_ptr,
+                                                               factor1,
+                                                               factor2,
+                                                               num_elements);
   }
   float runtime_ms = 0;
   checkCUDA(cudaEventRecord(events[1]));

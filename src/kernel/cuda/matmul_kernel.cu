@@ -41,12 +41,12 @@ bool KNMatmulOp::profile(ProfileResult &result) {
     assert(input_tensors[0].dim[i] == output_tensors[0].dim[i]);
     batch *= input_tensors[0].dim[i];
   }
-  int row_A = input_tensors[0].dim[num_dims-2];
-  int column_A = input_tensors[0].dim[num_dims-1];
-  int row_B = input_tensors[1].dim[num_dims-2];
-  int column_B = input_tensors[1].dim[num_dims-1];
-  int row_C = output_tensors[0].dim[num_dims-2];
-  int column_C = output_tensors[0].dim[num_dims-1];
+  int row_A = input_tensors[0].dim[num_dims - 2];
+  int column_A = input_tensors[0].dim[num_dims - 1];
+  int row_B = input_tensors[1].dim[num_dims - 2];
+  int column_B = input_tensors[1].dim[num_dims - 1];
+  int row_C = output_tensors[0].dim[num_dims - 2];
+  int column_C = output_tensors[0].dim[num_dims - 1];
   assert(column_A == row_B);
   assert(row_C == row_A);
   assert(column_C == column_B);
@@ -101,7 +101,7 @@ bool KNMatmulOp::profile(ProfileResult &result) {
                              type_C,
                              ldc,
                              compute_type,
-                             CUBLAS_GEMM_DEFAULT));  
+                             CUBLAS_GEMM_DEFAULT));
     } else {
       int strideA = row_A * column_A;
       int strideB = row_B * column_B;
@@ -128,8 +128,7 @@ bool KNMatmulOp::profile(ProfileResult &result) {
                                            strideC,
                                            batch,
                                            compute_type,
-                                           CUBLAS_GEMM_DEFAULT));  
-
+                                           CUBLAS_GEMM_DEFAULT));
     }
   }
   float runtime_ms = 0;
