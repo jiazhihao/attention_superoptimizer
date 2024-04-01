@@ -27,21 +27,18 @@ using namespace aso::type;
 template <typename ElementType>
 class ElementUnaryExecutor {
 public:
-  ElementType *base_ptr;
-  aso::type::TBOperatorType op_type;
-  int kElements;
-
-public:
   CUTLASS_DEVICE
-  ElementUnaryExecutor(ElementType *_base_ptr,
-                       aso::type::TBOperatorType _type,
-                       int _kElements)
-      : base_ptr(_base_ptr), op_type(_type), kElements(_kElements) {}
-
-  void CUTLASS_DEVICE execute_kernel(void) {
-    // extern __shared__ char smem_buffer[];
+  ElementUnaryExecutor(aso::type::TBOperatorType op_type,
+                       char *smem_buffer,
+                       STensor const &input,
+                       STensor const &output,
+                       int thread_id,
+                       int num_threads) {
+    assert(input.smem_offset == output.smem_offset);
+    int num_elements = output.num_elements();
+    ElementType *base_ptr = (ElementType *)(smem_buffer + input.smem_offset);
     if (op_type == aso::type::TB_EXP_OP) {
-      for (int i = 0; i < kElements; i += blockDim.x) {
+      for (int i = 0; i < num_elements; i += num_threads) {
         base_ptr[i] = cutlass::fast_exp(base_ptr[i]);
       }
     } else {

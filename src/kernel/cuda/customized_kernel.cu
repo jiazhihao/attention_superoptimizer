@@ -154,19 +154,38 @@ __global__ void
               params.smem_outputs[smem_output_idx];
           // Assert inline
           assert(input.smem_offset == output.smem_offset);
-          cutlass::half_t *input_ptr =
-              (cutlass::half_t *)(smem_buffer + input.smem_offset);
           aso::threadblock::ElementUnaryExecutor<cutlass::half_t> executor(
-              input_ptr, params.operator_types[op], input.size());
-          executor.execute_kernel();
+              params.operator_types[op], smem_buffer, input, output, threadIdx.x, blockDim.x);
+          __syncthreads();
+          break;
+        }
+        case aso::type::TB_DIV_OP: {
+          aso::threadblock::STensor input1 = params.smem_inputs[smem_input_idx];
+          aso::threadblock::STensor input2 = params.smem_inputs[smem_input_idx + 1];
+          aso::threadblock::STensor output = params.smem_outputs[smem_output_idx];
+          aso::threadblock::ElementBinaryExecutor<cutlass::half_t> executor(
+              params.operator_types[op], smem_buffer, input1, input2, output,
+              threadIdx.x, blockDim.x);
+          __syncthreads();
           break;
         }
         case aso::type::TB_REDUCTION_0_OP:
         case aso::type::TB_REDUCTION_1_OP:
-        case aso::type::TB_REDUCTION_2_OP: {
-          // aso::threadblock::STensor input =
-          // params.smem_inputs[smem_input_idx]; aso::threadblock::STensor
-          // output = params.smem_outputs[smem_output_idx];
+        case aso::type::TB_REDUCTION_2_OP:
+        case aso::type::TB_REDUCTION_0_TO_DIMX_OP:
+        case aso::type::TB_REDUCTION_1_TO_DIMX_OP:
+        case aso::type::TB_REDUCTION_2_TO_DIMX_OP: {
+          aso::threadblock::STensor input = params.smem_inputs[smem_input_idx];
+          aso::threadblock::STensor output =
+              params.smem_outputs[smem_output_idx];
+          aso::threadblock::SimpleRedunctionExecutor<cutlass::half_t> executor(
+              params.operator_types[op],
+              smem_buffer,
+              input,
+              output,
+              threadIdx.x,
+              blockDim.x);
+          __syncthreads();
           break;
         }
         default: {
@@ -523,7 +542,7 @@ void KNCustomizedOp::run() {
 bool KNCustomizedOp::profile(ProfileResult &result) {
   int max_smem_size = aso::type::MAX_SMEM_SIZE;
   assert(bgraph.smem_offset <= max_smem_size);
-  if (bgraph.smem_offset > 64 * 1024) {
+  if (bgraph.smem_offset > 48 * 1024) {
     checkCUDA(cudaFuncSetAttribute(customized_kernel_function,
                                    cudaFuncAttributeMaxDynamicSharedMemorySize,
                                    bgraph.smem_offset));
@@ -533,14 +552,14 @@ bool KNCustomizedOp::profile(ProfileResult &result) {
   checkCUDA(cudaEventCreate(&events[0]));
   checkCUDA(cudaEventCreate(&events[1]));
   checkCUDA(cudaEventRecord(events[0]));
-  for (int i = 0; i < 16; i++) {
+  for (int i = 0; i < ProfileResult::NUM_ITERATIONS; i++) {
     run();
   }
   float runtime_ms = 0;
   checkCUDA(cudaEventRecord(events[1]));
   checkCUDA(cudaEventSynchronize(events[1]));
   checkCUDA(cudaEventElapsedTime(&runtime_ms, events[0], events[1]));
-  result.run_time = runtime_ms / 16;
+  result.run_time = runtime_ms / ProfileResult::NUM_ITERATIONS;
   printf("KNCustomizedOp: runtime(%.8lfms)\n", result.run_time);
   checkCUDA(cudaEventDestroy(events[0]));
   checkCUDA(cudaEventDestroy(events[1]));

@@ -9,9 +9,9 @@ int main(int argc, char **argv) {
     kernel::DTensor Q = ref_graph.new_input(
         {16, 64, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
     kernel::DTensor K = ref_graph.new_input(
-        {16, 64, 512}, type::DT_FLOAT16, layout::DmemColumnMajor);
+        {16, 64, 1024}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor V = ref_graph.new_input(
-        {16, 512, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
+        {16, 1024, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor A = ref_graph.matmul(Q, K);
     kernel::DTensor E = ref_graph.exp(A);
     kernel::DTensor S = ref_graph.reduction(E, 2 /*dim*/);
@@ -20,14 +20,21 @@ int main(int argc, char **argv) {
     for (auto const &op : ref_graph.operators) {
       op->fingerprint();
     }
+    ProfileResult result;
+    float total_runtime = 0.0f;
+    for (auto const &op : ref_graph.operators) {
+      op->profile(result);
+      total_runtime = total_runtime + result.run_time;
+    }
+    printf("[cudnn kernel graph] Total runtime = %.4lfms\n", total_runtime);
   }
   kernel::Graph graph;
   kernel::DTensor Q =
       graph.new_input({16, 64, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
   kernel::DTensor K =
-      graph.new_input({16, 64, 512}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      graph.new_input({16, 64, 1024}, type::DT_FLOAT16, layout::DmemColumnMajor);
   kernel::DTensor V =
-      graph.new_input({16, 512, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      graph.new_input({16, 1024, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
   std::vector<kernel::DTensor> outputs;
   {
     threadblock::ExecutionPlan plan;
@@ -49,7 +56,7 @@ int main(int argc, char **argv) {
     };
     plan.output_map = {0, 2, -1};
     plan.forloop_dim = {-1, 2, 1};
-    plan.grid_dim = {16, 2, 1};
+    plan.grid_dim = {16, 4, 1};
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 4;
     outputs = graph.customized({Q, K, V}, plan);
@@ -82,9 +89,12 @@ int main(int argc, char **argv) {
   }
   assert(ref_graph.operators.back()->output_tensors[0].has_same_fingerprint(
       graph.operators.back()->output_tensors[0]));
-  // ProfileResult result;
-  // for (auto const &op : graph.operators) {
-  //   op->profile(result);
-  // }
+  ProfileResult result;
+  float total_ms = 0.0f;
+  for (auto const &op : graph.operators) {
+    op->profile(result);
+    total_ms = total_ms + result.run_time;
+  }
+  printf("[2 Block Graphs] Total runtime = %.4lfms\n", total_ms);
   return 0;
 }

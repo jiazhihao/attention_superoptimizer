@@ -32,12 +32,21 @@ bool KNMatmulOp::profile(ProfileResult &result) {
   void *A = input_tensors[0].data_ptr;
   void *B = input_tensors[1].data_ptr;
   void *C = output_tensors[0].data_ptr;
-  int row_A = input_tensors[0].dim[0];
-  int column_A = input_tensors[0].dim[1];
-  int row_B = input_tensors[1].dim[0];
-  int column_B = input_tensors[1].dim[1];
-  int row_C = output_tensors[0].dim[0];
-  int column_C = output_tensors[0].dim[1];
+  int num_dims = input_tensors[0].num_dims;
+  assert(input_tensors[1].num_dims == num_dims);
+  assert(output_tensors[0].num_dims == num_dims);
+  int batch = 1;
+  for (int i = 0; i < num_dims - 2; i++) {
+    assert(input_tensors[0].dim[i] == input_tensors[1].dim[i]);
+    assert(input_tensors[0].dim[i] == output_tensors[0].dim[i]);
+    batch *= input_tensors[0].dim[i];
+  }
+  int row_A = input_tensors[0].dim[num_dims-2];
+  int column_A = input_tensors[0].dim[num_dims-1];
+  int row_B = input_tensors[1].dim[num_dims-2];
+  int column_B = input_tensors[1].dim[num_dims-1];
+  int row_C = output_tensors[0].dim[num_dims-2];
+  int column_C = output_tensors[0].dim[num_dims-1];
   assert(column_A == row_B);
   assert(row_C == row_A);
   assert(column_C == column_B);
@@ -72,32 +81,63 @@ bool KNMatmulOp::profile(ProfileResult &result) {
   checkCUDA(cudaEventCreate(&events[0]));
   checkCUDA(cudaEventCreate(&events[1]));
   checkCUDA(cudaEventRecord(events[0]));
-  for (int i = 0; i < 16; i++) {
-    checkCUDA(cublasGemmEx(dmm->blas,
-                           trans_A,
-                           trans_B,
-                           row_C,
-                           column_C,
-                           column_A,
-                           &alpha,
-                           A,
-                           type_A,
-                           lda,
-                           B,
-                           type_B,
-                           ldb,
-                           &beta,
-                           C,
-                           type_C,
-                           ldc,
-                           compute_type,
-                           CUBLAS_GEMM_DEFAULT));
+  for (int i = 0; i < ProfileResult::NUM_ITERATIONS; i++) {
+    if (batch == 1) {
+      checkCUDA(cublasGemmEx(dmm->blas,
+                             trans_A,
+                             trans_B,
+                             row_C,
+                             column_C,
+                             column_A,
+                             &alpha,
+                             A,
+                             type_A,
+                             lda,
+                             B,
+                             type_B,
+                             ldb,
+                             &beta,
+                             C,
+                             type_C,
+                             ldc,
+                             compute_type,
+                             CUBLAS_GEMM_DEFAULT));  
+    } else {
+      int strideA = row_A * column_A;
+      int strideB = row_B * column_B;
+      int strideC = row_C * column_C;
+      checkCUDA(cublasGemmStridedBatchedEx(dmm->blas,
+                                           trans_A,
+                                           trans_B,
+                                           row_C,
+                                           column_C,
+                                           column_A,
+                                           &alpha,
+                                           A,
+                                           type_A,
+                                           lda,
+                                           strideA,
+                                           B,
+                                           type_B,
+                                           ldb,
+                                           strideB,
+                                           &beta,
+                                           C,
+                                           type_C,
+                                           ldc,
+                                           strideC,
+                                           batch,
+                                           compute_type,
+                                           CUBLAS_GEMM_DEFAULT));  
+
+    }
   }
   float runtime_ms = 0;
   checkCUDA(cudaEventRecord(events[1]));
   checkCUDA(cudaEventSynchronize(events[1]));
   checkCUDA(cudaEventElapsedTime(&runtime_ms, events[0], events[1]));
-  result.run_time = runtime_ms / 16;
+  result.run_time = runtime_ms / ProfileResult::NUM_ITERATIONS;
+  printf("BatchMatmul: runtime(%.8lfms)\n", result.run_time);
   checkCUDA(cudaEventDestroy(events[0]));
   checkCUDA(cudaEventDestroy(events[1]));
   return true;
