@@ -20,8 +20,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
 #add_subdirectory(deps/cutlass)
 
-set(CMAKE_CUDA_ARCHITECTURES 80 86)
-set(CUTLASS_NVCC_ARCHS "80;86")
+set(CMAKE_CUDA_ARCHITECTURES 80)
+set(CUTLASS_NVCC_ARCHS "80")
 
 file(GLOB_RECURSE ASO_SRCS
   src/*.cc
@@ -96,7 +96,7 @@ add_library(aso_runtime ${ASO_SRCS})
 set_target_properties(aso_runtime
   PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-set_target_properties(aso_runtime PROPERTIES CUDA_ARCHITECTURES "86")
+set_target_properties(aso_runtime PROPERTIES CUDA_ARCHITECTURES "80")
 
 
 target_compile_features(aso_runtime PUBLIC cxx_std_17)
