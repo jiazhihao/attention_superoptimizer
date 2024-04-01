@@ -45,7 +45,6 @@ __global__ void execute_elementbinary(aso::type::KNOperatorType type,
 }
 
 bool KNElementBinaryOp::profile(ProfileResult &result) {
-  // TODO: to be implemented
   assert(input_tensors[0].data_type == DT_FLOAT16);
   assert(input_tensors[1].data_type == DT_FLOAT16);
   assert(output_tensors[0].data_type == DT_FLOAT16);

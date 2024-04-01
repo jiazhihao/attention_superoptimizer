@@ -166,14 +166,14 @@ __global__ void
         __syncthreads();
       } else if (op_type == aso::type::TB_EXP_OP) {
         aso::threadblock::STensor input = params.smem_inputs[smem_input_idx];
-        aso::threadblock::STensor output = params.smem_outputs[smem_output_idx];
+        //aso::threadblock::STensor output = params.smem_outputs[smem_output_idx];
         // Assert inline
-        // assert(input.smem_offset == output.smem_offset);
+        //assert(input.smem_offset == output.smem_offset);
+        cutlass::half_t *base_ptr = (cutlass::half_t *)(smem_buffer + input.smem_offset);
         aso::threadblock::ElementUnaryExecutor<cutlass::half_t> executor(
-            params.operator_types[op],
-            smem_buffer,
-            input,
-            output,
+            op_type,
+            base_ptr,
+            input.num_elements(),
             threadIdx.x,
             blockDim.x);
         __syncthreads();
@@ -183,7 +183,7 @@ __global__ void
             params.smem_inputs[smem_input_idx + 1];
         aso::threadblock::STensor output = params.smem_outputs[smem_output_idx];
         aso::threadblock::ElementBinaryExecutor<cutlass::half_t> executor(
-            params.operator_types[op],
+            op_type,
             smem_buffer,
             input1,
             input2,

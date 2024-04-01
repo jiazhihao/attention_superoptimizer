@@ -29,14 +29,12 @@ class ElementUnaryExecutor {
 public:
   CUTLASS_DEVICE
   ElementUnaryExecutor(aso::type::TBOperatorType op_type,
-                       char *smem_buffer,
-                       STensor const &input,
-                       STensor const &output,
+                       ElementType *base_ptr,
+                       int num_elements,
                        int thread_id,
                        int num_threads) {
-    assert(input.smem_offset == output.smem_offset);
-    int num_elements = output.num_elements();
-    ElementType *base_ptr = (ElementType *)(smem_buffer + input.smem_offset);
+    //assert(input.smem_offset == output.smem_offset);
+    //int num_elements = output.num_elements();
     if (op_type == aso::type::TB_EXP_OP) {
       for (int i = thread_id; i < num_elements; i += num_threads) {
         base_ptr[thread_id] = cutlass::fast_exp(base_ptr[thread_id]);
