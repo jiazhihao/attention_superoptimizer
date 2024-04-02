@@ -24,6 +24,7 @@
 #include "aso/threadblock/serializer/input_loader_serializer.h"
 #include "aso/threadblock/serializer/output_saver_serializer.h"
 #include "aso/threadblock/serializer/matmul_serializer.h"
+#include "aso/threadblock/serializer/element_unary_serializer.h"
 #include "aso/threadblock/graph.h"
 #include "aso/utils/cuda_helper.h"
 #include "aso/warp/cuda/matmul.h"
@@ -136,15 +137,21 @@ __global__ void
             lane_idx);
         __syncthreads();
       } else if (op_type == aso::type::TB_EXP_OP) {
-        aso::threadblock::STensor input = params.smem_inputs[smem_input_idx];
+        int smem_offset, num_elements;
+        aso::threadblock::deserialize_elementunary_op_parameters(
+            new_params.parameters,
+            param_idx,
+            smem_offset,
+            num_elements);
+        //aso::threadblock::STensor input = params.smem_inputs[smem_input_idx];
         //aso::threadblock::STensor output = params.smem_outputs[smem_output_idx];
         // Assert inline
         //assert(input.smem_offset == output.smem_offset);
-        cutlass::half_t *base_ptr = (cutlass::half_t *)(smem_buffer + input.smem_offset);
+        cutlass::half_t *base_ptr = (cutlass::half_t *)(smem_buffer + smem_offset);
         aso::threadblock::ElementUnaryExecutor<cutlass::half_t> executor(
             op_type,
             base_ptr,
-            input.num_elements(),
+            num_elements,
             threadIdx.x,
             blockDim.x);
         __syncthreads();
@@ -414,19 +421,18 @@ __global__ void
           break;
         }
         case aso::type::TB_EXP_OP: {
-          aso::threadblock::STensor input = params.smem_inputs[smem_input_idx];
-          aso::threadblock::STensor output =
-              params.smem_outputs[smem_output_idx];
-          // Assert inline
-          assert(input.smem_offset == output.smem_offset);
-          // cutlass::half_t *input_ptr =
-          //     (cutlass::half_t *)(smem_buffer + input.smem_offset);
+          int smem_offset, num_elements;
+          aso::threadblock::deserialize_elementunary_op_parameters(
+              new_params.parameters,
+              param_idx,
+              smem_offset,
+              num_elements);
+          aso::type::FPType *base_ptr = (aso::type::FPType *)(smem_buffer + smem_offset);
           aso::threadblock::TBElementUnaryFingerPrinter fp(
-              params.operator_types[op],
+              new_params.operator_types[op],
               exp_lookup_table /*lookup_table*/,
-              smem_buffer,
-              input,
-              output,
+              base_ptr,
+              num_elements,
               threadIdx.x,
               blockDim.x);
           __syncthreads();
