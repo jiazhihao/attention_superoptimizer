@@ -201,12 +201,13 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
 
   if (verify(c, g)) {
     ++num_valid_kernel_graphs;
-    std::ofstream ofs;
-    ofs.open("generated_graphs.txt", std::ofstream::out | std::ofstream::app);
-    ofs << json(g) << std::endl;
-    ofs.close();
+    // std::ofstream ofs;
+    // ofs.open("generated_graphs.txt", std::ofstream::out | std::ofstream::app);
+    // ofs << json(g) << std::endl;
+    // ofs.close();
+    generated_graphs.push_back(json(g));
     update_best_graph(g);
-    // std::cerr << "kernel graph candidate: " << json(g) << std::endl;
+    std::cerr << "kernel graph candidate: " << json(g) << std::endl;
     callstack.pop_back();
     return;
   }
@@ -444,6 +445,8 @@ void KernelGraphGenerator::generate_kernel_graphs() {
 
   process_outputs();
   generate_next_kn_operator(c, g, 0);
+
+  save_checkpoint();
 
   printf("Total kernel graphs explored: %d\n", num_total_kernel_graphs);
   printf("Random tests performed: %d\n", num_total_random_tests);
@@ -721,6 +724,7 @@ void KernelGraphGenerator::save_checkpoint() const {
                         best_profile_result,
                         config,
                         callstack,
+                        generated_graphs,
                         num_total_kernel_graphs,
                         num_total_random_tests,
                         num_valid_kernel_graphs};
@@ -736,6 +740,7 @@ void KernelGraphGenerator::recovery_from_checkpoint(
   config = checkpoint.config;
   dim_strategy = DimStrategy(config);
   callstack = checkpoint.callstack;
+  generated_graphs = checkpoint.generated_graphs;
 
   num_total_kernel_graphs = checkpoint.num_total_kernel_graphs;
   num_total_random_tests = checkpoint.num_total_random_tests;
