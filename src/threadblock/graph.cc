@@ -15,6 +15,8 @@
 
 #include "aso/threadblock/graph.h"
 #include "aso/utils/hash_utils.h"
+#include "aso/threadblock/serializer/input_loader_serializer.h"
+#include "aso/threadblock/serializer/output_saver_serializer.h"
 
 namespace aso {
 namespace threadblock {
@@ -50,6 +52,189 @@ void Graph::free(std::vector<STensor> const &tensors) {
   for (int i = tensors.size() - 1; i >= 0; i--) {
     free(tensors[i]);
   }
+}
+
+NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
+  NewKernelParams params;
+  params.num_operators = operators.size();
+  params.num_parameters = 0;
+  params.num_dmem_inputs = 0;
+  params.num_dmem_outputs = 0;
+
+  assert(params.num_operators <= KernelParams::MAX_NUM_OPERATORS);
+  // Our serializer assumes that input loaders are the first operators
+  // and that output savers are the last operators
+  for (size_t i = 0; i < operators.size(); i++) {
+    params.operator_types[i] = operators[i]->op_type;
+    if (operators[i]->op_type == aso::type::TB_INPUT_OP) {
+      TBInputOp *input_op = static_cast<TBInputOp *>(operators[i]);
+      aso::kernel::DTensor dtensor = input_op->dtensor;
+      int3 input_map = input_op->input_map;
+      int forloop_dim = input_op->forloop_dim;
+      if (fingerprint) {
+        params.dmem_input_ptrs[params.num_dmem_inputs++] = input_op->dtensor.fp_ptr;
+      } else {
+        params.dmem_input_ptrs[params.num_dmem_inputs++] = input_op->dtensor.data_ptr;
+      }
+      // Serialize parameters for input loader
+      aso::threadblock::STensor stensor = operators[i]->output_tensors[0];
+      // Assert that stensor and dtensor have the same num of dims
+      int num_dims = stensor.num_dims;
+      assert(num_dims == dtensor.num_dims);
+      int2 dtensor_matrix_shape, stensor_matrix_shape;
+      dtensor_matrix_shape = {dtensor.dim[num_dims-2], dtensor.dim[num_dims-1]};
+      stensor_matrix_shape = {stensor.dim[num_dims-2], stensor.dim[num_dims-1]};
+      int input_smem_offset = stensor.smem_offset;
+      aso::layout::DmemLayout dtensor_layout = dtensor.layout;
+      aso::layout::SmemLayout stensor_layout = stensor.layout;
+      int3 input_matrix_row_offset_block_stride = {
+          (input_map.x == num_dims - 2 ? stensor.dim[num_dims - 2] : 0) *
+              (forloop_dim == num_dims - 2 ? this->forloop_range : 1),
+          (input_map.y == num_dims - 2 ? stensor.dim[num_dims - 2] : 0) *
+              (forloop_dim == num_dims - 2 ? this->forloop_range : 1),
+          (input_map.z == num_dims - 2 ? stensor.dim[num_dims - 2] : 0) *
+              (forloop_dim == num_dims - 2 ? this->forloop_range : 1)};
+      int3 input_matrix_column_offset_block_stride = {
+          (input_map.x == num_dims - 1 ? stensor.dim[num_dims - 1] : 0) *
+              (forloop_dim == num_dims - 1 ? this->forloop_range : 1),
+          (input_map.y == num_dims - 1 ? stensor.dim[num_dims - 1] : 0) *
+              (forloop_dim == num_dims - 1 ? this->forloop_range : 1),
+          (input_map.z == num_dims - 1 ? stensor.dim[num_dims - 1] : 0) *
+              (forloop_dim == num_dims - 1 ? this->forloop_range : 1)};
+      //int tb_offset_row = blockIdx.x * row_stride.x + blockIdx.y * row_stride.y +
+      //                    blockIdx.z * row_stride.z;
+      //int tb_offset_column = blockIdx.x * column_stride.x +
+      //                       blockIdx.y * column_stride.y +
+      //                       blockIdx.z * column_stride.z;
+      // FIXME: use cutlass prologue for loading data into shared memory
+      // examples/13_two_tensor_op_fusion/threadblock/
+      // b2b_mma_pipelined_smem_accumulator.h prologue iterators
+      // input_matrix_offset_base = {tb_offset_row, tb_offset_column};
+      int input_matrix_row_offset_forloop_stride = 0;
+      int input_matrix_column_offset_forloop_stride = 0;
+      if (forloop_dim == num_dims - 2) {
+        input_matrix_row_offset_forloop_stride = stensor.dim[num_dims - 2];
+      }
+      if (forloop_dim == num_dims - 1) {
+        input_matrix_column_offset_forloop_stride = stensor.dim[num_dims - 1];
+      }
+      // calculate global offset beyond the last two dimensions
+      // global_offset captures offsets caused by partitioning other
+      // dimensions such as batch matmul global_offset is directly added to
+      // dtensor.data_ptr by the input loader
+      int3 global_offset_block_stride = {0, 0, 0};
+      int global_offset_forloop_stride = 0;
+      if (num_dims > 2) {
+        int strides[MAX_TENSOR_DIMS];
+        strides[num_dims - 1] = 0;
+        strides[num_dims - 2] = 0;
+        strides[num_dims - 3] =
+            dtensor.dim[num_dims - 2] * dtensor.dim[num_dims - 1];
+        for (int j = num_dims - 4; j >= 0; j--) {
+          strides[j] = strides[j + 1] * dtensor.dim[j + 1];
+        }
+        if (input_map.x < num_dims - 2 && input_map.x >= 0) {
+          global_offset_block_stride.x = strides[input_map.x];
+        }
+        if (input_map.y < num_dims - 2 && input_map.y >= 0) {
+          global_offset_block_stride.y = strides[input_map.y];
+        }
+        if (input_map.z < num_dims - 2 && input_map.z >= 0) {
+          global_offset_block_stride.z = strides[input_map.z];
+        }
+        if (forloop_dim < num_dims - 2 && forloop_dim >= 0) {
+          global_offset_forloop_stride = stensor.dim[forloop_dim] * strides[forloop_dim];
+        }
+      } // if (num_dims > 2)
+      aso::threadblock::serialize_input_loader_parameters(
+         params.parameters,
+         params.num_parameters,
+         input_matrix_row_offset_block_stride,
+         input_matrix_column_offset_block_stride,
+         input_matrix_row_offset_forloop_stride,
+         input_matrix_column_offset_forloop_stride,
+         global_offset_block_stride,
+         global_offset_forloop_stride,
+         dtensor_matrix_shape,
+         stensor_matrix_shape,
+         dtensor_layout,
+         stensor_layout,
+         input_smem_offset);
+    } // if (operators[i]->op_type == aso::type::TB_INPUT_OP)
+    if (operators[i]->op_type == aso::type::TB_OUTPUT_OP) {
+      TBOutputOp *output_op = static_cast<TBOutputOp *>(operators[i]);
+      aso::kernel::DTensor dtensor = output_op->dtensor;
+      int3 output_map = output_op->output_map;
+      if (fingerprint) {
+        params.dmem_output_ptrs[params.num_dmem_outputs++] = output_op->dtensor.fp_ptr;
+      } else {
+        params.dmem_output_ptrs[params.num_dmem_outputs++] = output_op->dtensor.data_ptr;
+      }
+      // Serialize parameters for input loader
+      assert(operators[i]->input_tensors.size() == 1);
+      assert(operators[i]->output_tensors.size() == 1);
+      aso::threadblock::STensor input_stensor = operators[i]->input_tensors[0];
+      aso::threadblock::STensor accum_stensor = operators[i]->output_tensors[0];
+      // Assert that stensor and dtensor have the same num of dims
+      int num_dims = input_stensor.num_dims;
+      assert(num_dims == accum_stensor.num_dims);
+      assert(num_dims == dtensor.num_dims);
+      int2 dtensor_matrix_shape, stensor_matrix_shape;
+      dtensor_matrix_shape = {dtensor.dim[num_dims-2], dtensor.dim[num_dims-1]};
+      stensor_matrix_shape = {input_stensor.dim[num_dims-2], input_stensor.dim[num_dims-1]};
+      int input_smem_offset = input_stensor.smem_offset;
+      int accum_smem_offset = accum_stensor.smem_offset;
+      aso::layout::DmemLayout dtensor_layout = dtensor.layout;
+      aso::layout::SmemLayout stensor_layout = input_stensor.layout;
+      int3 output_matrix_row_offset_block_stride = {
+          output_map.x == num_dims - 2 ? input_stensor.dim[num_dims - 2] : 0,
+          output_map.y == num_dims - 2 ? input_stensor.dim[num_dims - 2] : 0,
+          output_map.z == num_dims - 2 ? input_stensor.dim[num_dims - 2] : 0};
+      int3 output_matrix_column_offset_block_stride = {
+          output_map.x == num_dims - 1 ? input_stensor.dim[num_dims - 1] : 0,
+          output_map.y == num_dims - 1 ? input_stensor.dim[num_dims - 1] : 0,
+          output_map.z == num_dims - 1 ? input_stensor.dim[num_dims - 1] : 0};
+      int3 global_offset_block_stride = {0, 0, 0};
+      if (num_dims > 2) {
+        int strides[MAX_TENSOR_DIMS];
+        strides[num_dims - 3] =
+            dtensor.dim[num_dims - 2] * dtensor.dim[num_dims - 1];
+        for (int j = num_dims - 4; j >= 0; j--) {
+          strides[j] = strides[j + 1] * dtensor.dim[j + 1];
+        }
+        if (output_map.x < num_dims - 2 && output_map.x >= 0) {
+          global_offset_block_stride.x = strides[output_map.x];
+        }
+        if (output_map.y < num_dims - 2 && output_map.y >= 0) {
+          global_offset_block_stride.y = strides[output_map.y];
+        }
+        if (output_map.z < num_dims - 2 && output_map.z >= 0) {
+          global_offset_block_stride.z = strides[output_map.z];
+        }
+      }
+      aso::threadblock::serialize_output_saver_parameters(
+          params.parameters,
+          params.num_parameters,
+          output_matrix_row_offset_block_stride,
+          output_matrix_column_offset_block_stride,
+          global_offset_block_stride,
+          dtensor_matrix_shape,
+          stensor_matrix_shape,
+          dtensor_layout,
+          stensor_layout,
+          input_smem_offset,
+          accum_smem_offset);
+    } // (operators[i]->op_type == aso::type::TB_OUTPUT_OP)
+  }
+  // Our serializer assumes that input loaders are the first operators
+  // and that output savers are the last operators
+  for (int i = 0; i < params.num_dmem_inputs; i++) {
+    assert(params.operator_types[i] == aso::type::TB_INPUT_OP);
+  }
+  for (int i = params.num_operators - params.num_dmem_outputs; i < params.num_operators; i++) {
+    assert(params.operator_types[i] == aso::type::TB_OUTPUT_OP);
+  }
+  return params;
 }
 
 KernelParams Graph::get_kernel_params() {
