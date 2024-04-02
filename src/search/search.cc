@@ -14,7 +14,8 @@ KernelGraphGenerator::KernelGraphGenerator(
     kernel::Graph const &computation_graph,
     GeneratorConfig const &config,
     char const *filename)
-    : computation_graph(computation_graph), config(config),
+    : computation_graph(computation_graph),
+      best_profile_result(ProfileResult::infinity()), config(config),
       dim_strategy(DimStrategy(config)), filename(filename),
       num_total_kernel_graphs(0), num_total_random_tests(0),
       num_valid_kernel_graphs(0) {}
@@ -656,11 +657,13 @@ void KernelGraphGenerator::optimize_layout(
     if (bts_idx >= (int)block_graph.operators[bop_idx]->output_tensors.size()) {
       optimize_layout(g, op_idx, ts_idx, bop_idx + 1, 0);
     }
-    for (layout::SmemLayout layout : get_valid_output_layout(block_graph.operators[bop_idx], bts_idx)) {
+    for (layout::SmemLayout layout :
+         get_valid_output_layout(block_graph.operators[bop_idx], bts_idx)) {
       block_graph.operators[bop_idx]->output_tensors[bts_idx].layout = layout;
       for (TBOperator *op : block_graph.operators) {
         for (STensor &stensor : op->input_tensors) {
-          if (stensor.guid == block_graph.operators[bop_idx]->output_tensors[bts_idx].guid) {
+          if (stensor.guid ==
+              block_graph.operators[bop_idx]->output_tensors[bts_idx].guid) {
             stensor.layout = layout;
           }
         }
@@ -674,7 +677,8 @@ void KernelGraphGenerator::optimize_layout(
     return;
   }
   if (ts_idx >= (int)g.operators[op_idx]->output_tensors.size()) {
-    if (g.operators[op_idx]->op_type == type::KNOperatorType::KN_CUSTOMIZED_OP) {
+    if (g.operators[op_idx]->op_type ==
+        type::KNOperatorType::KN_CUSTOMIZED_OP) {
       optimize_layout(g, op_idx, ts_idx, 0, 0);
     } else {
       optimize_layout(g, op_idx + 1, 0, bop_idx, bts_idx);
@@ -682,7 +686,8 @@ void KernelGraphGenerator::optimize_layout(
     return;
   }
 
-  for (layout::DmemLayout layout : {layout::DmemRowMajor/*, layout::DmemColumnMajor*/}) {
+  for (layout::DmemLayout layout :
+       {layout::DmemRowMajor /*, layout::DmemColumnMajor*/}) {
     g.operators[op_idx]->output_tensors[ts_idx].layout = layout;
     for (KNOperator *op : g.operators) {
       for (DTensor &dtensor : op->input_tensors) {
@@ -697,14 +702,14 @@ void KernelGraphGenerator::optimize_layout(
 
 void KernelGraphGenerator::update_best_graph(kernel::Graph &g) {
   std::cerr << "kernel graph candidate: " << json(g) << std::endl;
-  ProfileResult result;
+  ProfileResult result{0};
   for (auto op : g.operators) {
     ProfileResult op_result;
     op->profile(op_result);
     result.run_time += op_result.run_time;
   }
   if (result.run_time < best_profile_result.run_time) {
-    best_graph = g;
+    best_graph = json(g);
     best_profile_result = result;
   }
   return;

@@ -20,6 +20,8 @@ int main(int argc, char **argv) {
   ifs >> j;
   from_json(j, g);
 
+  std::cout << json(g) << std::endl;
+
   float run_time = 0;
   for (auto op : g.operators) {
     ProfileResult op_result;

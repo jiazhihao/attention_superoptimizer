@@ -45,7 +45,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LayerCheckpoint,
 
 struct Checkpoint {
   kernel::Graph computation_graph;
-  kernel::Graph best_graph;
+  json best_graph;
   ProfileResult best_profile_result;
   GeneratorConfig config;
   std::vector<LayerCheckpoint> callstack;
@@ -75,7 +75,7 @@ public:
   void generate_kernel_graphs();
 
   kernel::Graph computation_graph;
-  kernel::Graph best_graph;
+  json best_graph;
   ProfileResult best_profile_result;
 
   GeneratorConfig config;
