@@ -23,6 +23,7 @@
 #include "aso/threadblock/cuda/reduction.h"
 #include "aso/threadblock/serializer/input_loader_serializer.h"
 #include "aso/threadblock/serializer/output_saver_serializer.h"
+#include "aso/threadblock/serializer/matmul_serializer.h"
 #include "aso/threadblock/graph.h"
 #include "aso/utils/cuda_helper.h"
 #include "aso/warp/cuda/matmul.h"
@@ -115,11 +116,21 @@ __global__ void
         // is compiled as warp-uniform.
         int warp_idx = __shfl_sync(0xffffffff, threadIdx.x / 32, 0);
         int lane_idx = threadIdx.x % 32;
+        int m, n, k;
+        int A_smem_offset, B_smem_offset, C_smem_offset;
+        aso::threadblock::deserialize_matmul_op_parameters(
+            new_params.parameters,
+            param_idx,
+            m, n, k,
+            A_smem_offset, B_smem_offset, C_smem_offset);
+
+        cutlass::half_t *A_ptr = (cutlass::half_t *)(smem_buffer + A_smem_offset);
+        cutlass::half_t *B_ptr = (cutlass::half_t *)(smem_buffer + B_smem_offset);
+        cutlass::half_t *C_ptr = (cutlass::half_t *)(smem_buffer + C_smem_offset);
+
         aso::threadblock::GenericMatmulExecutor executor(
-            smem_buffer,
-            params.smem_inputs[smem_input_idx],
-            params.smem_inputs[smem_input_idx + 1],
-            params.smem_outputs[smem_output_idx],
+            A_ptr, B_ptr, C_ptr,
+            m, n, k,
             thread_idx,
             warp_idx,
             lane_idx);
@@ -383,11 +394,20 @@ __global__ void
           break;
         }
         case aso::type::TB_MATMUL_OP: {
+          int m, n, k;
+          int A_smem_offset, B_smem_offset, C_smem_offset;
+          aso::threadblock::deserialize_matmul_op_parameters(
+              new_params.parameters,
+              param_idx,
+              m, n, k,
+              A_smem_offset, B_smem_offset, C_smem_offset);
+          aso::type::FPType *A_ptr = (aso::type::FPType *)(smem_buffer + A_smem_offset);
+          aso::type::FPType *B_ptr = (aso::type::FPType *)(smem_buffer + B_smem_offset);
+          aso::type::FPType *C_ptr = (aso::type::FPType *)(smem_buffer + C_smem_offset);
+  
           aso::threadblock::TBMatmulFingerprinter fp(
-              smem_buffer,
-              params.smem_inputs[smem_input_idx],
-              params.smem_inputs[smem_input_idx + 1],
-              params.smem_outputs[smem_output_idx],
+              A_ptr, B_ptr, C_ptr,
+              m, n, k,
               threadIdx.x,
               blockDim.x);
           __syncthreads();

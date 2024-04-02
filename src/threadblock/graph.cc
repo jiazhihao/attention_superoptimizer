@@ -17,6 +17,7 @@
 #include "aso/utils/hash_utils.h"
 #include "aso/threadblock/serializer/input_loader_serializer.h"
 #include "aso/threadblock/serializer/output_saver_serializer.h"
+#include "aso/threadblock/serializer/matmul_serializer.h"
 
 namespace aso {
 namespace threadblock {
@@ -161,7 +162,7 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
          stensor_layout,
          input_smem_offset);
     } // if (operators[i]->op_type == aso::type::TB_INPUT_OP)
-    if (operators[i]->op_type == aso::type::TB_OUTPUT_OP) {
+    else if (operators[i]->op_type == aso::type::TB_OUTPUT_OP) {
       TBOutputOp *output_op = static_cast<TBOutputOp *>(operators[i]);
       aso::kernel::DTensor dtensor = output_op->dtensor;
       int3 output_map = output_op->output_map;
@@ -225,6 +226,33 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
           input_smem_offset,
           accum_smem_offset);
     } // (operators[i]->op_type == aso::type::TB_OUTPUT_OP)
+    else if (operators[i]->op_type == aso::type::TB_MATMUL_OP) {
+      assert(operators[i]->input_tensors.size() == 2);
+      assert(operators[i]->output_tensors.size() == 1);
+      aso::threadblock::STensor A = operators[i]->input_tensors[0];
+      aso::threadblock::STensor B = operators[i]->input_tensors[1];
+      aso::threadblock::STensor C = operators[i]->output_tensors[0];
+      int num_dims = A.num_dims;
+      assert(B.num_dims == num_dims);
+      assert(C.num_dims == num_dims);
+      // Currently do not support batch matmul in TB
+      for (int i = 0; i < num_dims - 2; i++) {
+        assert(A.dim[i] == 1);
+        assert(B.dim[i] == 1);
+        assert(C.dim[i] == 1);
+      }
+      int m = A.dim[num_dims-2];
+      int n = B.dim[num_dims-1];
+      int k = A.dim[num_dims-1];
+      assert(B.dim[num_dims-2] == k);
+      assert(C.dim[num_dims-2] == m);
+      assert(C.dim[num_dims-1] == n);
+      aso::threadblock::serialize_matmul_op_parameters(
+          params.parameters,
+          params.num_parameters,
+          m, n, k,
+          A.smem_offset, B.smem_offset, C.smem_offset);
+    } // (operators[i]->op_type == aso::type::TB_MATMUL_OP)
   }
   // Our serializer assumes that input loaders are the first operators
   // and that output savers are the last operators
