@@ -694,17 +694,19 @@ void calculate_warp_shape(
 class GenericMatmulExecutor {
 public:
   CUTLASS_DEVICE
-  GenericMatmulExecutor(char *smem_buffer,
-                        STensor const &A,
-                        STensor const &B,
-                        STensor const &C,
+  GenericMatmulExecutor(half_t* A_ptr,
+                        half_t* B_ptr,
+                        half_t* C_ptr,
+                        int m,
+                        int n,
+                        int k,
                         int thread_id,
                         int warp_id,
                         int lane_id) {
-    assert(A.num_dims == B.num_dims);
-    int m = A.dim[A.num_dims - 2];
-    int n = B.dim[B.num_dims - 1];
-    int k = A.dim[A.num_dims - 1];
+    //assert(A.num_dims == B.num_dims);
+    //int m = A.dim[A.num_dims - 2];
+    //int n = B.dim[B.num_dims - 1];
+    //int k = A.dim[A.num_dims - 1];
     using InstructionShape = gemm::GemmShape<16, 8, 16>;
     int warp_m = 0;
     int warp_n = 0;
@@ -731,9 +733,9 @@ public:
         // assert(A.layout == STensor::ROW_MAJOR &&
         //        B.layout == STensor::COLUMN_MAJOR &&
         //        "Layouts: mismatch between inputs and Executor.");
-        half_t *A_ptr = (half_t *)(smem_buffer + A.smem_offset);
-        half_t *B_ptr = (half_t *)(smem_buffer + B.smem_offset);
-        half_t *C_ptr = (half_t *)(smem_buffer + C.smem_offset);
+        //half_t *A_ptr = (half_t *)(smem_buffer + A.smem_offset);
+        //half_t *B_ptr = (half_t *)(smem_buffer + B.smem_offset);
+        //half_t *C_ptr = (half_t *)(smem_buffer + C.smem_offset);
 
         Executor executor({A_ptr, Executor::TensorRefA::Layout::packed({m, k})},
                           {B_ptr, Executor::TensorRefB::Layout::packed({k, n})},
@@ -791,27 +793,29 @@ public:
 class TBMatmulFingerprinter {
 public:
   CUTLASS_DEVICE
-  TBMatmulFingerprinter(char *smem_buffer,
-                        STensor const &A,
-                        STensor const &B,
-                        STensor const &C,
+  TBMatmulFingerprinter(FPType* A_ptr,
+                        FPType* B_ptr,
+                        FPType* C_ptr,
+                        int a_m_size,
+                        int c_n_size,
+                        int a_k_size,
                         int thread_id,
                         int num_threads) {
     // Note that we assume all tensors are in row-major layouts
     // when computing fingerprints
-    FPType *A_ptr = (FPType *)(smem_buffer + A.smem_offset);
-    FPType *B_ptr = (FPType *)(smem_buffer + B.smem_offset);
-    FPType *C_ptr = (FPType *)(smem_buffer + C.smem_offset);
-    int num_batches = 1;
-    for (int i = 0; i < C.num_dims - 2; i++) {
-      num_batches *= C.dim[i];
-    }
+    //FPType *A_ptr = (FPType *)(smem_buffer + A.smem_offset);
+    //FPType *B_ptr = (FPType *)(smem_buffer + B.smem_offset);
+    //FPType *C_ptr = (FPType *)(smem_buffer + C.smem_offset);
+    //int num_batches = 1;
+    //for (int i = 0; i < C.num_dims - 2; i++) {
+    //  num_batches *= C.dim[i];
+    //}
     // Do not support batch matmul in TB
-    assert(num_batches == 1);
-    int num_elements = (int)C.num_elements();
-    int c_n_size = C.dim[C.num_dims - 1];
-    int a_k_size = A.dim[A.num_dims - 1];
-    int b_n_size = B.dim[B.num_dims - 1];
+    //assert(num_batches == 1);
+    int num_elements = a_m_size * c_n_size;
+    //int c_n_size = C.dim[C.num_dims - 1];
+    //int a_k_size = A.dim[A.num_dims - 1];
+    int b_n_size = c_n_size;
     for (int i = thread_id; i < num_elements; i += num_threads) {
       uint32_t result = 0;
       int m = i / c_n_size;
@@ -822,7 +826,6 @@ public:
         result = (result + a_value * b_value) % FP_PQ;
         if (false && thread_id == 0) {
           printf("i(%d) block(%d %d %d) result(%d) a_value(%d) b_value(%d)"
-                 "A.smem_offset(%d) B.smem_offset(%d) C.smem_offset(%d)"
                  "n(%d) m(%d) k(%d) a_k_size(%d) b_n_size(%d) c_n_size(%d)\n",
                  i,
                  blockIdx.x,
@@ -831,9 +834,6 @@ public:
                  (int)result,
                  (int)a_value,
                  (int)b_value,
-                 A.smem_offset,
-                 B.smem_offset,
-                 C.smem_offset,
                  n,
                  m,
                  k,

@@ -101,24 +101,26 @@ template <typename ElementType>
 class SimpleRedunctionExecutor {
 public:
   CUTLASS_DEVICE
-  SimpleRedunctionExecutor(aso::type::TBOperatorType type,
-                           char *smem_buffer,
-                           STensor const &input,
-                           STensor const &output,
+  SimpleRedunctionExecutor(//aso::type::TBOperatorType type,
+                           ElementType *input_ptr,
+                           ElementType *output_ptr,
+                           int output_num_elements,
+                           int reduction_degree,
+                           int inner_range,
                            int thread_id,
                            int num_threads) {
     // int reduction_dim = aso::utils::get_reduction_dim(type);
     // int num_dims = output.num_dims;
-    ElementType *input_ptr = (ElementType *)(smem_buffer + input.smem_offset);
-    ElementType *output_ptr = (ElementType *)(smem_buffer + output.smem_offset);
+    //ElementType *input_ptr = (ElementType *)(smem_buffer + input.smem_offset);
+    //ElementType *output_ptr = (ElementType *)(smem_buffer + output.smem_offset);
 
-    int num_output_elements = output.num_elements();
-    int num_input_elements = input.num_elements();
+    //int num_output_elements = output.num_elements();
+    //int num_input_elements = input.num_elements();
     // int reduction_degree = num_input_elements / num_output_elements;
     perform_reduction<ElementType>(input_ptr,
                                    output_ptr,
-                                   num_input_elements,
-                                   num_output_elements,
+                                   output_num_elements * reduction_degree,
+                                   output_num_elements,
                                    num_threads);
   }
 };
@@ -127,11 +129,32 @@ class TBReductionFingerprinter {
 public:
   CUTLASS_DEVICE
   TBReductionFingerprinter(aso::type::TBOperatorType type,
-                           char *smem_buffer,
-                           STensor const &input,
-                           STensor const &output,
+                           FPType *input_ptr,
+                           FPType *output_ptr,
+                           int output_num_elements,
+                           int reduction_degree,
+                           int inner_range,
                            int thread_id,
                            int num_threads) {
+    // for a reduction_dim, inner_range is calculated as follows
+    // inner_range = 1;
+    // for (int i = reduction_dim; i < num_dims; i++)
+    //   inner_range *= output.dim[i]
+    // Note that the reduction_dim size itself is included in inner_range
+
+    // input position = (i / inner_range) * (inner_range * reduction_degree)
+    // + i % inner_range + k * inner_range
+    for (int i = thread_id; i < output_num_elements; i += num_threads) {
+      int pos = (i / inner_range) * (inner_range * reduction_degree)
+              + i % inner_range;
+      uint32_t result = 0;
+      for (int k = 0; k < reduction_degree; k++) {
+        result = (result + input_ptr[pos]) % FP_PQ;
+        pos += inner_range;
+      }
+      output_ptr[i] = result;
+    }
+#ifdef DEADCODE
     int reduction_dim = aso::utils::get_reduction_dim(type);
     int num_dims = output.num_dims;
     FPType *input_ptr = (FPType *)(smem_buffer + input.smem_offset);
@@ -169,6 +192,7 @@ public:
     } else {
       assert(false && "Unimplemented");
     }
+#endif
   };
 };
 
