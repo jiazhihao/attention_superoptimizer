@@ -20,6 +20,7 @@
 #include "aso/threadblock/serializer/matmul_serializer.h"
 #include "aso/threadblock/serializer/element_unary_serializer.h"
 #include "aso/threadblock/serializer/element_binary_serializer.h"
+#include "aso/threadblock/serializer/reduction_serializer.h"
 
 namespace aso {
 namespace threadblock {
@@ -307,7 +308,52 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
             input1.smem_offset, input2.smem_offset, output.smem_offset);
         break;
       }
-      default: {
+      case aso::type::TB_REDUCTION_0_OP:
+      case aso::type::TB_REDUCTION_1_OP:
+      case aso::type::TB_REDUCTION_2_OP:
+      case aso::type::TB_REDUCTION_0_TO_DIMX_OP:
+      case aso::type::TB_REDUCTION_1_TO_DIMX_OP:
+      case aso::type::TB_REDUCTION_2_TO_DIMX_OP:
+      {
+        assert(operators[i]->input_tensors.size() == 1);
+        assert(operators[i]->output_tensors.size() == 1);
+        aso::threadblock::STensor input = operators[i]->input_tensors[0];
+        aso::threadblock::STensor output = operators[i]->output_tensors[0];
+        aso::type::TBOperatorType type = operators[i]->op_type;
+        int reduction_dim = -1;
+        if (type >= aso::type::TB_REDUCTION_0_TO_DIMX_OP && type <= aso::type::TB_REDUCTION_2_TO_DIMX_OP) {
+          reduction_dim = type - aso::type::TB_REDUCTION_0_TO_DIMX_OP;
+        } else if (type >= aso::type::TB_REDUCTION_0_OP && type <= aso::type::TB_REDUCTION_2_OP) {
+          reduction_dim = type - aso::type::TB_REDUCTION_0_OP;
+        } else {
+          assert(false);
+        }
+        assert(input.num_dims == output.num_dims);
+        int reduction_degree = input.num_elements() / output.num_elements();
+        for (int i = 0; i < input.num_dims; i++) {
+          if (i != reduction_dim) {
+            assert(input.dim[i] == output.dim[i]);
+          } else {
+            assert(input.dim[i] == output.dim[i] * reduction_degree);
+          }
+        }
+        int inner_range = 1;
+        for (int i = reduction_dim; i < output.num_dims; i++) {
+          inner_range *= output.dim[i];
+        }
+        aso::threadblock::serialize_reduction_op_parameters(
+            params.parameters,
+            params.num_parameters,
+            (int) output.num_elements(),
+            reduction_degree,
+            inner_range,
+            input.smem_offset,
+            output.smem_offset);
+        break;
+      }
+      default:
+      {
+        assert(false && "Unsupported TB operator");
       }
     } // switch
   } // for-loop
