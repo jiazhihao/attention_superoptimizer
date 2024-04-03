@@ -25,6 +25,7 @@
 #include "aso/threadblock/serializer/output_saver_serializer.h"
 #include "aso/threadblock/serializer/matmul_serializer.h"
 #include "aso/threadblock/serializer/element_unary_serializer.h"
+#include "aso/threadblock/serializer/element_binary_serializer.h"
 #include "aso/threadblock/graph.h"
 #include "aso/utils/cuda_helper.h"
 #include "aso/warp/cuda/matmul.h"
@@ -156,16 +157,23 @@ __global__ void
             blockDim.x);
         __syncthreads();
       } else if (op_type == aso::type::TB_DIV_OP) {
-        aso::threadblock::STensor input1 = params.smem_inputs[smem_input_idx];
-        aso::threadblock::STensor input2 =
-            params.smem_inputs[smem_input_idx + 1];
-        aso::threadblock::STensor output = params.smem_outputs[smem_output_idx];
+        int3 input1_shape, input2_shape;
+        int input1_smem_offset, input2_smem_offset, output_smem_offset;
+        aso::threadblock::deserialize_elementbinary_op_parameters(
+            new_params.parameters,
+            param_idx,
+            input1_shape, input2_shape,
+            input1_smem_offset, input2_smem_offset, output_smem_offset);
+        cutlass::half_t* input1_ptr = (cutlass::half_t *)(smem_buffer + input1_smem_offset);
+        cutlass::half_t* input2_ptr = (cutlass::half_t *)(smem_buffer + input2_smem_offset);
+        cutlass::half_t* output_ptr = (cutlass::half_t *)(smem_buffer + output_smem_offset);
         aso::threadblock::ElementBinaryExecutor<cutlass::half_t> executor(
             op_type,
-            smem_buffer,
-            input1,
-            input2,
-            output,
+            input1_ptr,
+            input2_ptr,
+            output_ptr,
+            input1_shape,
+            input2_shape,
             threadIdx.x,
             blockDim.x);
         __syncthreads();
@@ -182,12 +190,7 @@ __global__ void
             blockDim.x);
         __syncthreads();
       } else {
-        // Assert the uncaptured operator must be output saver
-        // Only save outputs after forloop
-        // So we do nothing for output saver
-        // if (op_type != aso::type::TB_OUTPUT_OP) {
-        //  assert(false && "Unsupported threadblock operator");
-        //}
+        assert(false && "Unsupported threadblock operator");
       }
       // increment indices
       smem_input_idx += params.operator_num_inputs[op];
@@ -439,19 +442,25 @@ __global__ void
           break;
         }
         case aso::type::TB_DIV_OP: {
-          aso::threadblock::STensor input1 = params.smem_inputs[smem_input_idx];
-          aso::threadblock::STensor input2 =
-              params.smem_inputs[smem_input_idx + 1];
-          aso::threadblock::STensor output =
-              params.smem_outputs[smem_output_idx];
+          int3 input1_shape, input2_shape;
+          int input1_smem_offset, input2_smem_offset, output_smem_offset;
+          aso::threadblock::deserialize_elementbinary_op_parameters(
+              new_params.parameters,
+              param_idx,
+              input1_shape, input2_shape,
+              input1_smem_offset, input2_smem_offset, output_smem_offset);
+          aso::type::FPType *input1_ptr = (aso::type::FPType *)(smem_buffer + input1_smem_offset);
+          aso::type::FPType *input2_ptr = (aso::type::FPType *)(smem_buffer + input2_smem_offset);
+          aso::type::FPType *output_ptr = (aso::type::FPType *)(smem_buffer + output_smem_offset);
           aso::threadblock::TBElementBinaryFingerPrinter fp(
               params.operator_types[op],
               div_p_lookup_table /*div_p_lookup*/,
               div_q_lookup_table /*div_q_lookup*/,
-              smem_buffer,
-              input1,
-              input2,
-              output,
+              input1_ptr,
+              input2_ptr,
+              output_ptr,
+              input1_shape,
+              input2_shape,
               threadIdx.x,
               blockDim.x);
           __syncthreads();

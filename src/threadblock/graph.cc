@@ -19,6 +19,7 @@
 #include "aso/threadblock/serializer/output_saver_serializer.h"
 #include "aso/threadblock/serializer/matmul_serializer.h"
 #include "aso/threadblock/serializer/element_unary_serializer.h"
+#include "aso/threadblock/serializer/element_binary_serializer.h"
 
 namespace aso {
 namespace threadblock {
@@ -275,6 +276,35 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
             params.num_parameters,
             input.smem_offset,
             (int)input.num_elements());
+        break;
+      }
+      case aso::type::TB_DIV_OP:
+      {
+        assert(operators[i]->input_tensors.size() == 2);
+        assert(operators[i]->output_tensors.size() == 1);
+        aso::threadblock::STensor input1 = operators[i]->input_tensors[0];
+        aso::threadblock::STensor input2 = operators[i]->input_tensors[1];
+        aso::threadblock::STensor output = operators[i]->output_tensors[0];
+        int3 input1_shape = {1, 1, 1}, input2_shape = {1, 1, 1};
+        // assert that only the last three dimensions can be larger than 1
+        // since we only serialize these
+        for (int i = 0; i < input1.num_dims - 3; i++) {
+          assert(input1.dim[i] == 1);
+        }
+        for (int i = 0; i < input2.num_dims - 3; i++) {
+          assert(input2.dim[i] == 1);
+        }
+        input1_shape.z = input1.num_dims > 0 ? input1.dim[input1.num_dims - 1] : 1;
+        input1_shape.y = input1.num_dims > 1 ? input1.dim[input1.num_dims - 2] : 1;
+        input1_shape.x = input1.num_dims > 2 ? input1.dim[input1.num_dims - 3] : 1;
+        input2_shape.z = input2.num_dims > 0 ? input2.dim[input2.num_dims - 1] : 1;
+        input2_shape.y = input2.num_dims > 1 ? input2.dim[input2.num_dims - 2] : 1;
+        input2_shape.x = input2.num_dims > 2 ? input2.dim[input2.num_dims - 3] : 1;
+        aso::threadblock::serialize_elementbinary_op_parameters(
+            params.parameters,
+            params.num_parameters,
+            input1_shape, input2_shape,
+            input1.smem_offset, input2.smem_offset, output.smem_offset);
         break;
       }
       default: {
