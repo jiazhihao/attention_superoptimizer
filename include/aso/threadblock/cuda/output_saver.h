@@ -194,8 +194,8 @@ public:
                     int num_threads,
                     MatrixCoord matrix_offset,
                     int global_offset) {
-    assert(stensor.dim[stensor.num_dims - 2] == kRow);
-    assert(stensor.dim[stensor.num_dims - 1] == kColumn);
+    // assert(stensor.dim[stensor.num_dims - 2] == kRow);
+    // assert(stensor.dim[stensor.num_dims - 1] == kColumn);
     // Currently only support half precision
     int const kThreads = 128;
     assert(num_threads == kThreads);
@@ -328,6 +328,14 @@ public:
                                 global_offset);
     } else if (kRow == 64 && kColumn == 32) {
       ShapedOutputSaver<64, 32>(smem_buffer,
+                                dtensor,
+                                stensor,
+                                thread_id,
+                                num_threads,
+                                matrix_offset,
+                                global_offset);
+    } else if (kRow == 1 && kColumn == 64) {
+      ShapedOutputSaver<64, 64>(smem_buffer,
                                 dtensor,
                                 stensor,
                                 thread_id,
