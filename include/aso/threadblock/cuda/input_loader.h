@@ -337,7 +337,7 @@ public:
                                 num_threads,
                                 matrix_offset,
                                 global_offset);
-    } else if (kRow == 16 && kColumn == 64) {
+    } else if (kRow <= 16 && kColumn == 64) {
       ShapedInputLoader<16, 64>(dtensor_ptr,
                                 stensor_ptr,
                                 dtensor_matrix_shape,
@@ -347,19 +347,11 @@ public:
                                 num_threads,
                                 matrix_offset,
                                 global_offset);
-    } else if (kRow == 1 && kColumn == 64) {
-      ShapedInputLoader<64, 64>(smem_buffer,
-                                dtensor,
-                                stensor,
-                                thread_id,
-                                num_threads,
-                                matrix_offset,
-                                global_offset);
     } else {
-      // if (threadIdx.x == 0 && blockIdx.x == 0) {
-      //   printf("kRow = %d kColumn = %d\n", kRow, kColumn);
-      // }
-      assert(false && "Unimplemented");
+      //if (threadIdx.x == 0 && blockIdx.x == 0) {
+      //  printf("kRow = %d kColumn = %d\n", kRow, kColumn);
+      //}
+      //assert(false && "Unimplemented");
     }
   }
 };
