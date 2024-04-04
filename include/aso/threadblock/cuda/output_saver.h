@@ -342,6 +342,14 @@ public:
                                 num_threads,
                                 matrix_offset,
                                 global_offset);
+    } else if (kRow == 1 && kColumn == 64) {
+      ShapedOutputSaver<64, 64>(smem_buffer,
+                                dtensor,
+                                stensor,
+                                thread_id,
+                                num_threads,
+                                matrix_offset,
+                                global_offset);
     }
   }
 };

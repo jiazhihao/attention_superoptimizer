@@ -306,128 +306,87 @@ public:
   }
 };
 
-template <typename ThreadBlockShape,
-          typename ThreadShape,
+template <typename ThreadShape,
           typename ElementType,
           typename SmemLayoutA,
           typename SmemLayoutB,
           typename SmemLayoutC>
 class GemvExecutorV0 {
 public:
-  using Core =
-      typename cutlass::gemm::threadblock::DefaultGemvCore<ThreadBlockShape,
-                                                           ThreadShape,
-                                                           ElementType,
-                                                           SmemLayoutA,
-                                                           ElementType,
-                                                           SmemLayoutB,
-                                                           ElementType,
-                                                           SmemLayoutC>;
-  using Operator = typename Core::Operator;
-
-  /// Iterates over A in global memory
-  using IteratorA = typename Core::IteratorA;
-
-  /// Iterates over B in global memory
-  using IteratorB = typename Core::IteratorB;
-
-  /// Fragment of operand C loaded from global memory
-  using IteratorC = typename Core::IteratorC;
-
-  using LayoutCD = SmemLayoutC;
-
-  /// Policy for the iterator that reads/writes C/D
-  using IteratorPolicyCD = typename cutlass::platform::conditional<
-      cutlass::platform::is_same<LayoutCD, cutlass::layout::RowMajor>::value,
-      cutlass::transform::PitchLinearTilePolicyStripminedThreadContiguous<
-          cutlass::layout::PitchLinearShape<ThreadBlockShape::kN,
-                                            ThreadBlockShape::kM>,
-          Core::kThreadsPerN,
-          ThreadShape::kN>,
-      cutlass::transform::PitchLinearTilePolicyStripminedThreadStrided<
-          cutlass::layout::PitchLinearShape<ThreadBlockShape::kM,
-                                            ThreadBlockShape::kN>,
-          Core::kThreadsPerN,
-          ThreadShape::kM>>::type;
-
-  /// Iterator that reads/writes C/D
-  using IteratorCD = cutlass::transform::threadblock::PredicatedTileIterator<
-      cutlass::MatrixShape<ThreadBlockShape::kM, ThreadBlockShape::kN>,
-      ElementType,
-      LayoutCD,
-      0,
-      IteratorPolicyCD>;
-
-  /// Fragment of operand A loaded from global memory
-  using FragmentA = typename IteratorA::Fragment;
-
-  /// Fragment of operand B loaded from global memory
-  using FragmentB = typename IteratorB::Fragment;
-
-  /// Fragment of operand accumulator loaded/stored to global memory
-  using FragmentC = typename Operator::FragmentC;
-
-  using Params_A = typename IteratorA::Params;
-  using Params_B = typename IteratorB::Params;
-
-  using TensorRefA = typename IteratorA::TensorRef;
-  using TensorRefB = typename IteratorB::TensorRef;
-  using TensorRefC = typename IteratorCD::TensorRef;
-
-  FragmentC accum;
-  IteratorA iterator_A;
-  IteratorB iterator_B;
-  int gemm_k;
+  int k_dim;
+  using Mma = cutlass::arch::Mma<gemm::GemmShape<1, 2, 1>,
+                                 1,
+                                 ElementType,
+                                 SmemLayoutA,
+                                 ElementType,
+                                 SmemLayoutB,
+                                 ElementType,
+                                 SmemLayoutC,
+                                 arch::OpMultiplyAdd>;
 
   CUTLASS_DEVICE
-  GemvExecutorV0(TensorRefA const &ref_A,
-                 TensorRefB const &ref_B,
-                 TensorRefC const &ref_C,
+  GemvExecutorV0(ElementType const *A_ptr,
+                 ElementType const *B_ptr,
+                 ElementType *C_ptr,
                  int m,
                  int n,
                  int k,
                  int thread_idx,
                  int warp_idx,
                  int lane_idx)
-      : iterator_A(Params_A(ref_A.layout()), ref_A.data(), {1, k}, 0, {0, 0}),
-        iterator_B(
-            Params_B(ref_B.layout()), ref_B.data(), {k, n}, thread_idx, {0, 0}),
-        gemm_k(k) {}
-  CUTLASS_DEVICE
-  void execute_kernel(void) {
-    FragmentA frag_A;
-    FragmentB frag_B;
-    frag_A.clear();
-    frag_B.clear();
+      : k_dim(k) {
+    // assume no batch now
+    Mma mma;
+    int gemm_k = k_dim;
+    __half *ptr_D =
+        reinterpret_cast<__half *>(C_ptr + thread_idx * ThreadShape::kK);
 
-    iterator_A.load(frag_A);
-    iterator_B.load(frag_B);
-    ++iterator_A;
-    ++iterator_B;
-
-    //
-    // Mainloop
-    //
-    Operator thread_mma;
-
-    if (gemm_k < ThreadBlockShape::kK) {
-      iterator_A.clear_mask();
-      iterator_B.clear_mask();
-    }
-
-    // iterate over K to accumulate result
     CUTLASS_GEMM_LOOP
-    for (; gemm_k > 0; gemm_k -= ThreadBlockShape::kK) {
-      thread_mma(accum, frag_A, frag_B, accum);
+    for (; gemm_k > 0; gemm_k -= ThreadShape::kK) {
+      __half const *ptr_A = reinterpret_cast<__half const *>(
+          A_ptr + ((k_dim - gemm_k)) / 2 * ThreadShape::kK);
+      __half const *ptr_B = reinterpret_cast<__half const *>(
+          B_ptr + ((k_dim - gemm_k)) / 2 * ThreadShape::kK +
+          thread_idx * 2 * k_dim);
 
-      iterator_A.load(frag_A);
-      iterator_B.load(frag_B);
-      ++iterator_A;
-      ++iterator_B;
+      CUTLASS_PRAGMA_UNROLL
+      for (auto k = 0; k < ThreadShape::kK / Mma::Shape::kK; k++) {
 
-      if (gemm_k < ThreadBlockShape::kK) {
-        iterator_A.clear_mask();
-        iterator_B.clear_mask();
+        CUTLASS_PRAGMA_UNROLL
+        for (auto n = 0; n < ThreadShape::kN / Mma::Shape::kN; n++) {
+
+          CUTLASS_PRAGMA_UNROLL
+          for (auto m = 0; m < ThreadShape::kM / Mma::Shape::kM; m++) {
+
+            __half2 const &A = __half2half2(ptr_A[m * ThreadShape::kK + k]);
+            __half2 B =
+                __halves2half2(ptr_B[2 * n * ThreadShape::kK + k],
+                               ptr_B[2 * n * ThreadShape::kK + k + k_dim]);
+            __half2 const &C =
+                __halves2half2(ptr_D[m * ThreadShape::kN / 2 + n],
+                               ptr_D[m * ThreadShape::kN / 2 + n + 1]);
+
+            __half2 D = __hfma2(A, B, C);
+
+            ptr_D[m * ThreadShape::kN / 2 + n] = __low2half(D);
+            ptr_D[m * ThreadShape::kN / 2 + n + 1] = __high2half(D);
+
+            if (false && threadIdx.x == 0) {
+              printf("--------A----%d %f %f\n",
+                     threadIdx.x,
+                     (float)(__low2half(A)),
+                     (float)(__high2half(A)));
+
+              printf("-------B-----%d %f %f %d %d\n",
+                     threadIdx.x,
+                     (float)__low2half(B),
+                     (float)__high2half(B),
+                     ((k_dim - gemm_k)) / 2 * ThreadShape::kK +
+                         thread_idx * 2 * k_dim,
+                     thread_idx * ThreadShape::kK);
+            }
+          }
+        }
       }
     }
   }
@@ -757,10 +716,12 @@ public:
     int m = A.dim[0];
     int n = B.dim[1];
     int k = A.dim[1];
-    using ThreadBlockShape = cutlass::gemm::GemmShape<1, 64, 4>;
-    using ThreadShape = cutlass::gemm::GemmShape<1, 4, 4>;
-    using Executor = GemvExecutorV0<ThreadBlockShape,
-                                    ThreadShape,
+
+    // currently consider batch_size == 1
+    assert(m == 1);
+    using ThreadShape = cutlass::gemm::GemmShape<1, 2, 2>;
+
+    using Executor = GemvExecutorV0<ThreadShape,
                                     half_t,
                                     cutlass::layout::RowMajor,
                                     cutlass::layout::ColumnMajor,
@@ -769,16 +730,8 @@ public:
     half_t *B_ptr = (half_t *)(smem_buffer + B.smem_offset);
     half_t *C_ptr = (half_t *)(smem_buffer + C.smem_offset);
 
-    Executor executor({A_ptr, Executor::TensorRefA::Layout::packed({m, k})},
-                      {B_ptr, Executor::TensorRefB::Layout::packed({k, n})},
-                      {C_ptr, Executor::TensorRefC::Layout::packed({m, n})},
-                      m,
-                      n,
-                      k,
-                      thread_id,
-                      warp_id,
-                      lane_id);
-    executor.execute_kernel();
+    Executor executor(
+        A_ptr, B_ptr, C_ptr, m, n, k, thread_id, warp_id, lane_id);
   }
 };
 
