@@ -48,23 +48,22 @@ public:
   CUTLASS_DEVICE
   TBElementUnaryFingerPrinter(aso::type::TBOperatorType type,
                               FPType *exp_lookup_table,
-                              char *smem_buffer,
-                              STensor const &input,
-                              STensor const &output,
+                              FPType *base_ptr,
+                              int num_elements,
                               int thread_id,
                               int num_threads) {
     // Assert inplace
-    assert(input.smem_offset == output.smem_offset);
-    FPType *ptr = (FPType *)(smem_buffer + input.smem_offset);
-    int num_elements = output.num_elements();
+    //assert(input.smem_offset == output.smem_offset);
+    //FPType *ptr = (FPType *)(smem_buffer + input.smem_offset);
+    //int num_elements = output.num_elements();
     if (type == aso::type::TB_EXP_OP) {
       for (int i = thread_id; i < num_elements; i += num_threads) {
-        FPType input = ptr[i];
+        FPType input = base_ptr[i];
         // FPType p_residual = input % FP_P;
         FPType q_residual = input % FP_Q;
         uint32_t result = exp_lookup_table[q_residual];
         result = (result * FP_Q_MUL_P_MOD_1) % FP_PQ;
-        ptr[i] = result;
+        base_ptr[i] = result;
       }
     } else {
       assert(false && "Unimplemented");

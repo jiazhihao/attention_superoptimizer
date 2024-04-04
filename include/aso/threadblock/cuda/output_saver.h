@@ -187,112 +187,110 @@ template <int kRow, int kColumn>
 class ShapedOutputSaver {
 public:
   CUTLASS_DEVICE
-  ShapedOutputSaver(char *smem_buffer,
-                    aso::kernel::DTensor const &dtensor,
-                    aso::threadblock::STensor const &stensor,
+  ShapedOutputSaver(void *dtensor_ptr,
+                    void *stensor_ptr,
+                    int2 dtensor_matrix_shape,
+                    aso::layout::DmemLayout dlayout,
+                    aso::layout::SmemLayout slayout,
                     int thread_id,
                     int num_threads,
                     MatrixCoord matrix_offset,
                     int global_offset) {
-    // assert(stensor.dim[stensor.num_dims - 2] == kRow);
-    // assert(stensor.dim[stensor.num_dims - 1] == kColumn);
+    //assert(stensor.dim[stensor.num_dims - 2] == kRow);
+    //assert(stensor.dim[stensor.num_dims - 1] == kColumn);
     // Currently only support half precision
     int const kThreads = 128;
-    assert(num_threads == kThreads);
-    assert(stensor.data_type == aso::type::DT_FLOAT16);
-    assert(dtensor.data_type == aso::type::DT_FLOAT16);
+    //assert(num_threads == kThreads);
+    //assert(stensor.data_type == aso::type::DT_FLOAT16);
+    //assert(dtensor.data_type == aso::type::DT_FLOAT16);
     MatrixCoord extent(
-        {dtensor.dim[stensor.num_dims - 2], dtensor.dim[stensor.num_dims - 1]});
-    if (dtensor.layout == aso::layout::DmemRowMajor) {
+        {dtensor_matrix_shape.x, dtensor_matrix_shape.y});
+    if (dlayout == aso::layout::DmemRowMajor) {
       using DmemLayout = cutlass::layout::RowMajor;
-      switch (stensor.layout) {
-        case aso::layout::SmemRowMajor: {
-          using SmemLayout = cutlass::layout::RowMajor;
-          using OutputSaver = RowMajorOutputSaver<cutlass::half_t,
-                                                  kRow,
-                                                  kColumn,
-                                                  kThreads,
-                                                  DmemLayout,
-                                                  SmemLayout>;
-          OutputSaver loader(
-              ((cutlass::half_t *)dtensor.data_ptr) + global_offset,
-              (cutlass::half_t *)(stensor.smem_offset + smem_buffer),
-              extent,
-              thread_id,
-              matrix_offset);
-          loader.execute_kernel();
-          break;
-        }
-        case aso::layout::SmemRowMajorTensorOpMultiplicand_Crosswise16:
-        case aso::layout::SmemRowMajorTensorOpMultiplicand_Crosswise32:
-        case aso::layout::SmemRowMajorTensorOpMultiplicand_Crosswise64: {
-          using SmemLayout = cutlass::layout::
-              RowMajorTensorOpMultiplicandCrosswise<16 /*bits*/, kColumn>;
-          using OutputSaver = RowMajorOutputSaver<cutlass::half_t,
-                                                  kRow,
-                                                  kColumn,
-                                                  kThreads,
-                                                  DmemLayout,
-                                                  SmemLayout>;
-          OutputSaver loader(
-              ((cutlass::half_t *)dtensor.data_ptr) + global_offset,
-              (cutlass::half_t *)(stensor.smem_offset + smem_buffer),
-              extent,
-              thread_id,
-              matrix_offset);
-          loader.execute_kernel();
-          break;
-        }
-        default: {
-          printf("smem layout = %d\n", stensor.layout);
-          assert(false && "Unsupported smem layout");
-        }
+      if (slayout == aso::layout::SmemRowMajor) {
+        using SmemLayout = cutlass::layout::RowMajor;
+        using OutputSaver = RowMajorOutputSaver<cutlass::half_t,
+                                                kRow,
+                                                kColumn,
+                                                kThreads,
+                                                DmemLayout,
+                                                SmemLayout>;
+        OutputSaver saver(
+            ((cutlass::half_t *)dtensor_ptr) + global_offset,
+            (cutlass::half_t *)stensor_ptr,
+            extent,
+            thread_id,
+            matrix_offset);
+        saver.execute_kernel();
+      } else if (
+        slayout ==
+            aso::layout::SmemRowMajorTensorOpMultiplicand_Crosswise16 ||
+        slayout ==
+            aso::layout::SmemRowMajorTensorOpMultiplicand_Crosswise32 ||
+        slayout ==
+            aso::layout::SmemRowMajorTensorOpMultiplicand_Crosswise64) {
+        using SmemLayout = cutlass::layout::
+            RowMajorTensorOpMultiplicandCrosswise<16 /*bits*/, kColumn>;
+        using OutputSaver = RowMajorOutputSaver<cutlass::half_t,
+                                                kRow,
+                                                kColumn,
+                                                kThreads,
+                                                DmemLayout,
+                                                SmemLayout>;
+        OutputSaver saver(
+            ((cutlass::half_t *)dtensor_ptr) + global_offset,
+            (cutlass::half_t *)stensor_ptr,
+            extent,
+            thread_id,
+            matrix_offset);
+        saver.execute_kernel();
+      } else {
+        printf("smem layout = %d\n", slayout);
+        assert(false && "Unsupported smem layout");
       }
     } else {
-      assert(dtensor.layout == aso::layout::DmemColumnMajor);
+      assert(dlayout == aso::layout::DmemColumnMajor);
       using DmemLayout = cutlass::layout::ColumnMajor;
-      switch (stensor.layout) {
-        case aso::layout::SmemColumnMajor: {
-          using SmemLayout = cutlass::layout::ColumnMajor;
-          using OutputSaver = ColumnMajorOutputSaver<cutlass::half_t,
-                                                     kRow,
-                                                     kColumn,
-                                                     kThreads,
-                                                     DmemLayout,
-                                                     SmemLayout>;
-          OutputSaver loader(
-              ((cutlass::half_t *)dtensor.data_ptr) + global_offset,
-              (cutlass::half_t *)(stensor.smem_offset + smem_buffer),
-              extent,
-              thread_id,
-              matrix_offset);
-          loader.execute_kernel();
-          break;
-        }
-        case aso::layout::SmemColumnMajorTensorOpMultiplicand_Crosswise16:
-        case aso::layout::SmemColumnMajorTensorOpMultiplicand_Crosswise32:
-        case aso::layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64: {
-          using SmemLayout = cutlass::layout::
-              ColumnMajorTensorOpMultiplicandCrosswise<16 /*bits*/, kRow>;
-          using OutputSaver = ColumnMajorOutputSaver<cutlass::half_t,
-                                                     kRow,
-                                                     kColumn,
-                                                     kThreads,
-                                                     DmemLayout,
-                                                     SmemLayout>;
-          OutputSaver saver(
-              ((cutlass::half_t *)dtensor.data_ptr) + global_offset,
-              (cutlass::half_t *)(stensor.smem_offset + smem_buffer),
-              extent,
-              thread_id,
-              matrix_offset);
-          saver.execute_kernel();
-          break;
-        }
-        default: {
-          printf("smem layout = %d\n", stensor.layout);
-          assert(false && "Unsupported smem layout");
-        }
+      if (slayout == aso::layout::SmemColumnMajor) {
+        using SmemLayout = cutlass::layout::ColumnMajor;
+        using OutputSaver = ColumnMajorOutputSaver<cutlass::half_t,
+                                                   kRow,
+                                                   kColumn,
+                                                   kThreads,
+                                                   DmemLayout,
+                                                   SmemLayout>;
+        OutputSaver saver(
+            ((cutlass::half_t *)dtensor_ptr) + global_offset,
+            (cutlass::half_t *)stensor_ptr,
+            extent,
+            thread_id,
+            matrix_offset);
+        saver.execute_kernel();
+      } else if (
+          slayout ==
+              aso::layout::SmemColumnMajorTensorOpMultiplicand_Crosswise16 ||
+          slayout ==
+              aso::layout::SmemColumnMajorTensorOpMultiplicand_Crosswise32 ||
+          slayout ==
+              aso::layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64) {
+        using SmemLayout = cutlass::layout::
+            ColumnMajorTensorOpMultiplicandCrosswise<16 /*bits*/, kRow>;
+        using OutputSaver = ColumnMajorOutputSaver<cutlass::half_t,
+                                                   kRow,
+                                                   kColumn,
+                                                   kThreads,
+                                                   DmemLayout,
+                                                   SmemLayout>;
+        OutputSaver saver(
+            ((cutlass::half_t *)dtensor_ptr) + global_offset,
+            (cutlass::half_t *)stensor_ptr,
+            extent,
+            thread_id,
+            matrix_offset);
+        saver.execute_kernel();
+      } else {
+        printf("smem layout = %d\n", slayout);
+        assert(false && "Unsupported smem layout");
       }
     }
   }
@@ -301,35 +299,45 @@ public:
 class GenericOutputSaver {
 public:
   CUTLASS_DEVICE
-  GenericOutputSaver(char *smem_buffer,
-                     aso::kernel::DTensor const &dtensor,
-                     aso::threadblock::STensor const &stensor,
+  GenericOutputSaver(void* dtensor_ptr,
+                     void* stensor_ptr,
+                     int2 dtensor_matrix_shape,
+                     int2 stensor_matrix_shape,
+                     aso::layout::DmemLayout dtensor_layout,
+                     aso::layout::SmemLayout stensor_layout,
                      int thread_id,
                      int num_threads,
                      MatrixCoord matrix_offset,
                      int global_offset) {
-    int kRow = stensor.dim[stensor.num_dims - 2];
-    int kColumn = stensor.dim[stensor.num_dims - 1];
+    int kRow = stensor_matrix_shape.x;
+    int kColumn = stensor_matrix_shape.y;
+
     if (kRow == 64 && kColumn == 64) {
-      ShapedOutputSaver<64, 64>(smem_buffer,
-                                dtensor,
-                                stensor,
+      ShapedOutputSaver<64, 64>(dtensor_ptr,
+                                stensor_ptr,
+                                dtensor_matrix_shape,
+                                dtensor_layout,
+                                stensor_layout,
                                 thread_id,
                                 num_threads,
                                 matrix_offset,
                                 global_offset);
     } else if (kRow == 32 && kColumn == 64) {
-      ShapedOutputSaver<32, 64>(smem_buffer,
-                                dtensor,
-                                stensor,
+      ShapedOutputSaver<32, 64>(dtensor_ptr,
+                                stensor_ptr,
+                                dtensor_matrix_shape,
+                                dtensor_layout,
+                                stensor_layout,
                                 thread_id,
                                 num_threads,
                                 matrix_offset,
                                 global_offset);
     } else if (kRow == 64 && kColumn == 32) {
-      ShapedOutputSaver<64, 32>(smem_buffer,
-                                dtensor,
-                                stensor,
+      ShapedOutputSaver<64, 32>(dtensor_ptr,
+                                stensor_ptr,
+                                dtensor_matrix_shape,
+                                dtensor_layout,
+                                stensor_layout,
                                 thread_id,
                                 num_threads,
                                 matrix_offset,
@@ -349,33 +357,34 @@ public:
 class TBOutputAccumFingerprinter {
 public:
   CUTLASS_DEVICE
-  TBOutputAccumFingerprinter(char *smem_buffer,
-                             aso::threadblock::STensor const &input,
-                             aso::threadblock::STensor const &output,
+  TBOutputAccumFingerprinter(aso::type::FPType* input_ptr,
+                             aso::type::FPType* output_ptr,
+                             int2 stensor_matrix_shape,
                              bool is_first_loop,
                              int thread_id,
                              int num_threads) {
-    aso::type::FPType *input_ptr =
-        (aso::type::FPType *)(input.smem_offset + smem_buffer);
-    aso::type::FPType *output_ptr =
-        (aso::type::FPType *)(output.smem_offset + smem_buffer);
-    int num_elements = (int)input.num_elements();
+    //aso::type::FPType *input_ptr =
+    //    (aso::type::FPType *)(input.smem_offset + smem_buffer);
+    //aso::type::FPType *output_ptr =
+    //    (aso::type::FPType *)(output.smem_offset + smem_buffer);
+    //int num_elements = (int)input.num_elements();
+    int num_elements = stensor_matrix_shape.x * stensor_matrix_shape.y;
     if (is_first_loop) {
       for (int idx = thread_id; idx < num_elements; idx += num_threads) {
         output_ptr[idx] = input_ptr[idx];
       }
-      if (thread_id == 0) {
+      //if (thread_id == 0) {
         // printf("Accumu(0): block(%d %d %d) output(%d) input(%d)\n",
         //        blockIdx.x,
         //        blockIdx.y,
         //        blockIdx.z,
         //        output_ptr[thread_id],
         //        input_ptr[thread_id]);
-      }
+      //}
     } else {
       for (int idx = thread_id; idx < num_elements; idx += num_threads) {
         uint32_t value = input_ptr[idx];
-        if (thread_id == 0) {
+        //if (thread_id == 0) {
           // printf("Accumu(1): block(%d %d %d) output_old(%d) input(%d) "
           //        "output_new(%d)\n",
           //        blockIdx.x,
@@ -384,7 +393,7 @@ public:
           //        output_ptr[thread_id],
           //        input_ptr[thread_id],
           //        (value + output_ptr[idx]) % FP_PQ);
-        }
+        //}
         output_ptr[idx] = (value + output_ptr[idx]) % FP_PQ;
       }
     }
@@ -394,19 +403,21 @@ public:
 class TBOutputSaverFingerprinter {
 public:
   CUTLASS_DEVICE
-  TBOutputSaverFingerprinter(char *smem_buffer,
-                             aso::kernel::DTensor const &dtensor,
-                             aso::threadblock::STensor const &stensor,
+  TBOutputSaverFingerprinter(aso::type::FPType* dtensor_ptr,
+                             aso::type::FPType* stensor_ptr,
+                             int2 dtensor_matrix_shape,
+                             int2 stensor_matrix_shape,
+                             aso::layout::DmemLayout dtensor_layout,
+                             aso::layout::SmemLayout stensor_layout,
                              int thread_id,
                              int num_threads,
                              MatrixCoord matrix_offset,
                              int global_offset) {
-    aso::type::FPType *smem_ptr =
-        (aso::type::FPType *)(stensor.smem_offset + smem_buffer);
-    aso::type::FPType *dmem_ptr = dtensor.fp_ptr + global_offset;
-    int num_elements = (int)stensor.num_elements();
-    int smem_num_column = stensor.dim[stensor.num_dims - 1];
-    int dmem_num_column = dtensor.dim[dtensor.num_dims - 1];
+    aso::type::FPType *smem_ptr = stensor_ptr;
+    aso::type::FPType *dmem_ptr = dtensor_ptr + global_offset;
+    int num_elements = stensor_matrix_shape.x * stensor_matrix_shape.y;
+    int smem_num_column = stensor_matrix_shape.y;
+    int dmem_num_column = dtensor_matrix_shape.y;
     for (int idx = thread_id; idx < num_elements; idx += num_threads) {
       int dmem_row_idx = matrix_offset.row() + idx / smem_num_column;
       int dmem_column_idx = matrix_offset.column() + idx % smem_num_column;

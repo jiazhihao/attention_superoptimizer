@@ -29,21 +29,28 @@ class ElementBinaryExecutor {
 public:
   CUTLASS_DEVICE
   ElementBinaryExecutor(aso::type::TBOperatorType op_type,
-                        char *smem_buffer,
-                        STensor const &input1,
-                        STensor const &input2,
-                        STensor const &output,
+                        ElementType *input1_ptr,
+                        ElementType *input2_ptr,
+                        ElementType *output_ptr,
+                        int3 input1_shape,
+                        int3 input2_shape,
                         int thread_id,
                         int num_threads) {
     // FIXME: currently we assume broadcast the inner-most dim
-    ElementType *input1_ptr = (ElementType *)(smem_buffer + input1.smem_offset);
-    ElementType *input2_ptr = (ElementType *)(smem_buffer + input2.smem_offset);
-    ElementType *output_ptr = (ElementType *)(smem_buffer + output.smem_offset);
-    int num_elements = output.num_elements();
-    int factor1 = num_elements / input1.num_elements();
-    int factor2 = num_elements / input2.num_elements();
+    //ElementType *input1_ptr = (ElementType *)(smem_buffer + input1.smem_offset);
+    //ElementType *input2_ptr = (ElementType *)(smem_buffer + input2.smem_offset);
+    //ElementType *output_ptr = (ElementType *)(smem_buffer + output.smem_offset);
+    int3 output_shape = {
+        max(input1_shape.x, input2_shape.x),
+        max(input1_shape.y, input2_shape.y),
+        max(input1_shape.z, input2_shape.z)};
+    int output_num_elements = output_shape.x * output_shape.y * output_shape.z;
+    int input1_num_elements = input1_shape.x * input1_shape.y * input1_shape.z;
+    int input2_num_elements = input2_shape.x * input2_shape.y * input2_shape.z;
+    int factor1 = output_num_elements / input1_num_elements;
+    int factor2 = output_num_elements / input2_num_elements;
     if (op_type == aso::type::TB_DIV_OP) {
-      for (int i = 0; i < num_elements; i += num_threads) {
+      for (int i = 0; i < output_num_elements; i += num_threads) {
         output_ptr[i] = input1_ptr[i / factor1] / input2_ptr[i / factor2];
       }
     } else {
@@ -58,27 +65,37 @@ public:
   TBElementBinaryFingerPrinter(aso::type::TBOperatorType type,
                                FPType *div_p_lookup_table,
                                FPType *div_q_lookup_table,
-                               char *smem_buffer,
-                               STensor const &input1,
-                               STensor const &input2,
-                               STensor const &output,
+                               FPType *input1_ptr,
+                               FPType *input2_ptr,
+                               FPType *output_ptr,
+                               int3 input1_shape,
+                               int3 input2_shape,
                                int thread_id,
                                int num_threads) {
-    FPType *output_ptr = (FPType *)(smem_buffer + output.smem_offset);
-    FPType *input1_ptr = (FPType *)(smem_buffer + input1.smem_offset);
-    FPType *input2_ptr = (FPType *)(smem_buffer + input2.smem_offset);
-    int num_elements = output.num_elements();
+    //FPType *output_ptr = (FPType *)(smem_buffer + output.smem_offset);
+    //FPType *input1_ptr = (FPType *)(smem_buffer + input1.smem_offset);
+    //FPType *input2_ptr = (FPType *)(smem_buffer + input2.smem_offset);
+    int input1_dims[3], input2_dims[3], output_dims[3];
+    input1_dims[0] = input1_shape.x;
+    input1_dims[1] = input1_shape.y;
+    input1_dims[2] = input1_shape.z;
+    input2_dims[0] = input2_shape.x;
+    input2_dims[1] = input2_shape.y;
+    input2_dims[2] = input2_shape.z;
+    for (int i = 0; i < 3; i++)
+      output_dims[i] = max(input1_dims[i], input2_dims[i]);
+    int num_elements = output_dims[0] * output_dims[1] * output_dims[2];
     if (type == aso::type::TB_DIV_OP) {
       for (int i = thread_id; i < num_elements; i += num_threads) {
         int idx = i;
         int input1_stride = 1, input1_idx = 0;
         int input2_stride = 1, input2_idx = 0;
-        for (int d = output.num_dims - 1; d >= 0; d--) {
-          input1_idx += (idx % input1.dim[d]) * input1_stride;
-          input2_idx += (idx % input2.dim[d]) * input2_stride;
-          input1_stride *= input1.dim[d];
-          input2_stride *= input2.dim[d];
-          idx /= output.dim[d];
+        for (int d = 2; d >= 0; d--) {
+          input1_idx += (idx % input1_dims[d]) * input1_stride;
+          input2_idx += (idx % input2_dims[d]) * input2_stride;
+          input1_stride *= input1_dims[d];
+          input2_stride *= input2_dims[d];
+          idx /= output_dims[d];
         }
         uint32_t x = input1_ptr[input1_idx];
         uint32_t y = input2_ptr[input2_idx];
