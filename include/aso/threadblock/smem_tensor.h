@@ -29,7 +29,7 @@ namespace threadblock {
 
 class TBOperator;
 
-struct STensor {
+struct alignas(16) STensor {
   CUTLASS_HOST_DEVICE
   STensor(void) {
     data_type = aso::type::DT_UNKNOWN;
