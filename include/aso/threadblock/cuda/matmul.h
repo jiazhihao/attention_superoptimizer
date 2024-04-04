@@ -510,11 +510,8 @@ public:
   /// cutlass fields
   typename MmaTensorOp::IteratorA warp_tile_iterator_A;
   typename MmaTensorOp::IteratorB warp_tile_iterator_B;
-  int _warp_idx;
-  int _lane_idx;
   SmemIteratorD smem_iterator_D;
   OutputOpAccumulate output_op;
-  int gemm_k_iterations_0;
 
   CUTLASS_DEVICE
   MatmulExecutorV2(TensorRefA const &ref_A,
@@ -536,8 +533,9 @@ public:
     int warp_count_n = (n + WarpShape::kN - 1) / WarpShape::kN;
     assert(warp_count_m > 0);
     assert(warp_count_n > 0);
-    // We have exactly 4 warps in a thread block
-    assert(warp_count_m * warp_count_n == 4);
+    // Assert that warp_count_m * warp_count_n is at most 4
+    // since we have 4 warps in a thread block
+    assert(warp_count_m * warp_count_n <= 4);
     // Compute warp location within threadblock tile by mapping the warp_id to
     // three coordinates:
     //   warp_idx_m: the warp's position within the threadblock along the M
@@ -549,17 +547,17 @@ public:
 
     int warp_idx_mn = warp_idx % (warp_count_m * warp_count_n);
     int warp_idx_k = warp_idx / (warp_count_m * warp_count_n);
-    if (false && lane_idx == 0) {
-      printf("warp_idx(%d) warp_count_m(%d) warp_count_n(%d) m(%d) n(%d)\n",
-             warp_idx,
-             warp_count_m,
-             warp_count_n,
-             m,
-             n);
-    }
+    // All warps whose warp_idx_k > 0 do not need to perform computation
+    // since we only need (warp_count_m * warp_count_n) warps to do matmul
+    bool perform_work = (warp_idx_k == 0);
+    // Note that a warp immediately return if it does not perform work
+    // SO WE SHOULD NOT HAVE __synthreads INSIDE THIS FUNCTION
+    if (!perform_work)
+      return;
+
     // Currently assume that we don't parittion over k within a threadblock
     // we do it across threadblocks
-    if (warp_idx_k > 0) {
+    if (false && warp_idx_k > 0) {
       printf("warp_idx(%d) warp_count_m(%d) warp_count_n(%d) m(%d) n(%d)\n",
              warp_idx,
              warp_count_m,
@@ -576,20 +574,15 @@ public:
     // Add per-warp offsets in units of warp-level tiles
     warp_tile_iterator_A.add_tile_offset({warp_idx_m, tile_offset_k});
     warp_tile_iterator_B.add_tile_offset({tile_offset_k, warp_idx_n});
-    gemm_k_iterations_0 = (k + WarpShape::kK - 1) / WarpShape::kK;
+    int gemm_k_iterations_0 = (k + WarpShape::kK - 1) / WarpShape::kK;
 
     // Add smem accumulator iterator warp offset
     smem_iterator_D.add_tile_offset(
         {warp_idx_m * SmemIteratorD::TileIterations::kRow,
          warp_idx_n * SmemIteratorD::TileIterations::kColumn});
-    _warp_idx = warp_idx;
-    _lane_idx = lane_idx;
-  }
 
-  CUTLASS_DEVICE
-  void execute_kernel(void) {
-    // extern __shared__ char smem_buffer[];
-
+    // Start computation
+    // NOTE THAT WE SHOULD NOT HAVE __synthreads AFTER THIS POINT
     WarpFragmentA warp_frag_A[2];
     WarpFragmentB warp_frag_B[2];
     WarpTransformedFragmentA warp_transformed_frag_A_[2];
@@ -638,12 +631,12 @@ public:
                              warp_frag_B[warp_mma_k % 2]);
         }
 
-        if (false && _lane_idx == 0) {
+        if (false && lane_idx == 0) {
           printf(
               "warp_idx(%d) warp_mma_k(%d) lane_idx(%d) got A = %f, B = %f\n",
-              _warp_idx,
+              warp_idx,
               warp_mma_k,
-              _lane_idx,
+              lane_idx,
               static_cast<float>(warp_frag_A[warp_mma_k % 2].front()),
               static_cast<float>(warp_frag_B[warp_mma_k % 2].front()));
         }
@@ -662,9 +655,9 @@ public:
     }
 
     Epilogue epilogue;
-    // accum.fill(static_cast<ElementType>(_warp_idx)); // for debugging
+    // accum.fill(static_cast<ElementType>(warp_idx)); // for debugging
     epilogue(output_op, smem_iterator_D, accum);
-    __syncthreads();
+    //__syncthreads();
   }
 };
 
@@ -746,7 +739,6 @@ public:
                           thread_id,
                           warp_id,
                           lane_id);
-        executor.execute_kernel();
       });
     });
   }
