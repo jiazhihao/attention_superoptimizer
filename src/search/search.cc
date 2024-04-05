@@ -206,7 +206,7 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
     // ofs << json(g) << std::endl;
     // ofs.close();
     generated_graphs.push_back(json(g));
-    update_best_graph(g);
+    // update_best_graph(g);
     std::cerr << "kernel graph candidate: " << json(g) << std::endl;
     callstack.pop_back();
     return;
