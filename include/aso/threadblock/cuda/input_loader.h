@@ -104,7 +104,6 @@ public:
     Fragment tb_fragment;
     // The last kblock is loaded in the prolog
     dmem_iterator.load(tb_fragment);
-    return;
     smem_iterator.store(tb_fragment);
   }
 
@@ -178,7 +177,6 @@ public:
     Fragment tb_fragment;
     // The last kblock is loaded in the prolog
     dmem_iterator.load(tb_fragment);
-    return;
     smem_iterator.store(tb_fragment);
   }
 
@@ -339,7 +337,7 @@ public:
                                 num_threads,
                                 matrix_offset,
                                 global_offset);
-    } else if (kRow == 16 && kColumn == 64) {
+    } else if (kRow <= 16 && kColumn == 64) {
       ShapedInputLoader<16, 64>(dtensor_ptr,
                                 stensor_ptr,
                                 dtensor_matrix_shape,
@@ -350,10 +348,10 @@ public:
                                 matrix_offset,
                                 global_offset);
     } else {
-      // if (threadIdx.x == 0 && blockIdx.x == 0) {
-      //   printf("kRow = %d kColumn = %d\n", kRow, kColumn);
-      // }
-      //  assert(false && "Unimplemented");
+      //if (threadIdx.x == 0 && blockIdx.x == 0) {
+      //  printf("kRow = %d kColumn = %d\n", kRow, kColumn);
+      //}
+      //assert(false && "Unimplemented");
     }
   }
 };

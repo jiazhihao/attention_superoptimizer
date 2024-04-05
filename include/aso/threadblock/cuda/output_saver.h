@@ -342,7 +342,17 @@ public:
                                 num_threads,
                                 matrix_offset,
                                 global_offset);
-    }
+    } else if (kRow <= 16 && kColumn == 64) {
+      ShapedOutputSaver<16, 64>(dtensor_ptr,
+                                stensor_ptr,
+                                dtensor_matrix_shape,
+                                dtensor_layout,
+                                stensor_layout,
+                                thread_id,
+                                num_threads,
+                                matrix_offset,
+                                global_offset);
+    } 
   }
 };
 
