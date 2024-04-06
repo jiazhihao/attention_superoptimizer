@@ -646,33 +646,38 @@ std::vector<layout::SmemLayout> KernelGraphGenerator::get_valid_output_layout(
   }
 }
 
+void KernelGraphGenerator::optimize_layout(kernel::Graph &g) {
+  optimize_layout(g, 0, 0, -1, -1);
+}
+
 void KernelGraphGenerator::optimize_layout(
     kernel::Graph &g, int op_idx, int ts_idx, int bop_idx, int bts_idx) {
   if (bop_idx != -1) {
     kernel::KNCustomizedOp *op =
         dynamic_cast<kernel::KNCustomizedOp *>(g.operators[op_idx]);
     assert(op != nullptr);
-    threadblock::Graph &block_graph = op->bgraph;
-    if (bop_idx >= (int)block_graph.operators.size()) {
+    if (bop_idx >= (int)op->bgraph.operators.size()) {
       optimize_layout(g, op_idx + 1, 0, -1, -1);
       return;
     }
-    if (bts_idx >= (int)block_graph.operators[bop_idx]->output_tensors.size()) {
+    if (bts_idx >= (int)op->bgraph.operators[bop_idx]->output_tensors.size()) {
       optimize_layout(g, op_idx, ts_idx, bop_idx + 1, 0);
+      return;
     }
     for (layout::SmemLayout layout :
-         get_valid_output_layout(block_graph.operators[bop_idx], bts_idx)) {
-      block_graph.operators[bop_idx]->output_tensors[bts_idx].layout = layout;
-      for (TBOperator *op : block_graph.operators) {
-        for (STensor &stensor : op->input_tensors) {
+         get_valid_output_layout(op->bgraph.operators[bop_idx], bts_idx)) {
+      op->bgraph.operators[bop_idx]->output_tensors[bts_idx].layout = layout;
+      for (TBOperator *bop : op->bgraph.operators) {
+        for (STensor &stensor : bop->input_tensors) {
           if (stensor.guid ==
-              block_graph.operators[bop_idx]->output_tensors[bts_idx].guid) {
+              op->bgraph.operators[bop_idx]->output_tensors[bts_idx].guid) {
             stensor.layout = layout;
           }
         }
       }
       optimize_layout(g, op_idx, ts_idx, bop_idx, bts_idx + 1);
     }
+    return;
   }
 
   if (op_idx >= (int)g.operators.size()) {
@@ -682,6 +687,7 @@ void KernelGraphGenerator::optimize_layout(
   if (ts_idx >= (int)g.operators[op_idx]->output_tensors.size()) {
     if (g.operators[op_idx]->op_type ==
         type::KNOperatorType::KN_CUSTOMIZED_OP) {
+      assert(bop_idx == -1);
       optimize_layout(g, op_idx, ts_idx, 0, 0);
     } else {
       optimize_layout(g, op_idx + 1, 0, bop_idx, bts_idx);

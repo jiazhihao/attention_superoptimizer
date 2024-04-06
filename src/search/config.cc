@@ -27,13 +27,13 @@ GeneratorConfig GeneratorConfig::get_default_config() {
       {8, 16} /* frange_to_explore */,
       {
           layout::SmemRowMajor,
-          // layout::SmemColumnMajor,
-        //   layout::SmemRowMajorTensorOpMultiplicand_Crosswise16,
-          // layout::SmemRowMajorTensorOpMultiplicand_Crosswise32,
-          // layout::SmemRowMajorTensorOpMultiplicand_Crosswise64,
-        //   layout::SmemColumnMajorTensorOpMultiplicand_Crosswise16,
-          // layout::SmemColumnMajorTensorOpMultiplicand_Crosswise32,
-          // layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64,
+          layout::SmemColumnMajor,
+          layout::SmemRowMajorTensorOpMultiplicand_Crosswise16,
+          layout::SmemRowMajorTensorOpMultiplicand_Crosswise32,
+          layout::SmemRowMajorTensorOpMultiplicand_Crosswise64,
+          layout::SmemColumnMajorTensorOpMultiplicand_Crosswise16,
+          layout::SmemColumnMajorTensorOpMultiplicand_Crosswise32,
+          layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64,
       } /* smem_layout_to_explore*/};
 }
 

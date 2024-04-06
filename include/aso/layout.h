@@ -14,6 +14,7 @@
  */
 
 #pragma once
+#include "aso/utils/json_utils.h"
 
 namespace aso {
 namespace layout {
@@ -23,6 +24,13 @@ enum DmemLayout {
   DmemColumnMajor = 101,
   DmemUnknownLayout = 199,
 };
+
+NLOHMANN_JSON_SERIALIZE_ENUM(DmemLayout,
+                             {
+                                 {DmemRowMajor, "DmemRowMajor"},
+                                 {DmemColumnMajor, "DmemColumnMajor"},
+                                 {DmemUnknownLayout, "DmemUnknownLayout"},
+                             })
 
 enum SmemLayout {
   SmemRowMajor = 200,
@@ -35,6 +43,19 @@ enum SmemLayout {
   SmemColumnMajorTensorOpMultiplicand_Crosswise64 = 207,
   SmemUnknownLayout = 299,
 };
+
+NLOHMANN_JSON_SERIALIZE_ENUM(SmemLayout,
+                             {
+                                 {SmemRowMajor, "SmemRowMajor"},
+                                 {SmemColumnMajor, "SmemColumnMajor"},
+                                 {SmemRowMajorTensorOpMultiplicand_Crosswise16, "SmemRowMajorTensorOpMultiplicand_Crosswise16"},
+                                 {SmemRowMajorTensorOpMultiplicand_Crosswise32, "SmemRowMajorTensorOpMultiplicand_Crosswise32"},
+                                 {SmemRowMajorTensorOpMultiplicand_Crosswise64, "SmemRowMajorTensorOpMultiplicand_Crosswise64"},
+                                 {SmemColumnMajorTensorOpMultiplicand_Crosswise16, "SmemColumnMajorTensorOpMultiplicand_Crosswise16"},
+                                 {SmemColumnMajorTensorOpMultiplicand_Crosswise32, "SmemColumnMajorTensorOpMultiplicand_Crosswise32"},
+                                 {SmemColumnMajorTensorOpMultiplicand_Crosswise64, "SmemColumnMajorTensorOpMultiplicand_Crosswise64"},
+                                 {SmemUnknownLayout, "SmemUnknownLayout"},
+                             })
 
 } // namespace layout
 } // namespace aso

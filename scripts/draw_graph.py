@@ -4,9 +4,15 @@ import json
 import argparse
 import os
 
+def edge_info(edge):
+    dim = edge['dim'][:3]
+    layout = edge['layout']
+    return f"{dim}\n{layout}"
+
+
 def get_graph(data):
     node_labels = {idx: node['op_type'] for idx, node in enumerate(data)}
-    edge_labels = {(edge_owner[input_tensor["guid"]], idx): input_tensor["dim"] for idx, node in enumerate(data) for input_tensor in node["input_tensors"]}
+    edge_labels = {(edge_owner[input_tensor["guid"]], idx): edge_info(input_tensor) for idx, node in enumerate(data) for input_tensor in node["input_tensors"]}
     return node_labels, edge_labels
 
 
@@ -57,14 +63,14 @@ def process_graph(data):
                     else get_op_info(tb_op)
                 node_color[get_idx(kn_idx, tb_idx)] = (0.5, 1, 0.5)
                 if tb_op['op_type'] == 'tb_input_op':
-                    edge_labels[(edge_owner[tb_op['dtensor']['guid']], get_idx(kn_idx, tb_idx))] = tb_op['dtensor']['dim'][:3]
+                    edge_labels[(edge_owner[tb_op['dtensor']['guid']], get_idx(kn_idx, tb_idx))] = edge_info(tb_op['dtensor'])
                 for input_tensor in tb_op['input_tensors']:
-                    edge_labels[(edge_owner[input_tensor['guid']], get_idx(kn_idx, tb_idx))] = input_tensor['dim'][:3]
+                    edge_labels[(edge_owner[input_tensor['guid']], get_idx(kn_idx, tb_idx))] = edge_info(input_tensor)
         else:
             node_labels[kn_idx] = kn_op['op_type']
             node_color[kn_idx] = (0.5, 0.5, 1)
             for input_tensor in kn_op['input_tensors']:
-                edge_labels[(edge_owner[input_tensor['guid']], kn_idx)] = input_tensor['dim'][:3]
+                edge_labels[(edge_owner[input_tensor['guid']], kn_idx)] = edge_info(input_tensor)
 
     return node_labels, edge_labels, node_color
 

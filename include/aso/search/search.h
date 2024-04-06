@@ -75,6 +75,8 @@ public:
   KernelGraphGenerator(char const *filename);
 
   void generate_kernel_graphs();
+  void optimize_layout(kernel::Graph &g);
+  void save_checkpoint() const;
 
   kernel::Graph computation_graph;
   json best_graph;
@@ -84,6 +86,7 @@ public:
   DimStrategy dim_strategy;
 
   char const *filename;
+  std::vector<json> generated_graphs;
 
 private:
   std::vector<std::shared_ptr<AlgebraicPattern>> final_patterns;
@@ -91,8 +94,6 @@ private:
       computation_graph_patterns;
 
   std::vector<DTensor> output_tensors;
-
-  std::vector<json> generated_graphs;
 
   int num_total_kernel_graphs;
   int num_total_random_tests;
@@ -125,7 +126,6 @@ private:
   bool have_same_fingerprint(std::vector<DTensor> const &outputs,
                              std::vector<int> const &match) const;
   bool verify(SearchContext<DTensor> &c, kernel::Graph const &g);
-  void save_checkpoint() const;
   void recovery_from_checkpoint(Checkpoint const &checkpoint);
 };
 
