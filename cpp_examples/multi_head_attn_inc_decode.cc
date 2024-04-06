@@ -1,4 +1,5 @@
 #include "aso/kernel/graph.h"
+#include "aso/search/search.h"
 #include "aso/threadblock/graph.h"
 
 using namespace aso;
@@ -96,6 +97,19 @@ int main(int argc, char **argv) {
   }
   assert(ref_graph.operators.back()->output_tensors[0].has_same_fingerprint(
       graph.operators.back()->output_tensors[0]));
+
+  clock_t st = clock();
+  search::GeneratorConfig config = search::GeneratorConfig::get_default_config();
+  config.grid_dim_to_explore = {{40, 4, 1}, {40, 1, 1}};
+  search::KernelGraphGenerator gen(
+      ref_graph,
+      config,
+      "checkpoint_multi_head_attn_inc_decode.json");
+  gen.generate_kernel_graphs();
+
+  clock_t et = clock();
+
+  printf("Search time = %.4lfsec\n", (float)(et - st) / CLOCKS_PER_SEC);
 
   return 0;
 }

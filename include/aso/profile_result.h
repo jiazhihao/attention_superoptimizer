@@ -15,11 +15,15 @@
 
 #pragma once
 
+#include "aso/utils/json_utils.h"
+
 namespace aso {
 
 struct ProfileResult {
   static int const NUM_ITERATIONS = 1024;
   float run_time;
+
+  static ProfileResult infinity();
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ProfileResult, run_time);
