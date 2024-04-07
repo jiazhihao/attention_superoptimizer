@@ -338,7 +338,7 @@ public:
                                 matrix_offset,
                                 global_offset);
     } else if (kRow <= 16 && kColumn == 64) {
-      ShapedInputLoader<16, 128>(dtensor_ptr,
+      ShapedInputLoader<16, 64>(dtensor_ptr,
                                 stensor_ptr,
                                 dtensor_matrix_shape,
                                 dlayout,
