@@ -42,10 +42,11 @@ off_t Graph::allocate(STensor const &tensor) {
   off_t aligns_size = ((tensor.size() + 15) & ~15);
   smem_offset += aligns_size;
 
-  if (aligns_size != tensor.size()) {
-    printf("sdadasd %d, %d\n", tensor.size(), aligns_size);
+  if (false && aligns_size != tensor.size()) {
+    printf(
+        "before align (%zu), after align(%zu)\n", tensor.size(), aligns_size);
   }
-  assert(aligns_size <= (off_t)aso::type::MAX_SMEM_SIZE);
+  assert(smem_offset <= (off_t)aso::type::MAX_SMEM_SIZE);
   allocated_tensors.push_back(std::make_pair(ret, aligns_size));
   return ret;
 }
