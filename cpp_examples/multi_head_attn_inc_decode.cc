@@ -7,11 +7,11 @@ int main(int argc, char **argv) {
   kernel::Graph ref_graph;
   {
     kernel::DTensor Q = ref_graph.new_input(
-        {40, 16, 128}, type::DT_FLOAT16, layout::DmemRowMajor);
+        {32, 16, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
     kernel::DTensor K = ref_graph.new_input(
-        {40, 128, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+        {32, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor V = ref_graph.new_input(
-        {40, 4096, 128}, type::DT_FLOAT16, layout::DmemColumnMajor);
+        {32, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor A = ref_graph.matmul(Q, K);
     kernel::DTensor E = ref_graph.exp(A);
     kernel::DTensor S = ref_graph.reduction(E, 2 /*dim*/);
@@ -30,11 +30,11 @@ int main(int argc, char **argv) {
   }
   kernel::Graph graph;
   kernel::DTensor Q =
-      graph.new_input({40, 16, 128}, type::DT_FLOAT16, layout::DmemRowMajor);
+      graph.new_input({32, 16, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
   kernel::DTensor K = graph.new_input(
-      {40, 128, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      {32, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
   kernel::DTensor V = graph.new_input(
-      {40, 4096, 128}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      {32, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
   std::vector<kernel::DTensor> outputs;
   {
     threadblock::ExecutionPlan plan;
@@ -56,9 +56,9 @@ int main(int argc, char **argv) {
     };
     plan.output_map = {0, 2, -1};
     plan.forloop_dim = {-1, 2, 1};
-    plan.grid_dim = {40, 4, 1};
+    plan.grid_dim = {32, 8, 1};
     plan.block_dim = {128, 1, 1};
-    plan.forloop_range = 16;
+    plan.forloop_range = 8;
     outputs = graph.customized({Q, K, V}, plan);
     assert(outputs.size() == 2);
     // kernel::DTensor o1 = graph.reduction(outputs[0], 2 /*dim*/, 64 /*size*/);
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
     };
     plan.output_map = {0, -1, -1};
     plan.forloop_dim = {-1, -1};
-    plan.grid_dim = {40, 1, 1};
+    plan.grid_dim = {32, 1, 1};
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 1;
     outputs = graph.customized({outputs[0], outputs[1]}, plan);
