@@ -54,6 +54,7 @@ __global__ void
       aso::type::TBOperatorType op_type = new_params.operator_types[op];
       if (op_type == aso::type::TB_INPUT_OP) {
         // Assume that InputLoaders are the first operators
+        // printf("op input\n");
         void* dtensor_ptr = new_params.dmem_input_ptrs[op];
         int3 input_matrix_row_offset_block_stride;
         int3 input_matrix_column_offset_block_stride;
@@ -79,6 +80,9 @@ __global__ void
             dtensor_layout,
             stensor_layout,
             input_smem_offset);
+        if(input_smem_offset % 16 != 0){
+            assert(false);
+          }
 
         int tb_offset_row = blockIdx.x * input_matrix_row_offset_block_stride.x
                           + blockIdx.y * input_matrix_row_offset_block_stride.y
@@ -110,6 +114,7 @@ __global__ void
         // So we do nothing for output saver
       } else if (op_type == aso::type::TB_MATMUL_OP) {
         int thread_idx = threadIdx.x;
+        // printf("op matmul\n");
         // Broadcast the warp_id computed by lane 0 to ensure dependent code
         // is compiled as warp-uniform.
         int warp_idx = __shfl_sync(0xffffffff, threadIdx.x / 32, 0);
@@ -126,6 +131,10 @@ __global__ void
         cutlass::half_t *B_ptr = (cutlass::half_t *)(smem_buffer + B_smem_offset);
         cutlass::half_t *C_ptr = (cutlass::half_t *)(smem_buffer + C_smem_offset);
 
+        if(A_smem_offset % 16 != 0 || B_smem_offset % 16 != 0 || C_smem_offset % 16 != 0){
+            assert(false);
+          }
+
         aso::threadblock::GenericMatmulExecutor executor(
             A_ptr, B_ptr, C_ptr,
             m, n, k,
@@ -134,6 +143,7 @@ __global__ void
             lane_idx);
         __syncthreads();
       } else if (op_type == aso::type::TB_EXP_OP) {
+        // printf("op exp\n");
         int smem_offset, num_elements;
         aso::threadblock::deserialize_elementunary_op_parameters(
             new_params.parameters,
@@ -147,8 +157,12 @@ __global__ void
             num_elements,
             threadIdx.x,
             blockDim.x);
+        if(smem_offset % 16 != 0 ){
+            assert(false);
+          }
         __syncthreads();
       } else if (op_type == aso::type::TB_DIV_OP) {
+        // printf("op div\n");
         int3 input1_shape, input2_shape;
         int input1_smem_offset, input2_smem_offset, output_smem_offset;
         aso::threadblock::deserialize_elementbinary_op_parameters(
@@ -159,6 +173,10 @@ __global__ void
         cutlass::half_t* input1_ptr = (cutlass::half_t *)(smem_buffer + input1_smem_offset);
         cutlass::half_t* input2_ptr = (cutlass::half_t *)(smem_buffer + input2_smem_offset);
         cutlass::half_t* output_ptr = (cutlass::half_t *)(smem_buffer + output_smem_offset);
+
+        if(threadIdx.x == 0 && (input1_smem_offset % 16 != 0 || input2_smem_offset % 16 != 0 || output_smem_offset % 16 != 0)){
+            printf("input1_smem_offset %d, input2_smem_offset %d, output_smem_offset %d\n", input1_smem_offset, input2_smem_offset, output_smem_offset);
+          }
         aso::threadblock::ElementBinaryExecutor<cutlass::half_t> executor(
             op_type,
             input1_ptr,
@@ -168,6 +186,7 @@ __global__ void
             input2_shape,
             threadIdx.x,
             blockDim.x);
+        
         __syncthreads();
       } else if ((op_type >= aso::type::TB_REDUCTION_FIRST_OP_ID) &&
                  (op_type <= aso::type::TB_REDUCTION_LAST_OP_ID)) {
@@ -180,7 +199,9 @@ __global__ void
             input_smem_offset, output_smem_offset);
         cutlass::half_t *input_ptr = (cutlass::half_t *)(smem_buffer + input_smem_offset);
         cutlass::half_t *output_ptr = (cutlass::half_t *)(smem_buffer + output_smem_offset);
-
+      //  if(threadIdx.x == 0){
+      //       printf("reduction input_smem_offset %d, output_smem_offset %d\n", input_smem_offset, output_smem_offset);
+      //     }
         aso::threadblock::SimpleRedunctionExecutor<cutlass::half_t> executor(
             //new_params.operator_types[op],
             input_ptr,
@@ -199,6 +220,7 @@ __global__ void
   // Save output
   int output_saver_start_idx = new_params.num_operators - new_params.num_dmem_outputs;
   for (int op = output_saver_start_idx; op < new_params.num_operators; op++) {
+    // printf("op output\n");
     assert(new_params.operator_types[op] == aso::type::TB_OUTPUT_OP);
     void* dtensor_ptr = new_params.dmem_output_ptrs[op - output_saver_start_idx];
     int3 output_matrix_row_offset_block_stride;
@@ -206,6 +228,7 @@ __global__ void
     int3 global_offset_block_stride;
     int2 dtensor_matrix_shape, stensor_matrix_shape;
     int input_smem_offset, accum_smem_offset;
+    
     aso::layout::DmemLayout dtensor_layout;
     aso::layout::SmemLayout stensor_layout;
     aso::threadblock::deserialize_output_saver_parameters(
@@ -220,6 +243,9 @@ __global__ void
         stensor_layout,
         input_smem_offset,
         accum_smem_offset);
+    if(threadIdx.x == 0 && (input_smem_offset % 16 != 0 || accum_smem_offset % 16 != 0 )){
+            printf("input_smem_offset %d, accum_smem_offset %d\n", input_smem_offset, accum_smem_offset);
+          }
     int tb_offset_row = blockIdx.x * output_matrix_row_offset_block_stride.x
                       + blockIdx.y * output_matrix_row_offset_block_stride.y
                       + blockIdx.z * output_matrix_row_offset_block_stride.z;
@@ -506,18 +532,40 @@ bool KNCustomizedOp::profile(ProfileResult &result) {
                                    bgraph.smem_offset));
   }
   checkCUDA(cudaDeviceSynchronize());
+  cudaError_t error1 = cudaGetLastError();
+  if(error1 != cudaSuccess)
+  {
+    // print the CUDA error message and exit
+    printf("CUDA error00: %s\n", cudaGetErrorString(error1));
+    exit(-1);
+  }
   cudaEvent_t events[2];
   checkCUDA(cudaEventCreate(&events[0]));
   checkCUDA(cudaEventCreate(&events[1]));
   checkCUDA(cudaEventRecord(events[0]));
+
   //aso::threadblock::KernelParams params = bgraph.get_kernel_params();
   aso::threadblock::NewKernelParams new_params = bgraph.get_new_kernel_params(false/*fingerprint_kernel*/);
+  // if(bgraph.smem_offset == 9288){
+  //   asser
+  //   bgraph.smem_offset = 9296;
+  // }
+  printf("aso::threadblock::NewKernelParams size %zu, (%d) (%d) (%ld)\n", sizeof(new_params), bgraph.forloop_range, new_params.num_parameters, bgraph.smem_offset);
+  
   for (int i = 0; i < ProfileResult::NUM_ITERATIONS; i++) {
     customized_kernel_function<<<bgraph.grid_dim,
                                  bgraph.block_dim,
                                  bgraph.smem_offset>>>(new_params, bgraph.forloop_range);
+  cudaError_t error = cudaGetLastError();
+  if(error != cudaSuccess)
+  {
+    // print the CUDA error message and exit
+    printf("CUDA error: (%d) (%d) (%d), %s\n",bgraph.forloop_range,i, new_params.num_parameters, cudaGetErrorString(error));
+    exit(-1);
+  }                             
   }
   float runtime_ms = 0;
+  
   checkCUDA(cudaEventRecord(events[1]));
   checkCUDA(cudaEventSynchronize(events[1]));
   checkCUDA(cudaEventElapsedTime(&runtime_ms, events[0], events[1]));
