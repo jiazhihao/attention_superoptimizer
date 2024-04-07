@@ -77,6 +77,8 @@ public:
   STensor exp(STensor const &A);
   TBOperator *create_elementunary_op(STensor const &A,
                                      aso::type::TBOperatorType _type);
+  STensor add(STensor const &A, STensor const &B);
+  STensor mul(STensor const &A, STensor const &B);
   STensor div(STensor const &A, STensor const &B);
   TBOperator *create_elementbinary_op(STensor const &A,
                                       STensor const &B,
@@ -88,6 +90,10 @@ public:
   // reduction_to_dimx operator
   STensor reduction_to_dimx(STensor const &A, int dim);
   TBOperator *create_reduction_to_dimx_op(STensor const &A, int dim);
+
+  // concat operator
+  STensor concat(STensor const &A, STensor const &B, int dim);
+  TBOperator *create_concat_op(STensor const &A, STensor const &B, int dim);
 
   off_t allocate(STensor const &tensor);
   void free(STensor const &tensor);

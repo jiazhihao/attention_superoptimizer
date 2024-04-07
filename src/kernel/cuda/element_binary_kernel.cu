@@ -39,6 +39,14 @@ __global__ void execute_elementbinary(aso::type::KNOperatorType type,
     if (i < num_elements) {
       output_ptr[i] = input1_ptr[i / factor1] / input2_ptr[i / factor2];
     }
+  } else if (type == aso::type::KN_ADD_OP) {
+    if (i < num_elements) {
+      output_ptr[i] = input1_ptr[i / factor1] + input2_ptr[i / factor2];
+    }
+  } else if (type == aso::type::KN_MUL_OP) {
+    if (i < num_elements) {
+      output_ptr[i] = input1_ptr[i / factor1] * input2_ptr[i / factor2];
+    }
   } else {
     assert(false && "Unimplemented");
   }
@@ -97,7 +105,45 @@ __global__ void
                                       aso::kernel::DTensor output,
                                       int num_elements) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
-  if (type == aso::type::KN_DIV_OP) {
+  if (type == aso::type::KN_ADD_OP) {
+    if (i < num_elements) {
+      int input1_stride = 1, input1_idx = 0;
+      int input2_stride = 1, input2_idx = 0;
+      for (int d = output.num_dims - 1; d >= 0; d--) {
+        input1_idx += (i % input1.dim[d]) * input1_stride;
+        input2_idx += (i % input2.dim[d]) * input2_stride;
+        input1_stride *= input1.dim[d];
+        input2_stride *= input2.dim[d];
+        i /= output.dim[d];
+      }
+      uint32_t x = input1.fp_ptr[input1_idx];
+      uint32_t y = input2.fp_ptr[input2_idx];
+      uint32_t z = (x + y) % FP_PQ;
+      output.fp_ptr[threadIdx.x + blockIdx.x * blockDim.x] = z;
+      // printf("add: output[%d] = %d input1[%d] = %d input2[%d] = %d\n",
+      //     threadIdx.x + blockIdx.x * blockDim.x, z % FP_PQ,
+      //     input1_idx, x, input2_idx, y);
+    }
+  } else if (type == aso::type::KN_MUL_OP) {
+    if (i < num_elements) {
+      int input1_stride = 1, input1_idx = 0;
+      int input2_stride = 1, input2_idx = 0;
+      for (int d = output.num_dims - 1; d >= 0; d--) {
+        input1_idx += (i % input1.dim[d]) * input1_stride;
+        input2_idx += (i % input2.dim[d]) * input2_stride;
+        input1_stride *= input1.dim[d];
+        input2_stride *= input2.dim[d];
+        i /= output.dim[d];
+      }
+      uint32_t x = input1.fp_ptr[input1_idx];
+      uint32_t y = input2.fp_ptr[input2_idx];
+      uint32_t z = (x * y) % FP_PQ;
+      output.fp_ptr[threadIdx.x + blockIdx.x * blockDim.x] = z;
+      // printf("add: output[%d] = %d input1[%d] = %d input2[%d] = %d\n",
+      //     threadIdx.x + blockIdx.x * blockDim.x, z % FP_PQ,
+      //     input1_idx, x, input2_idx, y);
+    }
+  } else if (type == aso::type::KN_DIV_OP) {
     if (i < num_elements) {
       int input1_stride = 1, input1_idx = 0;
       int input2_stride = 1, input2_idx = 0;

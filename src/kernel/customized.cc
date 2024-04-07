@@ -122,6 +122,14 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         bgraph.reduction_to_dimx(my_inputs[0], reduce_dim);
         break;
       }
+      case aso::type::TB_CONCAT_0_OP:
+      case aso::type::TB_CONCAT_1_OP:
+      case aso::type::TB_CONCAT_2_OP: {
+        assert(my_inputs.size() == 2);
+        int concat_dim = op.first - aso::type::TB_CONCAT_0_OP;
+        bgraph.concat(my_inputs[0], my_inputs[1], concat_dim);
+        break;
+      }
       default: {
         assert(false && "Unsupported kernel operator");
       }

@@ -20,6 +20,7 @@
 #include "aso/threadblock/serializer/matmul_serializer.h"
 #include "aso/threadblock/serializer/output_saver_serializer.h"
 #include "aso/threadblock/serializer/reduction_serializer.h"
+#include "aso/threadblock/serializer/concat_serializer.h"
 #include "aso/utils/hash_utils.h"
 
 namespace aso {
@@ -371,6 +372,40 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
             reduction_degree,
             inner_range,
             input.smem_offset,
+            output.smem_offset);
+        break;
+      }
+      case aso::type::TB_CONCAT_0_OP:
+      case aso::type::TB_CONCAT_1_OP:
+      case aso::type::TB_CONCAT_2_OP: {
+        assert(operators[i]->input_tensors.size() == 2);
+        assert(operators[i]->output_tensors.size() == 1);
+        aso::threadblock::STensor A = operators[i]->input_tensors[0];
+        aso::threadblock::STensor B = operators[i]->input_tensors[1];
+        aso::threadblock::STensor output = operators[i]->output_tensors[0];
+        int concat_dim = operators[i]->op_type - aso::type::TB_CONCAT_0_OP;
+        assert(A.num_dims == B.num_dims);
+        assert(A.num_dims == output.num_dims);
+        int inner_size = 1;
+        for (int i = 0; i < A.num_dims; i++) {
+          if (i == concat_dim) {
+            assert(A.dim[i] + B.dim[i] == output.dim[i]);
+          } else {
+            assert(A.dim[i] == output.dim[i]);
+            assert(B.dim[i] == output.dim[i]);
+          }
+          if (i > concat_dim)
+            inner_size = inner_size * output.dim[i];
+        }
+        aso::threadblock::serialize_concat_op_parameters(
+            params.parameters,
+            params.num_parameters,
+            (int)output.num_elements(),
+            A.dim[concat_dim],
+            B.dim[concat_dim],
+            inner_size,
+            A.smem_offset,
+            B.smem_offset,
             output.smem_offset);
         break;
       }
