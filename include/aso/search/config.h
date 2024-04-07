@@ -30,6 +30,7 @@ struct GeneratorConfig {
   std::vector<dim3> block_dim_to_explore;
   std::vector<int> fmap_to_explore;
   std::vector<int> frange_to_explore;
+  std::vector<layout::SmemLayout> smem_layout_to_explore;
 
   static GeneratorConfig get_default_config();
 };
@@ -42,7 +43,8 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(GeneratorConfig,
                                    grid_dim_to_explore,
                                    block_dim_to_explore,
                                    fmap_to_explore,
-                                   frange_to_explore)
+                                   frange_to_explore,
+                                   smem_layout_to_explore)
 
 } // namespace search
 } // namespace aso

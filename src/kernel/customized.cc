@@ -155,6 +155,7 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         // printf("stensor.offset(%d)\n", stensor.smem_offset);
         dtensor.owner_op = this;
         dtensor.owner_ts_idx = static_cast<int>(output_tensors.size());
+        dtensor.guid = DTensor::next_guid++;
         DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
         dmm->allocate(dtensor);
         // Update dtensor saved by the output operator
