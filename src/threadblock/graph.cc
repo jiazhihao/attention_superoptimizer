@@ -42,10 +42,6 @@ off_t Graph::allocate(STensor const &tensor) {
   off_t aligns_size = ((tensor.size() + 15) & ~15);
   smem_offset += aligns_size;
 
-  if (false && aligns_size != tensor.size()) {
-    printf(
-        "before align (%zu), after align(%zu)\n", tensor.size(), aligns_size);
-  }
   assert(smem_offset <= (off_t)aso::type::MAX_SMEM_SIZE);
   allocated_tensors.push_back(std::make_pair(ret, aligns_size));
   return ret;
@@ -54,7 +50,7 @@ off_t Graph::allocate(STensor const &tensor) {
 void Graph::free(STensor const &tensor) {
   assert(allocated_tensors.size() > 0);
   assert(allocated_tensors.back().first == tensor.smem_offset);
-  assert(allocated_tensors.back().second == tensor.size());
+  assert(allocated_tensors.back().second == ((tensor.size() + 15) & ~15));
   smem_offset -= allocated_tensors.back().second;
   allocated_tensors.pop_back();
 }
