@@ -332,7 +332,7 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
                   }
                   SearchContext<STensor> tb_context;
                   threadblock::Graph tb_graph(
-                      grid_dim, block_dim, forloop_range);
+                      grid_dim, block_dim, forloop_range, type::TB_REDUCTION_DIMX);
 
                   bool input_created = true;
                   for (size_t i = 0; i < input_tensors.size(); ++i) {

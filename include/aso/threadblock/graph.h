@@ -37,6 +37,7 @@ public:
   // output-related fields
   int3 output_map; // assume that all output must use the same map
   int forloop_range;
+  int reduction_dimx;
   dim3 grid_dim, block_dim;
 };
 
@@ -57,7 +58,7 @@ private:
   };
 
 public:
-  Graph(dim3 grid_dim, dim3 block_dim, int forloop_range);
+  Graph(dim3 grid_dim, dim3 block_dim, int forloop_range, int reduction_dimx);
   // input operator
   STensor new_input(aso::kernel::DTensor const &dtensor,
                     int3 input_map,
@@ -107,6 +108,7 @@ public:
 public:
   dim3 grid_dim, block_dim;
   int forloop_range;
+  int reduction_dimx;
   std::vector<aso::threadblock::TBOperator *> operators;
   // memory allocator
   off_t smem_offset;

@@ -26,8 +26,9 @@
 namespace aso {
 namespace threadblock {
 
-Graph::Graph(dim3 _grid_dim, dim3 _block_dim, int _forloop_range)
-    : grid_dim(_grid_dim), block_dim(_block_dim), forloop_range(_forloop_range),
+Graph::Graph(dim3 _grid_dim, dim3 _block_dim, int _forloop_range, int _reduction_dimx)
+    : grid_dim(_grid_dim), block_dim(_block_dim),
+      forloop_range(_forloop_range), reduction_dimx(_reduction_dimx),
       smem_offset(0) {}
 
 size_t Graph::pair_hash::operator()(std::pair<int, int> const &p) const {

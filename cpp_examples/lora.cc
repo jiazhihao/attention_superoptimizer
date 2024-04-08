@@ -62,6 +62,7 @@ int main(int argc, char **argv) {
     plan.grid_dim = {128, 1, 1};
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 2;
+    plan.reduction_dimx = 64;
     outputs = graph.customized({X, W, A, B}, plan);
     assert(outputs.size() == 1);
   }

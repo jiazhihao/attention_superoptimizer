@@ -51,6 +51,7 @@ int main(int argc, char **argv) {
     plan.grid_dim = {32, 1, 1};
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 1;
+    plan.reduction_dimx = 8;
     outputs = graph.customized({X, A}, plan);
     assert(outputs.size() == 1);
   }
@@ -70,6 +71,7 @@ int main(int argc, char **argv) {
     plan.grid_dim = {64, 1, 1};
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 1;
+    plan.reduction_dimx = 8;
     outputs = graph.customized({outputs[0], B}, plan);
     assert(outputs.size() == 1);
   }

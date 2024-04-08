@@ -59,6 +59,7 @@ int main(int argc, char **argv) {
     plan.grid_dim = {8, 8, 1};
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 8;
+    plan.reduction_dimx = 64;
     outputs = graph.customized({Q, K, V}, plan);
     assert(outputs.size() == 2);
     // kernel::DTensor o1 = graph.reduction(outputs[0], 2 /*dim*/, 64 /*size*/);
@@ -81,6 +82,7 @@ int main(int argc, char **argv) {
     plan.grid_dim = {8, 1, 1};
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 1;
+    plan.reduction_dimx = 64;
     outputs = graph.customized({outputs[0], outputs[1]}, plan);
     assert(outputs.size() == 1);
   }
