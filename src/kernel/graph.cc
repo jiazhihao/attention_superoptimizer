@@ -124,6 +124,27 @@ void from_json(json const &j, Graph &g) {
           jop.at("output_tensors")[i].at("guid").get_to(guidO);
           guid_mapping[outputs[i].guid] = guidO;
         }
+
+        // Synchronize layouts with bgraph
+        KNCustomizedOp *op = dynamic_cast<KNCustomizedOp *>(g.operators.back());
+        for (json const &jbop : jop.at("bgraph").at("operators")) {
+          for (json const &joutput : jbop.at("output_tensors")) {
+            size_t jguid = joutput.at("guid");
+            layout::SmemLayout jlayout = joutput.at("layout");
+            for (auto const bop : op->bgraph.operators) {
+              for (threadblock::STensor &input : bop->input_tensors) {
+                if (guid_mapping[input.guid] == jguid) {
+                  input.layout = jlayout;
+                }
+              }
+              for (threadblock::STensor &output : bop->output_tensors) {
+                if (guid_mapping[output.guid] == jguid) {
+                  output.layout = jlayout;
+                }
+              }
+            }
+          }
+        }
         break;
       }
       default:

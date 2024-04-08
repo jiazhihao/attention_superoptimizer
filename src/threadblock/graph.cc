@@ -475,6 +475,7 @@ Graph::operator json() const {
             {"grid_dim", grid_dim},
             {"block_dim", block_dim},
             {"forloop_range", forloop_range},
+            {"reduction_dimx", reduction_dimx},
             {"operators", {}},
             {"smem_offset", smem_offset}};
   for (TBOperator *const op : operators) {
