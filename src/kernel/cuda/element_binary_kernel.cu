@@ -35,20 +35,18 @@ __global__ void execute_elementbinary(aso::type::KNOperatorType type,
                                       int factor2,
                                       int num_elements) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
-  if (type == aso::type::KN_DIV_OP) {
-    if (i < num_elements) {
-      output_ptr[i] = input1_ptr[i / factor1] / input2_ptr[i / factor2];
+  if (i < num_elements) {
+    DT operand_A = input1_ptr[i / factor1];
+    DT operand_B = input2_ptr[i / factor2];
+    if (type == aso::type::KN_ADD_OP) {
+      output_ptr[i] = operand_A + operand_B;
+    } else if (type == aso::type::KN_MUL_OP) {
+      output_ptr[i] = operand_A * operand_B;
+    } else if (type == aso::type::KN_DIV_OP) {
+      output_ptr[i] = operand_A / operand_B;
+    } else {
+      assert(false && "Unimplemented");
     }
-  } else if (type == aso::type::KN_ADD_OP) {
-    if (i < num_elements) {
-      output_ptr[i] = input1_ptr[i / factor1] + input2_ptr[i / factor2];
-    }
-  } else if (type == aso::type::KN_MUL_OP) {
-    if (i < num_elements) {
-      output_ptr[i] = input1_ptr[i / factor1] * input2_ptr[i / factor2];
-    }
-  } else {
-    assert(false && "Unimplemented");
   }
 }
 
@@ -76,7 +74,7 @@ bool KNElementBinaryOp::profile(ProfileResult &result) {
   checkCUDA(cudaEventCreate(&events[0]));
   checkCUDA(cudaEventCreate(&events[1]));
   checkCUDA(cudaEventRecord(events[0]));
-  for (int i = 0; i < ProfileResult::NUM_ITERATIONS; i++) {
+  for (int i = 0; i < 16; i++) {
     execute_elementbinary<<<num_blocks, num_threads_per_blk>>>(op_type,
                                                                input1_ptr,
                                                                input2_ptr,
@@ -89,7 +87,7 @@ bool KNElementBinaryOp::profile(ProfileResult &result) {
   checkCUDA(cudaEventRecord(events[1]));
   checkCUDA(cudaEventSynchronize(events[1]));
   checkCUDA(cudaEventElapsedTime(&runtime_ms, events[0], events[1]));
-  result.run_time = runtime_ms / ProfileResult::NUM_ITERATIONS;
+  result.run_time = runtime_ms / 16;
   printf("ElementBinary: runtime(%.8lfms)\n", result.run_time);
   checkCUDA(cudaEventDestroy(events[0]));
   checkCUDA(cudaEventDestroy(events[1]));

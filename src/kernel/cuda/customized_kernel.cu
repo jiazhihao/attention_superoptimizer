@@ -546,7 +546,7 @@ void KNCustomizedOp::run() {
 }
 
 bool KNCustomizedOp::profile(ProfileResult &result) {
-  printf("stensor size = %zu dtensor size %zu\n", sizeof(aso::threadblock::STensor), sizeof(aso::kernel::DTensor));
+  printf("smem_offset = %d\n", bgraph.smem_offset);
   int max_smem_size = aso::type::MAX_SMEM_SIZE;
   assert(bgraph.smem_offset <= max_smem_size);
   if (bgraph.smem_offset > 48 * 1024) {

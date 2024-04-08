@@ -81,7 +81,7 @@ bool KNMatmulOp::profile(ProfileResult &result) {
   checkCUDA(cudaEventCreate(&events[0]));
   checkCUDA(cudaEventCreate(&events[1]));
   checkCUDA(cudaEventRecord(events[0]));
-  for (int i = 0; i < ProfileResult::NUM_ITERATIONS; i++) {
+  for (int i = 0; i < 16; i++) {
     if (batch == 1) {
       checkCUDA(cublasGemmEx(dmm->blas,
                              trans_A,
@@ -135,7 +135,7 @@ bool KNMatmulOp::profile(ProfileResult &result) {
   checkCUDA(cudaEventRecord(events[1]));
   checkCUDA(cudaEventSynchronize(events[1]));
   checkCUDA(cudaEventElapsedTime(&runtime_ms, events[0], events[1]));
-  result.run_time = runtime_ms / ProfileResult::NUM_ITERATIONS;
+  result.run_time = runtime_ms / 16;
   printf("BatchMatmul: runtime(%.8lfms)\n", result.run_time);
   checkCUDA(cudaEventDestroy(events[0]));
   checkCUDA(cudaEventDestroy(events[1]));

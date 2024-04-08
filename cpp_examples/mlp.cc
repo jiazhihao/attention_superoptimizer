@@ -8,17 +8,15 @@ int main(int argc, char **argv) {
   kernel::Graph ref_graph;
   {
     kernel::DTensor X = ref_graph.new_input(
-        {16, 256}, type::DT_FLOAT16, layout::DmemRowMajor);
-    kernel::DTensor W = ref_graph.new_input(
-        {256, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+        {16, 8192}, type::DT_FLOAT16, layout::DmemRowMajor);
     kernel::DTensor A = ref_graph.new_input(
-        {256, 16}, type::DT_FLOAT16, layout::DmemColumnMajor);
+        {8192, 8}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor B = ref_graph.new_input(
-        {16, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+        {8, 8192}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor D = ref_graph.matmul(X, A);
-    kernel::DTensor E = ref_graph.matmul(D, B);
-    kernel::DTensor C = ref_graph.matmul(X, W);
-    ref_graph.add(C, E);
+    kernel::DTensor E = ref_graph.exp(D);
+    ref_graph.matmul(E, B);
+    //ref_graph.add(X, F);
     for (auto const &op : ref_graph.operators) {
       op->fingerprint();
     }
@@ -32,39 +30,50 @@ int main(int argc, char **argv) {
   }
   kernel::Graph graph;
   kernel::DTensor X = graph.new_input(
-      {16, 256}, type::DT_FLOAT16, layout::DmemRowMajor);
-  kernel::DTensor W = graph.new_input(
-      {256, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      {16, 8192}, type::DT_FLOAT16, layout::DmemRowMajor);
   kernel::DTensor A = graph.new_input(
-      {256, 16}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      {8192, 8}, type::DT_FLOAT16, layout::DmemColumnMajor);
   kernel::DTensor B = graph.new_input(
-      {16, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      {8, 8192}, type::DT_FLOAT16, layout::DmemColumnMajor);
 
   std::vector<kernel::DTensor> outputs;
   {
     threadblock::ExecutionPlan plan;
-    plan.ops.push_back({aso::type::TB_MATMUL_OP, {{0, 0}, {2, 0}}});
-    plan.ops.push_back({aso::type::TB_CONCAT_1_OP, {{0, 0}, {4, 0}}});
-    plan.ops.push_back({aso::type::TB_CONCAT_0_OP, {{1, 0}, {3, 0}}});
-    plan.ops.push_back({aso::type::TB_MATMUL_OP, {{5, 0}, {6, 0}}});
-    plan.input_map.push_back({-1, -1, -1});
+    plan.ops.push_back({aso::type::TB_MATMUL_OP, {{0, 0}, {1, 0}}});
     plan.input_map.push_back({1, -1, -1});
+    plan.input_map.push_back({0, -1, -1});
+    plan.input_smem_layouts = {
+        layout::SmemRowMajor,
+        layout::SmemColumnMajor,
+    };
+    plan.output_map = {1, -1, -1};
+    plan.forloop_dim = {-1, -1};
+    plan.grid_dim = {32, 1, 1};
+    plan.block_dim = {128, 1, 1};
+    plan.forloop_range = 1;
+    outputs = graph.customized({X, A}, plan);
+    assert(outputs.size() == 1);
+  }
+  {
+    threadblock::ExecutionPlan plan;
+    plan.ops.push_back({aso::type::TB_REDUCTION_1_TO_DIMX_OP, {{0, 0}}});
+    plan.ops.push_back({aso::type::TB_EXP_OP, {{2, 0}}});
+    plan.ops.push_back({aso::type::TB_MATMUL_OP, {{3, 0}, {1, 0}}});
     plan.input_map.push_back({-1, -1, -1});
     plan.input_map.push_back({1, -1, -1});
     plan.input_smem_layouts = {
         layout::SmemRowMajor,
         layout::SmemColumnMajor,
-        layout::SmemColumnMajor,
-        layout::SmemColumnMajor,
     };
     plan.output_map = {1, -1, -1};
-    plan.forloop_dim = {1, 0, 0, -1};
-    plan.grid_dim = {128, 1, 1};
+    plan.forloop_dim = {-1, -1};
+    plan.grid_dim = {64, 1, 1};
     plan.block_dim = {128, 1, 1};
-    plan.forloop_range = 2;
-    outputs = graph.customized({X, W, A, B}, plan);
+    plan.forloop_range = 1;
+    outputs = graph.customized({outputs[0], B}, plan);
     assert(outputs.size() == 1);
   }
+
   ProfileResult result;
   float total_ms = 0.0f;
   for (auto const &op : graph.operators) {

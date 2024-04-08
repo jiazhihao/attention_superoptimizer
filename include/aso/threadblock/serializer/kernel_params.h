@@ -23,10 +23,10 @@ namespace aso {
 namespace threadblock {
 
 struct alignas(16) NewKernelParams {
-  const static int MAX_NUM_OPERATORS = 10;
+  const static int MAX_NUM_OPERATORS = 16;
   const static int MAX_NUM_PARAMETERS = 120;
-  const static int MAX_NUM_DMEM_INPUTS = 3;
-  const static int MAX_NUM_DMEM_OUTPUTS = 3;
+  const static int MAX_NUM_DMEM_INPUTS = 4;
+  const static int MAX_NUM_DMEM_OUTPUTS = 4;
   int num_operators, num_parameters, num_dmem_inputs, num_dmem_outputs;
   int parameters[MAX_NUM_PARAMETERS];
   aso::type::TBOperatorType operator_types[MAX_NUM_OPERATORS];
@@ -38,8 +38,8 @@ struct alignas(16) KernelParams {
   const static int MAX_NUM_OPERATORS = 10;
   const static int MAX_TOTAL_SMEM_INPUTS = 16;
   const static int MAX_TOTAL_SMEM_OUTPUTS = 10;
-  const static int MAX_NUM_DMEM_INPUTS = 3;
-  const static int MAX_NUM_DMEM_OUTPUTS = 3;
+  const static int MAX_NUM_DMEM_INPUTS = 4;
+  const static int MAX_NUM_DMEM_OUTPUTS = 4;
   int forloop_range;
   int num_operators, num_smem_inputs, num_smem_outputs;
   int operator_num_inputs[MAX_NUM_OPERATORS],
