@@ -61,6 +61,10 @@ std::shared_ptr<AlgebraicPattern>
     get_pattern(type::TBOperatorType op,
                 STensor const &tensor,
                 std::shared_ptr<AlgebraicPattern> opd) {
+  // Retrieve reduction_dimx from threadblock graph
+  assert(tensor.owner_op != nullptr);
+  assert(tensor.owner_op->bgraph != nullptr);
+  int reduction_dimx = tensor.owner_op->bgraph->reduction_dimx;
   switch (op) {
     case type::TBOperatorType::TB_EXP_OP:
       return std::make_shared<Exp>(opd);
@@ -74,13 +78,13 @@ std::shared_ptr<AlgebraicPattern>
       // assert(tensor.dim[2] > 1);
       return std::make_shared<Red>(tensor.dim[2], opd);
     case type::TBOperatorType::TB_REDUCTION_0_TO_DIMX_OP:
-      return std::make_shared<Red>(tensor.dim[0] / type::TB_REDUCTION_DIMX,
+      return std::make_shared<Red>(tensor.dim[0] / reduction_dimx,
                                    opd);
     case type::TBOperatorType::TB_REDUCTION_1_TO_DIMX_OP:
-      return std::make_shared<Red>(tensor.dim[1] / type::TB_REDUCTION_DIMX,
+      return std::make_shared<Red>(tensor.dim[1] / reduction_dimx,
                                    opd);
     case type::TBOperatorType::TB_REDUCTION_2_TO_DIMX_OP:
-      return std::make_shared<Red>(tensor.dim[2] / type::TB_REDUCTION_DIMX,
+      return std::make_shared<Red>(tensor.dim[2] / reduction_dimx,
                                    opd);
     case type::TBOperatorType::TB_OUTPUT_OP:
       return opd;
@@ -198,26 +202,26 @@ TBOperator *create_op(threadblock::Graph &g,
       }
       return g.create_reduction_op(input, 2);
     case type::TBOperatorType::TB_REDUCTION_0_TO_DIMX_OP:
-      if (input.num_dims > 0 && input.dim[0] % type::TB_REDUCTION_DIMX != 0) {
+      if (input.num_dims > 0 && input.dim[0] % g.reduction_dimx != 0) {
         return nullptr;
       }
-      if (input.num_dims > 0 && input.dim[0] <= type::TB_REDUCTION_DIMX) {
+      if (input.num_dims > 0 && input.dim[0] <= g.reduction_dimx) {
         return nullptr;
       }
       return g.create_reduction_to_dimx_op(input, 0);
     case type::TBOperatorType::TB_REDUCTION_1_TO_DIMX_OP:
-      if (input.num_dims > 1 && input.dim[1] % type::TB_REDUCTION_DIMX != 0) {
+      if (input.num_dims > 1 && input.dim[1] % g.reduction_dimx != 0) {
         return nullptr;
       }
-      if (input.num_dims > 1 && input.dim[1] <= type::TB_REDUCTION_DIMX) {
+      if (input.num_dims > 1 && input.dim[1] <= g.reduction_dimx) {
         return nullptr;
       }
       return g.create_reduction_to_dimx_op(input, 1);
     case type::TBOperatorType::TB_REDUCTION_2_TO_DIMX_OP:
-      if (input.num_dims > 2 && input.dim[2] % type::TB_REDUCTION_DIMX != 0) {
+      if (input.num_dims > 2 && input.dim[2] % g.reduction_dimx != 0) {
         return nullptr;
       }
-      if (input.num_dims > 2 && input.dim[2] <= type::TB_REDUCTION_DIMX) {
+      if (input.num_dims > 2 && input.dim[2] <= g.reduction_dimx) {
         return nullptr;
       }
       return g.create_reduction_to_dimx_op(input, 2);

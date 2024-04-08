@@ -65,7 +65,7 @@ KNOperator *Graph::create_customized_op(std::vector<DTensor> const &inputs,
 KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
                                ExecutionPlan const &_plan)
     : KNOperator(aso::type::KN_CUSTOMIZED_OP, _inputs), plan(_plan),
-      bgraph(_plan.grid_dim, _plan.block_dim, _plan.forloop_range) {
+      bgraph(_plan.grid_dim, _plan.block_dim, _plan.forloop_range, _plan.reduction_dimx) {
   assert(_inputs.size() == plan.input_map.size());
   assert(plan.forloop_dim.size() == plan.input_map.size());
   assert(plan.input_smem_layouts.size() == plan.input_map.size());
@@ -122,6 +122,14 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         bgraph.reduction_to_dimx(my_inputs[0], reduce_dim);
         break;
       }
+      case aso::type::TB_CONCAT_0_OP:
+      case aso::type::TB_CONCAT_1_OP:
+      case aso::type::TB_CONCAT_2_OP: {
+        assert(my_inputs.size() == 2);
+        int concat_dim = op.first - aso::type::TB_CONCAT_0_OP;
+        bgraph.concat(my_inputs[0], my_inputs[1], concat_dim);
+        break;
+      }
       default: {
         assert(false && "Unsupported kernel operator");
       }
@@ -175,7 +183,7 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
 KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
                                aso::threadblock::Graph const &_graph)
     : KNOperator(aso::type::KN_CUSTOMIZED_OP, _inputs),
-      bgraph(_graph.grid_dim, _graph.block_dim, _graph.forloop_range) {
+      bgraph(_graph.grid_dim, _graph.block_dim, _graph.forloop_range, _graph.reduction_dimx) {
   plan.grid_dim = _graph.grid_dim;
   plan.block_dim = _graph.block_dim;
   plan.forloop_range = _graph.forloop_range;

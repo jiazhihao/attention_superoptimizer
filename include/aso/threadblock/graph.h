@@ -37,6 +37,7 @@ public:
   // output-related fields
   int3 output_map; // assume that all output must use the same map
   int forloop_range;
+  int reduction_dimx;
   dim3 grid_dim, block_dim;
 };
 
@@ -57,7 +58,7 @@ private:
   };
 
 public:
-  Graph(dim3 grid_dim, dim3 block_dim, int forloop_range);
+  Graph(dim3 grid_dim, dim3 block_dim, int forloop_range, int reduction_dimx);
   // input operator
   STensor new_input(aso::kernel::DTensor const &dtensor,
                     int3 input_map,
@@ -77,6 +78,8 @@ public:
   STensor exp(STensor const &A);
   TBOperator *create_elementunary_op(STensor const &A,
                                      aso::type::TBOperatorType _type);
+  STensor add(STensor const &A, STensor const &B);
+  STensor mul(STensor const &A, STensor const &B);
   STensor div(STensor const &A, STensor const &B);
   TBOperator *create_elementbinary_op(STensor const &A,
                                       STensor const &B,
@@ -88,6 +91,10 @@ public:
   // reduction_to_dimx operator
   STensor reduction_to_dimx(STensor const &A, int dim);
   TBOperator *create_reduction_to_dimx_op(STensor const &A, int dim);
+
+  // concat operator
+  STensor concat(STensor const &A, STensor const &B, int dim);
+  TBOperator *create_concat_op(STensor const &A, STensor const &B, int dim);
 
   off_t allocate(STensor const &tensor);
   void free(STensor const &tensor);
@@ -101,6 +108,7 @@ public:
 public:
   dim3 grid_dim, block_dim;
   int forloop_range;
+  int reduction_dimx;
   std::vector<aso::threadblock::TBOperator *> operators;
   // memory allocator
   off_t smem_offset;

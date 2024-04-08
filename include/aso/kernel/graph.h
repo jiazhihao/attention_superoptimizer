@@ -48,6 +48,8 @@ public:
   KNOperator *create_elementunary_op(DTensor const &input,
                                      aso::type::KNOperatorType _type);
   // elementunary operator
+  DTensor add(DTensor const &input1, DTensor const &input2);
+  DTensor mul(DTensor const &input1, DTensor const &input2);
   DTensor div(DTensor const &input1, DTensor const &input2);
   KNOperator *create_elementbinary_op(DTensor const &input1,
                                       DTensor const &input2,

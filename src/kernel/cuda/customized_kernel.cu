@@ -21,12 +21,14 @@
 #include "aso/threadblock/cuda/matmul.h"
 #include "aso/threadblock/cuda/output_saver.h"
 #include "aso/threadblock/cuda/reduction.h"
+#include "aso/threadblock/cuda/concat.h"
 #include "aso/threadblock/serializer/input_loader_serializer.h"
 #include "aso/threadblock/serializer/output_saver_serializer.h"
 #include "aso/threadblock/serializer/matmul_serializer.h"
 #include "aso/threadblock/serializer/element_unary_serializer.h"
 #include "aso/threadblock/serializer/element_binary_serializer.h"
 #include "aso/threadblock/serializer/reduction_serializer.h"
+#include "aso/threadblock/serializer/concat_serializer.h"
 #include "aso/threadblock/graph.h"
 #include "aso/utils/cuda_helper.h"
 #include "aso/warp/cuda/matmul.h"
@@ -191,6 +193,22 @@ __global__ void
             threadIdx.x,
             blockDim.x);
         __syncthreads();
+      } else if ((op_type >= aso::type::TB_CONCAT_FIRST_OP_ID) &&
+                 (op_type <= aso::type::TB_CONCAT_LAST_OP_ID)) {
+          int output_num_elements, A_concat_dim_size, B_concat_dim_size, inner_size;
+          int A_smem_offset, B_smem_offset, output_smem_offset;
+          aso::threadblock::deserialize_concat_op_parameters(
+              new_params.parameters,
+              param_idx,
+              output_num_elements,
+              A_concat_dim_size,
+              B_concat_dim_size,
+              inner_size,
+              A_smem_offset,
+              B_smem_offset,
+              output_smem_offset);
+        // Do nothing since we can avoid concat mem copy by
+        // updating the input tensors smem_offset
       } else {
         assert(false && "Unsupported threadblock operator");
       }
@@ -479,6 +497,37 @@ __global__ void
           __syncthreads();
           break;
         }
+        case aso::type::TB_CONCAT_0_OP:
+        case aso::type::TB_CONCAT_1_OP:
+        case aso::type::TB_CONCAT_2_OP: {
+          int output_num_elements, A_concat_dim_size, B_concat_dim_size, inner_size;
+          int A_smem_offset, B_smem_offset, output_smem_offset;
+          aso::threadblock::deserialize_concat_op_parameters(
+              new_params.parameters,
+              param_idx,
+              output_num_elements,
+              A_concat_dim_size,
+              B_concat_dim_size,
+              inner_size,
+              A_smem_offset,
+              B_smem_offset,
+              output_smem_offset);
+          aso::type::FPType *A_ptr = (aso::type::FPType *)(smem_buffer + A_smem_offset);
+          aso::type::FPType *B_ptr = (aso::type::FPType *)(smem_buffer + B_smem_offset);
+          aso::type::FPType *output_ptr = (aso::type::FPType *)(smem_buffer + output_smem_offset);
+          aso::threadblock::TBConcatFingerprinter fp(
+              A_ptr,
+              B_ptr,
+              output_ptr,
+              output_num_elements,
+              A_concat_dim_size,
+              B_concat_dim_size,
+              inner_size,
+              threadIdx.x,
+              blockDim.x);
+          __syncthreads();
+          break;
+        }
         default: {
           assert(false && "Unsupported threadblock operator");
         }
@@ -497,7 +546,7 @@ void KNCustomizedOp::run() {
 }
 
 bool KNCustomizedOp::profile(ProfileResult &result) {
-  printf("stensor size = %zu dtensor size %zu\n", sizeof(aso::threadblock::STensor), sizeof(aso::kernel::DTensor));
+  printf("smem_offset = %d\n", bgraph.smem_offset);
   int max_smem_size = aso::type::MAX_SMEM_SIZE;
   assert(bgraph.smem_offset <= max_smem_size);
   if (bgraph.smem_offset > 48 * 1024) {

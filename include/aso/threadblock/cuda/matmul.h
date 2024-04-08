@@ -626,18 +626,18 @@ void calculate_warp_shape(
   int m_factor = (m + inst_m - 1) / inst_m;
   int n_factor = (n + inst_n - 1) / inst_n;
   // We should have at least 4 warps in a thread block
-  assert(m_factor * n_factor >= 4);
+  //assert(m_factor * n_factor >= 4);
   if (m_factor >= 2 && n_factor >= 2) {
     assert(m_factor % 2 == 0);
     assert(n_factor % 2 == 0);
     m_factor = m_factor / 2;
     n_factor = n_factor / 2;
   } else if (m_factor == 1) {
-    assert(n_factor % 4 == 0);
-    n_factor = n_factor / 4;
+    //assert(n_factor % 4 == 0);
+    n_factor = n_factor / min(4, n_factor);
   } else if (n_factor == 1) {
-    assert(m_factor % 4 == 0);
-    m_factor = m_factor / 4;
+    //assert(m_factor % 4 == 0);
+    m_factor = m_factor / min(4, m_factor);
   }
   warp_m = m_factor * inst_m;
   warp_n = n_factor * inst_n;

@@ -35,12 +35,18 @@ __global__ void execute_elementbinary(aso::type::KNOperatorType type,
                                       int factor2,
                                       int num_elements) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
-  if (type == aso::type::KN_DIV_OP) {
-    if (i < num_elements) {
-      output_ptr[i] = input1_ptr[i / factor1] / input2_ptr[i / factor2];
+  if (i < num_elements) {
+    DT operand_A = input1_ptr[i / factor1];
+    DT operand_B = input2_ptr[i / factor2];
+    if (type == aso::type::KN_ADD_OP) {
+      output_ptr[i] = operand_A + operand_B;
+    } else if (type == aso::type::KN_MUL_OP) {
+      output_ptr[i] = operand_A * operand_B;
+    } else if (type == aso::type::KN_DIV_OP) {
+      output_ptr[i] = operand_A / operand_B;
+    } else {
+      assert(false && "Unimplemented");
     }
-  } else {
-    assert(false && "Unimplemented");
   }
 }
 
@@ -68,7 +74,7 @@ bool KNElementBinaryOp::profile(ProfileResult &result) {
   checkCUDA(cudaEventCreate(&events[0]));
   checkCUDA(cudaEventCreate(&events[1]));
   checkCUDA(cudaEventRecord(events[0]));
-  for (int i = 0; i < ProfileResult::NUM_ITERATIONS; i++) {
+  for (int i = 0; i < 16; i++) {
     execute_elementbinary<<<num_blocks, num_threads_per_blk>>>(op_type,
                                                                input1_ptr,
                                                                input2_ptr,
@@ -81,7 +87,7 @@ bool KNElementBinaryOp::profile(ProfileResult &result) {
   checkCUDA(cudaEventRecord(events[1]));
   checkCUDA(cudaEventSynchronize(events[1]));
   checkCUDA(cudaEventElapsedTime(&runtime_ms, events[0], events[1]));
-  result.run_time = runtime_ms / ProfileResult::NUM_ITERATIONS;
+  result.run_time = runtime_ms / 16;
   printf("ElementBinary: runtime(%.8lfms)\n", result.run_time);
   checkCUDA(cudaEventDestroy(events[0]));
   checkCUDA(cudaEventDestroy(events[1]));
@@ -97,7 +103,45 @@ __global__ void
                                       aso::kernel::DTensor output,
                                       int num_elements) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
-  if (type == aso::type::KN_DIV_OP) {
+  if (type == aso::type::KN_ADD_OP) {
+    if (i < num_elements) {
+      int input1_stride = 1, input1_idx = 0;
+      int input2_stride = 1, input2_idx = 0;
+      for (int d = output.num_dims - 1; d >= 0; d--) {
+        input1_idx += (i % input1.dim[d]) * input1_stride;
+        input2_idx += (i % input2.dim[d]) * input2_stride;
+        input1_stride *= input1.dim[d];
+        input2_stride *= input2.dim[d];
+        i /= output.dim[d];
+      }
+      uint32_t x = input1.fp_ptr[input1_idx];
+      uint32_t y = input2.fp_ptr[input2_idx];
+      uint32_t z = (x + y) % FP_PQ;
+      output.fp_ptr[threadIdx.x + blockIdx.x * blockDim.x] = z;
+      // printf("add: output[%d] = %d input1[%d] = %d input2[%d] = %d\n",
+      //     threadIdx.x + blockIdx.x * blockDim.x, z % FP_PQ,
+      //     input1_idx, x, input2_idx, y);
+    }
+  } else if (type == aso::type::KN_MUL_OP) {
+    if (i < num_elements) {
+      int input1_stride = 1, input1_idx = 0;
+      int input2_stride = 1, input2_idx = 0;
+      for (int d = output.num_dims - 1; d >= 0; d--) {
+        input1_idx += (i % input1.dim[d]) * input1_stride;
+        input2_idx += (i % input2.dim[d]) * input2_stride;
+        input1_stride *= input1.dim[d];
+        input2_stride *= input2.dim[d];
+        i /= output.dim[d];
+      }
+      uint32_t x = input1.fp_ptr[input1_idx];
+      uint32_t y = input2.fp_ptr[input2_idx];
+      uint32_t z = (x * y) % FP_PQ;
+      output.fp_ptr[threadIdx.x + blockIdx.x * blockDim.x] = z;
+      // printf("add: output[%d] = %d input1[%d] = %d input2[%d] = %d\n",
+      //     threadIdx.x + blockIdx.x * blockDim.x, z % FP_PQ,
+      //     input1_idx, x, input2_idx, y);
+    }
+  } else if (type == aso::type::KN_DIV_OP) {
     if (i < num_elements) {
       int input1_stride = 1, input1_idx = 0;
       int input2_stride = 1, input2_idx = 0;

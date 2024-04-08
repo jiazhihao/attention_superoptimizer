@@ -56,14 +56,14 @@ TBOperator *Graph::create_reduction_to_dimx_op(STensor const &input, int dim) {
   STensor output = input;
   assert(output.num_dims > dim);
   assert(output.layout == aso::layout::SmemRowMajor);
-  output.dim[dim] = aso::type::TB_REDUCTION_DIMX;
+  output.dim[dim] = this->reduction_dimx;
 
   if (smem_offset + (off_t)output.size() > (off_t)aso::type::MAX_SMEM_SIZE) {
     return nullptr;
   }
 
   TBOperator *op =
-      new TBReductionOp(this, input, dim, aso::type::TB_REDUCTION_DIMX);
+      new TBReductionOp(this, input, dim, this->reduction_dimx);
 
   return op;
 }

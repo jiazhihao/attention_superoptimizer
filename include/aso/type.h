@@ -55,7 +55,9 @@ enum KNOperatorType {
   KN_REDUCTION_1_OP = 1005,
   KN_REDUCTION_2_OP = 1006,
   KN_EXP_OP = 1007,
-  KN_DIV_OP = 1008,
+  KN_ADD_OP = 1008,
+  KN_MUL_OP = 1009,
+  KN_DIV_OP = 1010,
   KN_CUSTOMIZED_OP = 1999,
 };
 
@@ -68,6 +70,8 @@ NLOHMANN_JSON_SERIALIZE_ENUM(KNOperatorType,
                                  {KN_REDUCTION_1_OP, "kn_reduction_1_op"},
                                  {KN_REDUCTION_2_OP, "kn_reduction_2_op"},
                                  {KN_EXP_OP, "kn_exp_op"},
+                                 {KN_ADD_OP, "kn_add_op"},
+                                 {KN_MUL_OP, "kn_mul_op"},
                                  {KN_DIV_OP, "kn_div_op"},
                                  {KN_CUSTOMIZED_OP, "kn_customized_op"},
                              })
@@ -78,7 +82,9 @@ enum TBOperatorType {
   TB_OUTPUT_OP = 2002,
   TB_MATMUL_OP = 2003,
   TB_EXP_OP = 2007,
-  TB_DIV_OP = 2008,
+  TB_ADD_OP = 2008,
+  TB_MUL_OP = 2009,
+  TB_DIV_OP = 2010,
   TB_REDUCTION_FIRST_OP_ID = 2100,
   TB_REDUCTION_0_OP = 2101,
   TB_REDUCTION_1_OP = 2102,
@@ -87,6 +93,11 @@ enum TBOperatorType {
   TB_REDUCTION_1_TO_DIMX_OP = 2105,
   TB_REDUCTION_2_TO_DIMX_OP = 2106,
   TB_REDUCTION_LAST_OP_ID = 2199,
+  TB_CONCAT_FIRST_OP_ID = 2200,
+  TB_CONCAT_0_OP = 2200,
+  TB_CONCAT_1_OP = 2201,
+  TB_CONCAT_2_OP = 2202,
+  TB_CONCAT_LAST_OP_ID = 2210,
   TB_CUSTOMIZED_OP = 2999
 };
 
@@ -101,10 +112,15 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
         {TB_REDUCTION_1_OP, "tb_reduction_1_op"},
         {TB_REDUCTION_2_OP, "tb_reduction_2_op"},
         {TB_EXP_OP, "tb_exp_op"},
+        {TB_ADD_OP, "tb_add_op"},
+        {TB_MUL_OP, "tb_mul_op"},
         {TB_DIV_OP, "tb_div_op"},
         {TB_REDUCTION_0_TO_DIMX_OP, "tb_reduction_0_to_dimx_op"},
         {TB_REDUCTION_1_TO_DIMX_OP, "tb_reduction_1_to_dimx_op"},
         {TB_REDUCTION_2_TO_DIMX_OP, "tb_reduction_2_to_dimx_op"},
+        {TB_CONCAT_0_OP, "tb_concat_0_op"},
+        {TB_CONCAT_1_OP, "tb_concat_1_op"},
+        {TB_CONCAT_2_OP, "tb_concat_2_op"},
         {TB_CUSTOMIZED_OP, "tb_customized_op"},
     })
 
