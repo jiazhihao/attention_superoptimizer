@@ -79,14 +79,13 @@ int main(int argc, char **argv) {
   assert(ref_graph.operators.back()->output_tensors[0].has_same_fingerprint(
       graph.operators.back()->output_tensors[0]));
 
-  return 0;
   clock_t st = clock();
   search::GeneratorConfig config = search::GeneratorConfig::get_default_config();
-  config.grid_dim_to_explore = {{40, 4, 1}, {40, 1, 1}};
+  config.grid_dim_to_explore = {{128, 1, 1}};
   search::KernelGraphGenerator gen(
       ref_graph,
       config,
-      "checkpoint_multi_head_attn_inc_decode.json");
+      "checkpoint_lora.json");
   gen.generate_kernel_graphs();
 
   clock_t et = clock();

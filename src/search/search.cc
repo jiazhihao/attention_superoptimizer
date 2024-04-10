@@ -202,9 +202,8 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
   if (verify(c, g)) {
     ++num_valid_kernel_graphs;
     // std::ofstream ofs;
-    // ofs.open("generated_graphs.txt", std::ofstream::out | std::ofstream::app);
-    // ofs << json(g) << std::endl;
-    // ofs.close();
+    // ofs.open("generated_graphs.txt", std::ofstream::out |
+    // std::ofstream::app); ofs << json(g) << std::endl; ofs.close();
     generated_graphs.push_back(json(g));
     // update_best_graph(g);
     std::cerr << "kernel graph candidate: " << json(g) << std::endl;
@@ -331,8 +330,10 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
                     continue;
                   }
                   SearchContext<STensor> tb_context;
-                  threadblock::Graph tb_graph(
-                      grid_dim, block_dim, forloop_range, config.reduction_dimx);
+                  threadblock::Graph tb_graph(grid_dim,
+                                              block_dim,
+                                              forloop_range,
+                                              config.reduction_dimx);
 
                   bool input_created = true;
                   for (size_t i = 0; i < input_tensors.size(); ++i) {
@@ -450,7 +451,7 @@ void KernelGraphGenerator::generate_kernel_graphs() {
 
   printf("Total kernel graphs explored: %d\n", num_total_kernel_graphs);
   printf("Random tests performed: %d\n", num_total_random_tests);
-  printf("Valid kernel graphs explored: %d", num_valid_kernel_graphs);
+  printf("Valid kernel graphs explored: %d\n", num_valid_kernel_graphs);
 }
 
 void KernelGraphGenerator::fingerprint_eval() {
@@ -479,6 +480,9 @@ void KernelGraphGenerator::process_outputs() {
 
 bool KernelGraphGenerator::check_pattern(
     std::shared_ptr<AlgebraicPattern> pattern) {
+  if (!pattern) {
+    return false;
+  }
   for (auto const &final_pattern : final_patterns) {
     if (pattern->subpattern_to(*final_pattern)) {
       return true;
@@ -507,6 +511,12 @@ void KernelGraphGenerator::pattern_eval() {
                      computation_graph_patterns.at(op->input_tensors[0]),
                      computation_graph_patterns.at(op->input_tensors[1])))});
         break;
+      case type::KNOperatorType::KN_ADD_OP:
+        computation_graph_patterns.insert(
+            {op->output_tensors[0],
+             std::make_shared<Add>(
+                 computation_graph_patterns.at(op->input_tensors[0]),
+                 computation_graph_patterns.at(op->input_tensors[1]))});
       case type::KNOperatorType::KN_REDUCTION_0_OP:
         computation_graph_patterns.insert(
             {op->output_tensors[0],
@@ -573,7 +583,7 @@ bool KernelGraphGenerator::verify(SearchContext<DTensor> &c,
 
   ++num_total_random_tests;
 
-  // std::cout << "random testing: " << json(g) << std::endl;
+  std::cout << "random testing: " << json(g) << std::endl;
 
   for (auto const &op : g.operators) {
     op->fingerprint();

@@ -2,6 +2,9 @@
 #include "aso/search/search.h"
 #include "aso/threadblock/graph.h"
 
+
+#include <iostream>
+
 using namespace aso;
 
 int main(int argc, char **argv) {
@@ -76,6 +79,8 @@ int main(int argc, char **argv) {
     assert(outputs.size() == 1);
   }
 
+  std::cout << "ref graph:" << json(graph) << std::endl;
+
   ProfileResult result;
   float total_ms = 0.0f;
   for (auto const &op : graph.operators) {
@@ -89,14 +94,18 @@ int main(int argc, char **argv) {
   assert(ref_graph.operators.back()->output_tensors[0].has_same_fingerprint(
       graph.operators.back()->output_tensors[0]));
 
-  return 0;
   clock_t st = clock();
   search::GeneratorConfig config = search::GeneratorConfig::get_default_config();
-  config.grid_dim_to_explore = {{40, 4, 1}, {40, 1, 1}};
+  // config.imap_to_explore.push_back({1, -1, -1});
+  // config.omap_to_explore.push_back({1, -1, -1});
+  config.imap_to_explore = {{0, -1, -1}, {1, -1, -1}, {-1, -1, -1}};
+  config.omap_to_explore = {{1, -1, -1}};
+  config.grid_dim_to_explore = {{32, 1, 1}, {64, 1, 1}};
+  config.reduction_dimx = 8;
   search::KernelGraphGenerator gen(
       ref_graph,
       config,
-      "checkpoint_multi_head_attn_inc_decode.json");
+      "checkpoint_mlp.json");
   gen.generate_kernel_graphs();
 
   clock_t et = clock();
