@@ -134,6 +134,7 @@ template <ActivationType act_type, int N>
 struct act_function {
   CUTLASS_DEVICE cutlass::Array<cutlass::half_t, N>
       operator()(cutlass::Array<cutlass::half_t, N> const &rhs) const {
+    // default do nothing
     return rhs;
   }
 };

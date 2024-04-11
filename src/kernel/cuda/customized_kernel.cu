@@ -635,12 +635,6 @@ bool KNCustomizedOp::profile(ProfileResult &result) {
                                  bgraph.smem_offset>>>(new_params,
                                                        bgraph.forloop_range);
   }
-  cudaError_t error = cudaGetLastError();
-  if (error != cudaSuccess) {
-    // print the CUDA error message and exit
-    printf("CUDA error: %s\n", cudaGetErrorString(error));
-    exit(-1);
-  }
   float runtime_ms = 0;
   checkCUDA(cudaEventRecord(events[1]));
   checkCUDA(cudaEventSynchronize(events[1]));
