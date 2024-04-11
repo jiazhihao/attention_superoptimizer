@@ -127,22 +127,17 @@ void from_json(json const &j, Graph &g) {
 
         // Synchronize layouts with bgraph
         KNCustomizedOp *op = dynamic_cast<KNCustomizedOp *>(g.operators.back());
-        for (json const &jbop : jop.at("bgraph").at("operators")) {
-          for (json const &joutput : jbop.at("output_tensors")) {
-            size_t jguid = joutput.at("guid");
-            layout::SmemLayout jlayout = joutput.at("layout");
-            for (auto const bop : op->bgraph.operators) {
-              for (threadblock::STensor &input : bop->input_tensors) {
-                if (guid_mapping[input.guid] == jguid) {
-                  input.layout = jlayout;
-                }
-              }
-              for (threadblock::STensor &output : bop->output_tensors) {
-                if (guid_mapping[output.guid] == jguid) {
-                  output.layout = jlayout;
-                }
-              }
-            }
+        assert(op->bgraph.operators.size() == jop.at("bgraph").at("operators").size());
+        for (size_t i = 0; i < op->bgraph.operators.size(); ++i) {
+          threadblock::TBOperator *bop = op->bgraph.operators[i];
+          json jbop = jop.at("bgraph").at("operators")[i];
+          assert(bop->input_tensors.size() == jbop.at("input_tensors").size());
+          assert(bop->output_tensors.size() == jbop.at("output_tensors").size());
+          for (size_t j = 0; j < bop->input_tensors.size(); ++j) {
+            jbop.at("input_tensors")[j].at("layout").get_to(bop->input_tensors[j].layout);
+          }
+          for (size_t j = 0; j < bop->output_tensors.size(); ++j) {
+            jbop.at("output_tensors")[j].at("layout").get_to(bop->output_tensors[j].layout);
           }
         }
         break;

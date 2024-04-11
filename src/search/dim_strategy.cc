@@ -214,7 +214,7 @@ std::vector<std::vector<int>> DimStrategy::get_customized_input_cand_idx(
     if (all_input.size() == 3) {
       return {{0, 1, 2}, {0, 1}};
     } else {
-      return {{0, 1, 2, 3}, {num_inputs - 2, num_inputs - 1}};
+      return {{num_inputs - 2, num_inputs - 1}};
     }
   } else if (opt_level == 1) {
     std::vector<std::vector<int>> results {{0, 1}, {0, 1, 2}};
