@@ -295,7 +295,8 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
             (int)input.num_elements());
         break;
       }
-      case aso::type::TB_DIV_OP: {
+      case aso::type::TB_DIV_OP: 
+      case aso::type::TB_ADD_OP: {
         assert(operators[i]->input_tensors.size() == 2);
         assert(operators[i]->output_tensors.size() == 1);
         aso::threadblock::STensor input1 = operators[i]->input_tensors[0];

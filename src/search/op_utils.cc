@@ -8,7 +8,10 @@ bool is_binary(type::TBOperatorType op) {
   std::unordered_set<type::TBOperatorType> true_values{
       type::TBOperatorType::TB_ADD_OP,
       type::TBOperatorType::TB_MATMUL_OP,
-      type::TBOperatorType::TB_DIV_OP};
+      type::TBOperatorType::TB_DIV_OP,
+      type::TBOperatorType::TB_CONCAT_0_OP,
+      type::TBOperatorType::TB_CONCAT_1_OP,
+      type::TBOperatorType::TB_CONCAT_2_OP};
   return contains(true_values, op);
 }
 
@@ -185,6 +188,7 @@ KNOperator *create_op(kernel::Graph &g,
     case type::KNOperatorType::KN_MATMUL_OP:
       return g.create_matmul_op(input1, input2);
     case type::KNOperatorType::KN_DIV_OP:
+    case type::KNOperatorType::KN_ADD_OP:
       return g.create_elementbinary_op(input1, input2, type);
     default:
       assert(false && "Unsupported operator");
@@ -243,6 +247,7 @@ TBOperator *create_op(threadblock::Graph &g,
     case type::TBOperatorType::TB_MATMUL_OP:
       return g.create_matmul_op(input1, input2);
     case type::TBOperatorType::TB_DIV_OP:
+    case type::TBOperatorType::TB_ADD_OP:
       return g.create_elementbinary_op(input1, input2, type);
     default:
       assert(false && "Unsupported operator");

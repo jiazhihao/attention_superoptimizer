@@ -101,6 +101,11 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         bgraph.exp(my_inputs[0]);
         break;
       }
+      case aso::type::TB_ADD_OP: {
+        assert(my_inputs.size() == 2);
+        bgraph.add(my_inputs[0], my_inputs[1]);
+        break;
+      }
       case aso::type::TB_DIV_OP: {
         assert(my_inputs.size() == 2);
         bgraph.div(my_inputs[0], my_inputs[1]);
@@ -254,6 +259,11 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         bgraph.exp(my_inputs[0]);
         break;
       }
+      case aso::type::TB_ADD_OP: {
+        assert(my_inputs.size() == 2);
+        bgraph.add(my_inputs[0], my_inputs[1]);
+        break;
+      }
       case aso::type::TB_DIV_OP: {
         assert(my_inputs.size() == 2);
         bgraph.div(my_inputs[0], my_inputs[1]);
@@ -273,6 +283,14 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         assert(my_inputs.size() == 1);
         int reduce_dim = op->op_type - aso::type::TB_REDUCTION_0_TO_DIMX_OP;
         bgraph.reduction_to_dimx(my_inputs[0], reduce_dim);
+        break;
+      }
+      case aso::type::TB_CONCAT_0_OP:
+      case aso::type::TB_CONCAT_1_OP:
+      case aso::type::TB_CONCAT_2_OP: {
+        assert(my_inputs.size() == 2);
+        int concat_dim = op->op_type - aso::type::TB_CONCAT_FIRST_OP_ID;
+        bgraph.concat(my_inputs[0], my_inputs[1], concat_dim);
         break;
       }
       default: {

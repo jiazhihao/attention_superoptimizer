@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
 
   clock_t st = clock();
   search::GeneratorConfig config = search::GeneratorConfig::get_default_config();
-  config.grid_dim_to_explore = {{40, 4, 1}, {40, 1, 1}};
+  config.grid_dim_to_explore = {{32, 8, 1}, {32, 1, 1}};
   search::KernelGraphGenerator gen(
       ref_graph,
       config,

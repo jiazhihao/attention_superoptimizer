@@ -96,10 +96,9 @@ int main(int argc, char **argv) {
 
   clock_t st = clock();
   search::GeneratorConfig config = search::GeneratorConfig::get_default_config();
-  // config.imap_to_explore.push_back({1, -1, -1});
-  // config.omap_to_explore.push_back({1, -1, -1});
   config.imap_to_explore = {{0, -1, -1}, {1, -1, -1}, {-1, -1, -1}};
   config.omap_to_explore = {{1, -1, -1}};
+  config.fmap_to_explore = {-1};
   config.grid_dim_to_explore = {{32, 1, 1}, {64, 1, 1}};
   config.reduction_dimx = 8;
   search::KernelGraphGenerator gen(

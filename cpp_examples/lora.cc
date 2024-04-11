@@ -82,6 +82,10 @@ int main(int argc, char **argv) {
   clock_t st = clock();
   search::GeneratorConfig config = search::GeneratorConfig::get_default_config();
   config.grid_dim_to_explore = {{128, 1, 1}};
+  config.tbop_to_explore.push_back(aso::type::TB_CONCAT_0_OP);
+  config.tbop_to_explore.push_back(aso::type::TB_CONCAT_1_OP);
+  config.imap_to_explore = {{-1, -1, -1}, {1, -1, -1}};
+  config.omap_to_explore = {{1, -1, -1}};
   search::KernelGraphGenerator gen(
       ref_graph,
       config,
