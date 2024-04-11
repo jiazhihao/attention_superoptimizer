@@ -24,15 +24,15 @@ namespace aso {
 namespace type {
 
 typedef uint16_t FPType;
-const uint16_t FP_P = 227;
-const uint16_t FP_Q = 113;
-const uint32_t FP_EXP_BASE = 3;
-const uint16_t FP_PQ = 25651;
+uint16_t const FP_P = 227;
+uint16_t const FP_Q = 113;
+uint32_t const FP_EXP_BASE = 3;
+uint16_t const FP_PQ = 25651;
 // FP_P_MUL_Q_MOD_1 is a multiplier of P and is 1 module Q
-const uint16_t FP_P_MUL_Q_MOD_1 = 227;
+uint16_t const FP_P_MUL_Q_MOD_1 = 227;
 // FP_Q_MUL_P_MOD_1 is a multiplier of Q and is 1 module P
-const uint16_t FP_Q_MUL_P_MOD_1 = 25425;
-const size_t MAX_SMEM_SIZE = 64 * 1024; // 64 KB
+uint16_t const FP_Q_MUL_P_MOD_1 = 25425;
+size_t const MAX_SMEM_SIZE = 64 * 1024; // 64 KB
 int const TB_REDUCTION_DIMX = 64;
 
 enum DataType {
@@ -124,5 +124,12 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
         {TB_CUSTOMIZED_OP, "tb_customized_op"},
     })
 
+enum ActivationType {
+  ACT_UNKOWN = 3000,
+  ACT_EXP = 3001,
+  ACT_RELU = 3002,
+  ACT_GELU = 3003,
+  ACT_NONE = 3100
+};
 } // namespace type
 } // namespace aso

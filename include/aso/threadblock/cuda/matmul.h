@@ -16,6 +16,7 @@
 #pragma once
 
 #include "aso/threadblock/smem_tensor.h"
+#include "aso/utils/cuda_helper.h"
 #include "aso/utils/static_switch.h"
 
 #include "cutlass/aligned_buffer.h"
@@ -397,7 +398,8 @@ template <typename WarpShape,
           typename ElementType,
           typename SmemLayoutA,
           typename SmemLayoutB,
-          typename SmemLayoutC>
+          typename SmemLayoutC,
+          ActivationType act_type>
 class MatmulExecutorV2 {
 public:
   using SmemLayoutA_T = cutlass::layout::RowMajorTensorOpMultiplicandCrosswise<
@@ -490,6 +492,9 @@ public:
         smem_iterator_D(ref_C, lane_idx) {
     int warp_count_m = (m + WarpShape::kM - 1) / WarpShape::kM;
     int warp_count_n = (n + WarpShape::kN - 1) / WarpShape::kN;
+    using ActFunc = act_function<act_type, WarpFragmentC::kElements>;
+    ActFunc act;
+
     assert(warp_count_m > 0);
     assert(warp_count_n > 0);
     // Assert that warp_count_m * warp_count_n is at most 4
@@ -511,8 +516,9 @@ public:
     bool perform_work = (warp_idx_k == 0);
     // Note that a warp immediately return if it does not perform work
     // SO WE SHOULD NOT HAVE __synthreads INSIDE THIS FUNCTION
-    if (!perform_work)
+    if (!perform_work) {
       return;
+    }
 
     // Currently assume that we don't parittion over k within a threadblock
     // we do it across threadblocks
@@ -615,7 +621,9 @@ public:
 
     Epilogue epilogue;
     // accum.fill(static_cast<ElementType>(warp_idx)); // for debugging
-    epilogue(output_op, smem_iterator_D, accum);
+    // accum
+    WarpFragmentC intermidiate = act(accum);
+    epilogue(output_op, smem_iterator_D, intermidiate);
     //__syncthreads();
   }
 };
@@ -643,22 +651,23 @@ void calculate_warp_shape(
   warp_n = n_factor * inst_n;
 }
 
+template<ActivationType act_type>
 class GenericMatmulExecutor {
 public:
   CUTLASS_DEVICE
-  GenericMatmulExecutor(half_t* A_ptr,
-                        half_t* B_ptr,
-                        half_t* C_ptr,
+  GenericMatmulExecutor(half_t *A_ptr,
+                        half_t *B_ptr,
+                        half_t *C_ptr,
                         int m,
                         int n,
                         int k,
                         int thread_id,
                         int warp_id,
                         int lane_id) {
-    //assert(A.num_dims == B.num_dims);
-    //int m = A.dim[A.num_dims - 2];
-    //int n = B.dim[B.num_dims - 1];
-    //int k = A.dim[A.num_dims - 1];
+    // assert(A.num_dims == B.num_dims);
+    // int m = A.dim[A.num_dims - 2];
+    // int n = B.dim[B.num_dims - 1];
+    // int k = A.dim[A.num_dims - 1];
     using InstructionShape = gemm::GemmShape<16, 8, 16>;
     int warp_m = 0;
     int warp_n = 0;
@@ -669,35 +678,38 @@ public:
     // }
     WARP_SHAPE_M_SWITCH(warp_m, WARP_M, [&] {
       WARP_SHAPE_N_SWITCH(warp_n, WARP_N, [&] {
-        using WarpShape = gemm::GemmShape<WARP_M, WARP_N, InstructionShape::kK>;
-        // TODO: consider cutlass' RowMajorTensorOpMultiplicandCrosswise
-        // layout
-        // using SmemLayoutA =
-        // cutlass::layout::RowMajorTensorOpMultiplicandCrosswise<16, 32>; using
-        // SmemLayoutB =
-        // cutlass::layout::ColumnMajorTensorOpMultiplicandCrosswise<16, 32>;
-        using Executor = MatmulExecutorV2<WarpShape,
-                                          InstructionShape,
-                                          half_t,
-                                          cutlass::layout::RowMajor,
-                                          cutlass::layout::ColumnMajor,
-                                          cutlass::layout::RowMajor>;
-        // assert(A.layout == STensor::ROW_MAJOR &&
-        //        B.layout == STensor::COLUMN_MAJOR &&
-        //        "Layouts: mismatch between inputs and Executor.");
-        //half_t *A_ptr = (half_t *)(smem_buffer + A.smem_offset);
-        //half_t *B_ptr = (half_t *)(smem_buffer + B.smem_offset);
-        //half_t *C_ptr = (half_t *)(smem_buffer + C.smem_offset);
+          using WarpShape =
+              gemm::GemmShape<WARP_M, WARP_N, InstructionShape::kK>;
+          // TODO: consider cutlass' RowMajorTensorOpMultiplicandCrosswise
+          // layout
+          // using SmemLayoutA =
+          // cutlass::layout::RowMajorTensorOpMultiplicandCrosswise<16, 32>;
+          // using SmemLayoutB =
+          // cutlass::layout::ColumnMajorTensorOpMultiplicandCrosswise<16, 32>;
+          using Executor = MatmulExecutorV2<WarpShape,
+                                            InstructionShape,
+                                            half_t,
+                                            cutlass::layout::RowMajor,
+                                            cutlass::layout::ColumnMajor,
+                                            cutlass::layout::RowMajor,
+                                            act_type>;
+          // assert(A.layout == STensor::ROW_MAJOR &&
+          //        B.layout == STensor::COLUMN_MAJOR &&
+          //        "Layouts: mismatch between inputs and Executor.");
+          // half_t *A_ptr = (half_t *)(smem_buffer + A.smem_offset);
+          // half_t *B_ptr = (half_t *)(smem_buffer + B.smem_offset);
+          // half_t *C_ptr = (half_t *)(smem_buffer + C.smem_offset);
 
-        Executor executor({A_ptr, Executor::TensorRefA::Layout::packed({m, k})},
-                          {B_ptr, Executor::TensorRefB::Layout::packed({k, n})},
-                          {C_ptr, Executor::TensorRefC::Layout::packed({m, n})},
-                          m,
-                          n,
-                          k,
-                          thread_id,
-                          warp_id,
-                          lane_id);
+          Executor executor(
+              {A_ptr, Executor::TensorRefA::Layout::packed({m, k})},
+              {B_ptr, Executor::TensorRefB::Layout::packed({k, n})},
+              {C_ptr, Executor::TensorRefC::Layout::packed({m, n})},
+              m,
+              n,
+              k,
+              thread_id,
+              warp_id,
+              lane_id);
       });
     });
   }
@@ -738,9 +750,9 @@ public:
 class TBMatmulFingerprinter {
 public:
   CUTLASS_DEVICE
-  TBMatmulFingerprinter(FPType* A_ptr,
-                        FPType* B_ptr,
-                        FPType* C_ptr,
+  TBMatmulFingerprinter(FPType *A_ptr,
+                        FPType *B_ptr,
+                        FPType *C_ptr,
                         int a_m_size,
                         int c_n_size,
                         int a_k_size,
@@ -748,18 +760,18 @@ public:
                         int num_threads) {
     // Note that we assume all tensors are in row-major layouts
     // when computing fingerprints
-    //FPType *A_ptr = (FPType *)(smem_buffer + A.smem_offset);
-    //FPType *B_ptr = (FPType *)(smem_buffer + B.smem_offset);
-    //FPType *C_ptr = (FPType *)(smem_buffer + C.smem_offset);
-    //int num_batches = 1;
-    //for (int i = 0; i < C.num_dims - 2; i++) {
+    // FPType *A_ptr = (FPType *)(smem_buffer + A.smem_offset);
+    // FPType *B_ptr = (FPType *)(smem_buffer + B.smem_offset);
+    // FPType *C_ptr = (FPType *)(smem_buffer + C.smem_offset);
+    // int num_batches = 1;
+    // for (int i = 0; i < C.num_dims - 2; i++) {
     //  num_batches *= C.dim[i];
     //}
     // Do not support batch matmul in TB
-    //assert(num_batches == 1);
+    // assert(num_batches == 1);
     int num_elements = a_m_size * c_n_size;
-    //int c_n_size = C.dim[C.num_dims - 1];
-    //int a_k_size = A.dim[A.num_dims - 1];
+    // int c_n_size = C.dim[C.num_dims - 1];
+    // int a_k_size = A.dim[A.num_dims - 1];
     int b_n_size = c_n_size;
     for (int i = thread_id; i < num_elements; i += num_threads) {
       uint32_t result = 0;

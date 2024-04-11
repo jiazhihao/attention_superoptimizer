@@ -31,11 +31,11 @@ int main(int argc, char **argv) {
   }
   kernel::Graph graph;
   kernel::DTensor Q =
-      graph.new_input({32, 16, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
+      graph.new_input({256, 16, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
   kernel::DTensor K = graph.new_input(
-      {32, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      {256, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
   kernel::DTensor V = graph.new_input(
-      {32, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      {256, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
   std::vector<kernel::DTensor> outputs;
   {
     threadblock::ExecutionPlan plan;
@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
     };
     plan.output_map = {0, 2, -1};
     plan.forloop_dim = {-1, 2, 1};
-    plan.grid_dim = {32, 8, 1};
+    plan.grid_dim = {256, 4, 1};
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 8;
     plan.reduction_dimx = 64;
@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
     };
     plan.output_map = {0, -1, -1};
     plan.forloop_dim = {-1, -1};
-    plan.grid_dim = {32, 1, 1};
+    plan.grid_dim = {256, 1, 1};
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 1;
     plan.reduction_dimx = 64;
