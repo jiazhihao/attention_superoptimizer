@@ -16,6 +16,8 @@
 #pragma once
 
 #include "aso/type.h"
+#include "cutlass/array.h"
+#include "cutlass/fast_math.h"
 #include <cublas_v2.h>
 #include <cudnn.h>
 #include <cutlass/cutlass.h>
@@ -126,13 +128,50 @@ CUTLASS_DEVICE float block_sum_fp32(float sum) {
   return __shfl_sync(uint32_t(-1), sum, 0);
 }
 
-namespace utils {
+using namespace aso::type;
 
-cudaDataType_t to_cuda_datatype(aso::type::DataType type);
+template <ActivationType act_type, int N>
+struct act_function {
+  CUTLASS_DEVICE cutlass::Array<cutlass::half_t, N>
+      operator()(cutlass::Array<cutlass::half_t, N> const &rhs) const {
+    return rhs;
+  }
+};
+
+template <int N>
+struct act_function<ActivationType::ACT_EXP, N> {
+  using func = cutlass::fast_exp_op<cutlass::Array<cutlass::half_t, N>>;
+  func exp;
+
+  CUTLASS_DEVICE cutlass::Array<cutlass::half_t, N>
+      operator()(cutlass::Array<cutlass::half_t, N> const &rhs) const {
+    return exp(rhs);
+  }
+};
+
+namespace utils {
+using namespace aso::type;
+
+cudaDataType_t to_cuda_datatype(DataType type);
 
 size_t get_max_shared_mem();
 
-using namespace aso::type;
+CUTLASS_DEVICE
+ActivationType get_matmul_activation_type(TBOperatorType const *operator_types,
+                                          int op,
+                                          int num_operators) {
+  assert(op <= num_operators);
+  assert(operator_types[op] == TB_MATMUL_OP);
+  if (op == num_operators) {
+    return ACT_NONE;
+  }
+
+  if (operator_types[op + 1] == TB_EXP_OP) {
+    return ACT_EXP;
+  }
+
+  return ACT_NONE;
+}
 
 CUTLASS_HOST_DEVICE
 int get_reduction_dim(TBOperatorType type) {
