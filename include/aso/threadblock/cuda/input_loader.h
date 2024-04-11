@@ -26,6 +26,8 @@
 #include "cutlass/transform/threadblock/regular_tile_iterator_pitch_linear.h"
 #include "cutlass/transform/threadblock/regular_tile_iterator_tensor_op.h"
 
+#include "cutlass/arch/memory_sm75.h"
+
 namespace aso {
 namespace threadblock {
 
@@ -185,6 +187,55 @@ public:
   SmemIterator smem_iterator;
 };
 
+template<typename ElementType>
+class SimpleRowMajorInputLoader {
+public:
+  CUTLASS_DEVICE
+  SimpleRowMajorInputLoader(ElementType *dmem_ptr,
+                            ElementType *smem_ptr,
+                            int kRow,
+                            int kColumn,
+                            MatrixCoord dtensor_matrix_shape,
+                            int thread_id,
+                            int num_threads,
+                            MatrixCoord matrix_offset,
+                            int global_offset) {
+    int base_offset = global_offset + matrix_offset.row() * dtensor_matrix_shape.column() + matrix_offset.column();
+    // Each thread loads 16 bytes using cp.async
+    for (int i = thread_id * 8; i < kRow * kColumn; i += 8 * num_threads) {
+      //smem_ptr[i] = dmem_ptr[(i / kColumn) * dtensor_matrix_shape.column() + i % kColumn];
+      unsigned smem_int_ptr = cutlass::arch::cutlass_get_smem_pointer(smem_ptr + i);
+      ElementType *global_ptr = dmem_ptr + base_offset + (i / kColumn) * dtensor_matrix_shape.column() + i % kColumn;
+      asm volatile("cp.async.ca.shared.global.L2::128B [%0], [%1], %2, %3;\n" ::"r"(smem_int_ptr), "l"(global_ptr), "n"(16), "r"(16));
+    }
+    asm volatile("cp.async.wait_all;\n" ::);
+  }
+};
+
+template<typename ElementType>
+class SimpleColumnMajorInputLoader {
+public:
+  CUTLASS_DEVICE
+  SimpleColumnMajorInputLoader(ElementType *dmem_ptr,
+                            ElementType *smem_ptr,
+                            int kRow,
+                            int kColumn,
+                            MatrixCoord dtensor_matrix_shape,
+                            int thread_id,
+                            int num_threads,
+                            MatrixCoord matrix_offset,
+                            int global_offset) {
+    int base_offset = global_offset + matrix_offset.column() * dtensor_matrix_shape.row() + matrix_offset.row();
+    // Each thread loads 16 bytes using cp.async
+    for (int i = thread_id * 8; i < kRow * kColumn; i += 8 * num_threads) {
+      unsigned smem_int_ptr = cutlass::arch::cutlass_get_smem_pointer(smem_ptr + i);
+      ElementType *global_ptr = dmem_ptr + base_offset + (i / kRow) * dtensor_matrix_shape.row() + i % kRow;
+      asm volatile("cp.async.ca.shared.global.L2::128B [%0], [%1], %2, %3;\n" ::"r"(smem_int_ptr), "l"(global_ptr), "n"(16), "r"(16));
+    }
+    asm volatile("cp.async.wait_all;\n" ::);
+  }
+};
+
 template <int kRow, int kColumn>
 class ShapedInputLoader {
 public:
@@ -306,7 +357,30 @@ public:
                      int global_offset) {
     int kRow = stensor_matrix_shape.x;
     int kColumn = stensor_matrix_shape.y;
-
+    MatrixCoord extent(
+        {dtensor_matrix_shape.x, dtensor_matrix_shape.y});
+    if (dlayout == aso::layout::DmemRowMajor) {
+      SimpleRowMajorInputLoader((cutlass::half_t*)dtensor_ptr,
+                                (cutlass::half_t*)stensor_ptr,
+                                kRow,
+                                kColumn,
+                                extent,
+                                thread_id,
+                                num_threads,
+                                matrix_offset,
+                                global_offset);
+    } else {
+      SimpleColumnMajorInputLoader((cutlass::half_t*)dtensor_ptr,
+                                   (cutlass::half_t*)stensor_ptr,
+                                   kRow,
+                                   kColumn,
+                                   extent,
+                                   thread_id,
+                                   num_threads,
+                                   matrix_offset,
+                                   global_offset);
+    }
+#ifdef DEADCODE
     if (kRow == 64 && kColumn == 64) {
       ShapedInputLoader<64, 64>(dtensor_ptr,
                                 stensor_ptr,
@@ -353,6 +427,7 @@ public:
       //}
       //assert(false && "Unimplemented");
     }
+#endif
   }
 };
 
