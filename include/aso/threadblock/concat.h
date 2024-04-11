@@ -1,4 +1,4 @@
-/* Copyright 2023 CMU
+/* Copyright 2023-2024 CMU
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,22 @@
 
 #pragma once
 
-#include "aso/utils/json_utils.h"
+#include "aso/threadblock/operator.h"
 
 namespace aso {
+namespace threadblock {
 
-struct ProfileResult {
-  static int const NUM_ITERATIONS = 1024;
-  float run_time;
-
-  static ProfileResult infinity();
+class TBConcatOp : public TBOperator {
+public:
+  TBConcatOp(Graph *_graph,
+             STensor const &A,
+             STensor const &B,
+             int concat_dim);
+  ~TBConcatOp();
+  operator json() const override;
+public:
+  int concat_dim;
 };
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ProfileResult, run_time);
-
+} // namespace threadblock
 } // namespace aso

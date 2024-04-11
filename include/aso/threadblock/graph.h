@@ -18,35 +18,12 @@
 #include "aso/kernel/device_tensor.h"
 #include "aso/threadblock/operator.h"
 #include "aso/threadblock/smem_tensor.h"
+#include "aso/threadblock/serializer/kernel_params.h"
 #include <vector>
 #include <vector_types.h>
 
 namespace aso {
 namespace threadblock {
-
-struct KernelParams {
-  const static int MAX_NUM_OPERATORS = 10;
-  const static int MAX_TOTAL_SMEM_INPUTS = 16;
-  const static int MAX_TOTAL_SMEM_OUTPUTS = 10;
-  const static int MAX_NUM_DMEM_INPUTS = 3;
-  const static int MAX_NUM_DMEM_OUTPUTS = 3;
-  int forloop_range;
-  int num_operators, num_smem_inputs, num_smem_outputs;
-  int operator_num_inputs[MAX_NUM_OPERATORS],
-      operator_num_outputs[MAX_NUM_OPERATORS];
-  aso::type::TBOperatorType operator_types[MAX_NUM_OPERATORS];
-  aso::threadblock::STensor smem_inputs[MAX_TOTAL_SMEM_INPUTS];
-  aso::threadblock::STensor smem_outputs[MAX_TOTAL_SMEM_OUTPUTS];
-  // input dtensors in device memory
-  int num_dmem_inputs, num_dmem_outputs;
-  aso::kernel::DTensor dmem_inputs[MAX_NUM_DMEM_INPUTS];
-  aso::kernel::DTensor dmem_outputs[MAX_NUM_DMEM_INPUTS];
-  // mappings between input dtensors and stensors
-  int3 input_map[MAX_NUM_DMEM_INPUTS];
-  int forloop_dim[MAX_NUM_DMEM_INPUTS];
-  // mappings between output dtensors and their stensors
-  int3 output_map;
-};
 
 class ExecutionPlan {
 public:
@@ -60,6 +37,7 @@ public:
   // output-related fields
   int3 output_map; // assume that all output must use the same map
   int forloop_range;
+  int reduction_dimx;
   dim3 grid_dim, block_dim;
 };
 
@@ -80,7 +58,7 @@ private:
   };
 
 public:
-  Graph(dim3 grid_dim, dim3 block_dim, int forloop_range);
+  Graph(dim3 grid_dim, dim3 block_dim, int forloop_range, int reduction_dimx);
   // input operator
   STensor new_input(aso::kernel::DTensor const &dtensor,
                     int3 input_map,
@@ -100,6 +78,8 @@ public:
   STensor exp(STensor const &A);
   TBOperator *create_elementunary_op(STensor const &A,
                                      aso::type::TBOperatorType _type);
+  STensor add(STensor const &A, STensor const &B);
+  STensor mul(STensor const &A, STensor const &B);
   STensor div(STensor const &A, STensor const &B);
   TBOperator *create_elementbinary_op(STensor const &A,
                                       STensor const &B,
@@ -112,17 +92,23 @@ public:
   STensor reduction_to_dimx(STensor const &A, int dim);
   TBOperator *create_reduction_to_dimx_op(STensor const &A, int dim);
 
+  // concat operator
+  STensor concat(STensor const &A, STensor const &B, int dim);
+  TBOperator *create_concat_op(STensor const &A, STensor const &B, int dim);
+
   off_t allocate(STensor const &tensor);
   void free(STensor const &tensor);
   void free(std::vector<STensor> const &tensors);
 
   KernelParams get_kernel_params();
+  NewKernelParams get_new_kernel_params(bool fingerprint);
 
   operator json() const;
 
 public:
   dim3 grid_dim, block_dim;
   int forloop_range;
+  int reduction_dimx;
   std::vector<aso::threadblock::TBOperator *> operators;
   // memory allocator
   off_t smem_offset;

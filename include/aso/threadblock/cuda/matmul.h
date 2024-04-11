@@ -306,128 +306,87 @@ public:
   }
 };
 
-template <typename ThreadBlockShape,
-          typename ThreadShape,
+template <typename ThreadShape,
           typename ElementType,
           typename SmemLayoutA,
           typename SmemLayoutB,
           typename SmemLayoutC>
 class GemvExecutorV0 {
 public:
-  using Core =
-      typename cutlass::gemm::threadblock::DefaultGemvCore<ThreadBlockShape,
-                                                           ThreadShape,
-                                                           ElementType,
-                                                           SmemLayoutA,
-                                                           ElementType,
-                                                           SmemLayoutB,
-                                                           ElementType,
-                                                           SmemLayoutC>;
-  using Operator = typename Core::Operator;
-
-  /// Iterates over A in global memory
-  using IteratorA = typename Core::IteratorA;
-
-  /// Iterates over B in global memory
-  using IteratorB = typename Core::IteratorB;
-
-  /// Fragment of operand C loaded from global memory
-  using IteratorC = typename Core::IteratorC;
-
-  using LayoutCD = SmemLayoutC;
-
-  /// Policy for the iterator that reads/writes C/D
-  using IteratorPolicyCD = typename cutlass::platform::conditional<
-      cutlass::platform::is_same<LayoutCD, cutlass::layout::RowMajor>::value,
-      cutlass::transform::PitchLinearTilePolicyStripminedThreadContiguous<
-          cutlass::layout::PitchLinearShape<ThreadBlockShape::kN,
-                                            ThreadBlockShape::kM>,
-          Core::kThreadsPerN,
-          ThreadShape::kN>,
-      cutlass::transform::PitchLinearTilePolicyStripminedThreadStrided<
-          cutlass::layout::PitchLinearShape<ThreadBlockShape::kM,
-                                            ThreadBlockShape::kN>,
-          Core::kThreadsPerN,
-          ThreadShape::kM>>::type;
-
-  /// Iterator that reads/writes C/D
-  using IteratorCD = cutlass::transform::threadblock::PredicatedTileIterator<
-      cutlass::MatrixShape<ThreadBlockShape::kM, ThreadBlockShape::kN>,
-      ElementType,
-      LayoutCD,
-      0,
-      IteratorPolicyCD>;
-
-  /// Fragment of operand A loaded from global memory
-  using FragmentA = typename IteratorA::Fragment;
-
-  /// Fragment of operand B loaded from global memory
-  using FragmentB = typename IteratorB::Fragment;
-
-  /// Fragment of operand accumulator loaded/stored to global memory
-  using FragmentC = typename Operator::FragmentC;
-
-  using Params_A = typename IteratorA::Params;
-  using Params_B = typename IteratorB::Params;
-
-  using TensorRefA = typename IteratorA::TensorRef;
-  using TensorRefB = typename IteratorB::TensorRef;
-  using TensorRefC = typename IteratorCD::TensorRef;
-
-  FragmentC accum;
-  IteratorA iterator_A;
-  IteratorB iterator_B;
-  int gemm_k;
+  int k_dim;
+  using Mma = cutlass::arch::Mma<gemm::GemmShape<1, 2, 1>,
+                                 1,
+                                 ElementType,
+                                 SmemLayoutA,
+                                 ElementType,
+                                 SmemLayoutB,
+                                 ElementType,
+                                 SmemLayoutC,
+                                 arch::OpMultiplyAdd>;
 
   CUTLASS_DEVICE
-  GemvExecutorV0(TensorRefA const &ref_A,
-                 TensorRefB const &ref_B,
-                 TensorRefC const &ref_C,
+  GemvExecutorV0(ElementType const *A_ptr,
+                 ElementType const *B_ptr,
+                 ElementType *C_ptr,
                  int m,
                  int n,
                  int k,
                  int thread_idx,
                  int warp_idx,
                  int lane_idx)
-      : iterator_A(Params_A(ref_A.layout()), ref_A.data(), {1, k}, 0, {0, 0}),
-        iterator_B(
-            Params_B(ref_B.layout()), ref_B.data(), {k, n}, thread_idx, {0, 0}),
-        gemm_k(k) {}
-  CUTLASS_DEVICE
-  void execute_kernel(void) {
-    FragmentA frag_A;
-    FragmentB frag_B;
-    frag_A.clear();
-    frag_B.clear();
+      : k_dim(k) {
+    // assume no batch now
+    Mma mma;
+    int gemm_k = k_dim;
+    __half *ptr_D =
+        reinterpret_cast<__half *>(C_ptr + thread_idx * ThreadShape::kK);
 
-    iterator_A.load(frag_A);
-    iterator_B.load(frag_B);
-    ++iterator_A;
-    ++iterator_B;
-
-    //
-    // Mainloop
-    //
-    Operator thread_mma;
-
-    if (gemm_k < ThreadBlockShape::kK) {
-      iterator_A.clear_mask();
-      iterator_B.clear_mask();
-    }
-
-    // iterate over K to accumulate result
     CUTLASS_GEMM_LOOP
-    for (; gemm_k > 0; gemm_k -= ThreadBlockShape::kK) {
-      thread_mma(accum, frag_A, frag_B, accum);
+    for (; gemm_k > 0; gemm_k -= ThreadShape::kK) {
+      __half const *ptr_A = reinterpret_cast<__half const *>(
+          A_ptr + ((k_dim - gemm_k)) / 2 * ThreadShape::kK);
+      __half const *ptr_B = reinterpret_cast<__half const *>(
+          B_ptr + ((k_dim - gemm_k)) / 2 * ThreadShape::kK +
+          thread_idx * 2 * k_dim);
 
-      iterator_A.load(frag_A);
-      iterator_B.load(frag_B);
-      ++iterator_A;
-      ++iterator_B;
+      CUTLASS_PRAGMA_UNROLL
+      for (auto k = 0; k < ThreadShape::kK / Mma::Shape::kK; k++) {
 
-      if (gemm_k < ThreadBlockShape::kK) {
-        iterator_A.clear_mask();
-        iterator_B.clear_mask();
+        CUTLASS_PRAGMA_UNROLL
+        for (auto n = 0; n < ThreadShape::kN / Mma::Shape::kN; n++) {
+
+          CUTLASS_PRAGMA_UNROLL
+          for (auto m = 0; m < ThreadShape::kM / Mma::Shape::kM; m++) {
+
+            __half2 const &A = __half2half2(ptr_A[m * ThreadShape::kK + k]);
+            __half2 B =
+                __halves2half2(ptr_B[2 * n * ThreadShape::kK + k],
+                               ptr_B[2 * n * ThreadShape::kK + k + k_dim]);
+            __half2 const &C =
+                __halves2half2(ptr_D[m * ThreadShape::kN / 2 + n],
+                               ptr_D[m * ThreadShape::kN / 2 + n + 1]);
+
+            __half2 D = __hfma2(A, B, C);
+
+            ptr_D[m * ThreadShape::kN / 2 + n] = __low2half(D);
+            ptr_D[m * ThreadShape::kN / 2 + n + 1] = __high2half(D);
+
+            if (false && threadIdx.x == 0) {
+              printf("--------A----%d %f %f\n",
+                     threadIdx.x,
+                     (float)(__low2half(A)),
+                     (float)(__high2half(A)));
+
+              printf("-------B-----%d %f %f %d %d\n",
+                     threadIdx.x,
+                     (float)__low2half(B),
+                     (float)__high2half(B),
+                     ((k_dim - gemm_k)) / 2 * ThreadShape::kK +
+                         thread_idx * 2 * k_dim,
+                     thread_idx * ThreadShape::kK);
+            }
+          }
+        }
       }
     }
   }
@@ -510,11 +469,8 @@ public:
   /// cutlass fields
   typename MmaTensorOp::IteratorA warp_tile_iterator_A;
   typename MmaTensorOp::IteratorB warp_tile_iterator_B;
-  int _warp_idx;
-  int _lane_idx;
   SmemIteratorD smem_iterator_D;
   OutputOpAccumulate output_op;
-  int gemm_k_iterations_0;
 
   CUTLASS_DEVICE
   MatmulExecutorV2(TensorRefA const &ref_A,
@@ -536,8 +492,9 @@ public:
     int warp_count_n = (n + WarpShape::kN - 1) / WarpShape::kN;
     assert(warp_count_m > 0);
     assert(warp_count_n > 0);
-    // We have exactly 4 warps in a thread block
-    assert(warp_count_m * warp_count_n == 4);
+    // Assert that warp_count_m * warp_count_n is at most 4
+    // since we have 4 warps in a thread block
+    assert(warp_count_m * warp_count_n <= 4);
     // Compute warp location within threadblock tile by mapping the warp_id to
     // three coordinates:
     //   warp_idx_m: the warp's position within the threadblock along the M
@@ -549,17 +506,17 @@ public:
 
     int warp_idx_mn = warp_idx % (warp_count_m * warp_count_n);
     int warp_idx_k = warp_idx / (warp_count_m * warp_count_n);
-    if (false && lane_idx == 0) {
-      printf("warp_idx(%d) warp_count_m(%d) warp_count_n(%d) m(%d) n(%d)\n",
-             warp_idx,
-             warp_count_m,
-             warp_count_n,
-             m,
-             n);
-    }
+    // All warps whose warp_idx_k > 0 do not need to perform computation
+    // since we only need (warp_count_m * warp_count_n) warps to do matmul
+    bool perform_work = (warp_idx_k == 0);
+    // Note that a warp immediately return if it does not perform work
+    // SO WE SHOULD NOT HAVE __synthreads INSIDE THIS FUNCTION
+    if (!perform_work)
+      return;
+
     // Currently assume that we don't parittion over k within a threadblock
     // we do it across threadblocks
-    if (warp_idx_k > 0) {
+    if (false && warp_idx_k > 0) {
       printf("warp_idx(%d) warp_count_m(%d) warp_count_n(%d) m(%d) n(%d)\n",
              warp_idx,
              warp_count_m,
@@ -576,20 +533,15 @@ public:
     // Add per-warp offsets in units of warp-level tiles
     warp_tile_iterator_A.add_tile_offset({warp_idx_m, tile_offset_k});
     warp_tile_iterator_B.add_tile_offset({tile_offset_k, warp_idx_n});
-    gemm_k_iterations_0 = (k + WarpShape::kK - 1) / WarpShape::kK;
+    int gemm_k_iterations_0 = (k + WarpShape::kK - 1) / WarpShape::kK;
 
     // Add smem accumulator iterator warp offset
     smem_iterator_D.add_tile_offset(
         {warp_idx_m * SmemIteratorD::TileIterations::kRow,
          warp_idx_n * SmemIteratorD::TileIterations::kColumn});
-    _warp_idx = warp_idx;
-    _lane_idx = lane_idx;
-  }
 
-  CUTLASS_DEVICE
-  void execute_kernel(void) {
-    // extern __shared__ char smem_buffer[];
-
+    // Start computation
+    // NOTE THAT WE SHOULD NOT HAVE __synthreads AFTER THIS POINT
     WarpFragmentA warp_frag_A[2];
     WarpFragmentB warp_frag_B[2];
     WarpTransformedFragmentA warp_transformed_frag_A_[2];
@@ -638,12 +590,12 @@ public:
                              warp_frag_B[warp_mma_k % 2]);
         }
 
-        if (false && _lane_idx == 0) {
+        if (false && lane_idx == 0) {
           printf(
               "warp_idx(%d) warp_mma_k(%d) lane_idx(%d) got A = %f, B = %f\n",
-              _warp_idx,
+              warp_idx,
               warp_mma_k,
-              _lane_idx,
+              lane_idx,
               static_cast<float>(warp_frag_A[warp_mma_k % 2].front()),
               static_cast<float>(warp_frag_B[warp_mma_k % 2].front()));
         }
@@ -662,9 +614,9 @@ public:
     }
 
     Epilogue epilogue;
-    // accum.fill(static_cast<ElementType>(_warp_idx)); // for debugging
+    // accum.fill(static_cast<ElementType>(warp_idx)); // for debugging
     epilogue(output_op, smem_iterator_D, accum);
-    __syncthreads();
+    //__syncthreads();
   }
 };
 
@@ -674,18 +626,18 @@ void calculate_warp_shape(
   int m_factor = (m + inst_m - 1) / inst_m;
   int n_factor = (n + inst_n - 1) / inst_n;
   // We should have at least 4 warps in a thread block
-  assert(m_factor * n_factor >= 4);
+  //assert(m_factor * n_factor >= 4);
   if (m_factor >= 2 && n_factor >= 2) {
     assert(m_factor % 2 == 0);
     assert(n_factor % 2 == 0);
     m_factor = m_factor / 2;
     n_factor = n_factor / 2;
   } else if (m_factor == 1) {
-    assert(n_factor % 4 == 0);
-    n_factor = n_factor / 4;
+    //assert(n_factor % 4 == 0);
+    n_factor = n_factor / min(4, n_factor);
   } else if (n_factor == 1) {
-    assert(m_factor % 4 == 0);
-    m_factor = m_factor / 4;
+    //assert(m_factor % 4 == 0);
+    m_factor = m_factor / min(4, m_factor);
   }
   warp_m = m_factor * inst_m;
   warp_n = n_factor * inst_n;
@@ -694,17 +646,19 @@ void calculate_warp_shape(
 class GenericMatmulExecutor {
 public:
   CUTLASS_DEVICE
-  GenericMatmulExecutor(char *smem_buffer,
-                        STensor const &A,
-                        STensor const &B,
-                        STensor const &C,
+  GenericMatmulExecutor(half_t* A_ptr,
+                        half_t* B_ptr,
+                        half_t* C_ptr,
+                        int m,
+                        int n,
+                        int k,
                         int thread_id,
                         int warp_id,
                         int lane_id) {
-    assert(A.num_dims == B.num_dims);
-    int m = A.dim[A.num_dims - 2];
-    int n = B.dim[B.num_dims - 1];
-    int k = A.dim[A.num_dims - 1];
+    //assert(A.num_dims == B.num_dims);
+    //int m = A.dim[A.num_dims - 2];
+    //int n = B.dim[B.num_dims - 1];
+    //int k = A.dim[A.num_dims - 1];
     using InstructionShape = gemm::GemmShape<16, 8, 16>;
     int warp_m = 0;
     int warp_n = 0;
@@ -731,9 +685,9 @@ public:
         // assert(A.layout == STensor::ROW_MAJOR &&
         //        B.layout == STensor::COLUMN_MAJOR &&
         //        "Layouts: mismatch between inputs and Executor.");
-        half_t *A_ptr = (half_t *)(smem_buffer + A.smem_offset);
-        half_t *B_ptr = (half_t *)(smem_buffer + B.smem_offset);
-        half_t *C_ptr = (half_t *)(smem_buffer + C.smem_offset);
+        //half_t *A_ptr = (half_t *)(smem_buffer + A.smem_offset);
+        //half_t *B_ptr = (half_t *)(smem_buffer + B.smem_offset);
+        //half_t *C_ptr = (half_t *)(smem_buffer + C.smem_offset);
 
         Executor executor({A_ptr, Executor::TensorRefA::Layout::packed({m, k})},
                           {B_ptr, Executor::TensorRefB::Layout::packed({k, n})},
@@ -744,7 +698,6 @@ public:
                           thread_id,
                           warp_id,
                           lane_id);
-        executor.execute_kernel();
       });
     });
   }
@@ -763,10 +716,12 @@ public:
     int m = A.dim[0];
     int n = B.dim[1];
     int k = A.dim[1];
-    using ThreadBlockShape = cutlass::gemm::GemmShape<1, 64, 4>;
-    using ThreadShape = cutlass::gemm::GemmShape<1, 4, 4>;
-    using Executor = GemvExecutorV0<ThreadBlockShape,
-                                    ThreadShape,
+
+    // currently consider batch_size == 1
+    assert(m == 1);
+    using ThreadShape = cutlass::gemm::GemmShape<1, 2, 2>;
+
+    using Executor = GemvExecutorV0<ThreadShape,
                                     half_t,
                                     cutlass::layout::RowMajor,
                                     cutlass::layout::ColumnMajor,
@@ -775,43 +730,37 @@ public:
     half_t *B_ptr = (half_t *)(smem_buffer + B.smem_offset);
     half_t *C_ptr = (half_t *)(smem_buffer + C.smem_offset);
 
-    Executor executor({A_ptr, Executor::TensorRefA::Layout::packed({m, k})},
-                      {B_ptr, Executor::TensorRefB::Layout::packed({k, n})},
-                      {C_ptr, Executor::TensorRefC::Layout::packed({m, n})},
-                      m,
-                      n,
-                      k,
-                      thread_id,
-                      warp_id,
-                      lane_id);
-    executor.execute_kernel();
+    Executor executor(
+        A_ptr, B_ptr, C_ptr, m, n, k, thread_id, warp_id, lane_id);
   }
 };
 
 class TBMatmulFingerprinter {
 public:
   CUTLASS_DEVICE
-  TBMatmulFingerprinter(char *smem_buffer,
-                        STensor const &A,
-                        STensor const &B,
-                        STensor const &C,
+  TBMatmulFingerprinter(FPType* A_ptr,
+                        FPType* B_ptr,
+                        FPType* C_ptr,
+                        int a_m_size,
+                        int c_n_size,
+                        int a_k_size,
                         int thread_id,
                         int num_threads) {
     // Note that we assume all tensors are in row-major layouts
     // when computing fingerprints
-    FPType *A_ptr = (FPType *)(smem_buffer + A.smem_offset);
-    FPType *B_ptr = (FPType *)(smem_buffer + B.smem_offset);
-    FPType *C_ptr = (FPType *)(smem_buffer + C.smem_offset);
-    int num_batches = 1;
-    for (int i = 0; i < C.num_dims - 2; i++) {
-      num_batches *= C.dim[i];
-    }
+    //FPType *A_ptr = (FPType *)(smem_buffer + A.smem_offset);
+    //FPType *B_ptr = (FPType *)(smem_buffer + B.smem_offset);
+    //FPType *C_ptr = (FPType *)(smem_buffer + C.smem_offset);
+    //int num_batches = 1;
+    //for (int i = 0; i < C.num_dims - 2; i++) {
+    //  num_batches *= C.dim[i];
+    //}
     // Do not support batch matmul in TB
-    assert(num_batches == 1);
-    int num_elements = (int)C.num_elements();
-    int c_n_size = C.dim[C.num_dims - 1];
-    int a_k_size = A.dim[A.num_dims - 1];
-    int b_n_size = B.dim[B.num_dims - 1];
+    //assert(num_batches == 1);
+    int num_elements = a_m_size * c_n_size;
+    //int c_n_size = C.dim[C.num_dims - 1];
+    //int a_k_size = A.dim[A.num_dims - 1];
+    int b_n_size = c_n_size;
     for (int i = thread_id; i < num_elements; i += num_threads) {
       uint32_t result = 0;
       int m = i / c_n_size;
@@ -822,7 +771,6 @@ public:
         result = (result + a_value * b_value) % FP_PQ;
         if (false && thread_id == 0) {
           printf("i(%d) block(%d %d %d) result(%d) a_value(%d) b_value(%d)"
-                 "A.smem_offset(%d) B.smem_offset(%d) C.smem_offset(%d)"
                  "n(%d) m(%d) k(%d) a_k_size(%d) b_n_size(%d) c_n_size(%d)\n",
                  i,
                  blockIdx.x,
@@ -831,9 +779,6 @@ public:
                  (int)result,
                  (int)a_value,
                  (int)b_value,
-                 A.smem_offset,
-                 B.smem_offset,
-                 C.smem_offset,
                  n,
                  m,
                  k,

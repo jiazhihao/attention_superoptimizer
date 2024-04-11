@@ -1,5 +1,6 @@
 #include "aso/kernel/graph.h"
 #include "aso/threadblock/graph.h"
+#include "aso/search/search.h"
 
 using namespace aso;
 
@@ -59,6 +60,7 @@ int main(int argc, char **argv) {
     plan.grid_dim = {8, 8, 1};
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 8;
+    plan.reduction_dimx = 64;
     outputs = graph.customized({Q, K, V}, plan);
     assert(outputs.size() == 2);
     // kernel::DTensor o1 = graph.reduction(outputs[0], 2 /*dim*/, 64 /*size*/);
@@ -81,6 +83,7 @@ int main(int argc, char **argv) {
     plan.grid_dim = {8, 1, 1};
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 1;
+    plan.reduction_dimx = 64;
     outputs = graph.customized({outputs[0], outputs[1]}, plan);
     assert(outputs.size() == 1);
   }
@@ -96,5 +99,19 @@ int main(int argc, char **argv) {
     total_ms = total_ms + result.run_time;
   }
   printf("[2 Block Graphs] Total runtime = %.4lfms\n", total_ms);
+
+  clock_t st = clock();
+  search::GeneratorConfig config = search::GeneratorConfig::get_default_config();
+  config.grid_dim_to_explore = {{8, 8, 1}, {8, 1, 1}};
+  search::KernelGraphGenerator gen(
+      ref_graph,
+      config,
+      "checkpoint_multi_query_attn_inc_decode.json");
+  gen.generate_kernel_graphs();
+
+  clock_t et = clock();
+
+  printf("Search time = %.4lfsec\n", (float)(et - st) / CLOCKS_PER_SEC);
+
   return 0;
 }

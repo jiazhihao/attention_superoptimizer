@@ -23,6 +23,26 @@
 namespace aso {
 namespace kernel {
 
+DTensor Graph::add(DTensor const &input1, DTensor const &input2) {
+  KNOperator *op =
+      create_elementbinary_op(input1, input2, aso::type::KN_ADD_OP);
+  assert(op != nullptr);
+  operators.push_back(op);
+  assert(op->output_tensors.size() == 1);
+  DTensor output = op->output_tensors[0];
+  return output;
+}
+
+DTensor Graph::mul(DTensor const &input1, DTensor const &input2) {
+  KNOperator *op =
+      create_elementbinary_op(input1, input2, aso::type::KN_MUL_OP);
+  assert(op != nullptr);
+  operators.push_back(op);
+  assert(op->output_tensors.size() == 1);
+  DTensor output = op->output_tensors[0];
+  return output;
+}
+
 DTensor Graph::div(DTensor const &input1, DTensor const &input2) {
   KNOperator *op =
       create_elementbinary_op(input1, input2, aso::type::KN_DIV_OP);

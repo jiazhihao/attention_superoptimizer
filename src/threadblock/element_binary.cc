@@ -20,6 +20,22 @@
 namespace aso {
 namespace threadblock {
 
+STensor Graph::add(STensor const &input1, STensor const &input2) {
+  TBOperator *op =
+      create_elementbinary_op(input1, input2, aso::type::TB_ADD_OP);
+  assert(op != nullptr);
+  operators.push_back(op);
+  return op->output_tensors[0];
+}
+
+STensor Graph::mul(STensor const &input1, STensor const &input2) {
+  TBOperator *op =
+      create_elementbinary_op(input1, input2, aso::type::TB_MUL_OP);
+  assert(op != nullptr);
+  operators.push_back(op);
+  return op->output_tensors[0];
+}
+
 STensor Graph::div(STensor const &input1, STensor const &input2) {
   TBOperator *op =
       create_elementbinary_op(input1, input2, aso::type::TB_DIV_OP);

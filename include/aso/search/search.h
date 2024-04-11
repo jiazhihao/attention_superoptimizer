@@ -45,10 +45,15 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(LayerCheckpoint,
 
 struct Checkpoint {
   kernel::Graph computation_graph;
-  kernel::Graph best_graph;
+  json best_graph;
   ProfileResult best_profile_result;
   GeneratorConfig config;
   std::vector<LayerCheckpoint> callstack;
+  std::vector<json> generated_graphs;
+
+  int num_total_kernel_graphs;
+  int num_total_random_tests;
+  int num_valid_kernel_graphs;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Checkpoint,
@@ -56,7 +61,11 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Checkpoint,
                                    best_graph,
                                    best_profile_result,
                                    config,
-                                   callstack);
+                                   callstack,
+                                   generated_graphs,
+                                   num_total_kernel_graphs,
+                                   num_total_random_tests,
+                                   num_valid_kernel_graphs);
 
 class KernelGraphGenerator {
 public:
@@ -66,15 +75,18 @@ public:
   KernelGraphGenerator(char const *filename);
 
   void generate_kernel_graphs();
+  void optimize_layout(kernel::Graph &g);
+  void save_checkpoint() const;
 
   kernel::Graph computation_graph;
-  kernel::Graph best_graph;
+  json best_graph;
   ProfileResult best_profile_result;
 
   GeneratorConfig config;
   DimStrategy dim_strategy;
 
   char const *filename;
+  std::vector<json> generated_graphs;
 
 private:
   std::vector<std::shared_ptr<AlgebraicPattern>> final_patterns;
@@ -97,10 +109,15 @@ private:
   void generate_next_kn_operator(SearchContext<DTensor> &c,
                                  kernel::Graph &g,
                                  int depth);
+  void optimize_layout(
+      kernel::Graph &g, int op_idx, int ts_idx, int bop_idx, int bts_idx);
   void update_best_graph(kernel::Graph &g);
   bool create_tb_outputs(SearchContext<STensor> &c,
                          threadblock::Graph &g,
                          int3 output_map);
+
+  std::vector<layout::SmemLayout>
+      get_valid_output_layout(threadblock::TBOperator const *op, int idx);
 
   void process_outputs();
   bool check_pattern(std::shared_ptr<AlgebraicPattern> pattern);
@@ -109,7 +126,6 @@ private:
   bool have_same_fingerprint(std::vector<DTensor> const &outputs,
                              std::vector<int> const &match) const;
   bool verify(SearchContext<DTensor> &c, kernel::Graph const &g);
-  void save_checkpoint() const;
   void recovery_from_checkpoint(Checkpoint const &checkpoint);
 };
 

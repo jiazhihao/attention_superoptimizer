@@ -26,6 +26,8 @@
 #include "cutlass/transform/threadblock/regular_tile_iterator_pitch_linear.h"
 #include "cutlass/transform/threadblock/regular_tile_iterator_tensor_op.h"
 
+#include "cutlass/arch/memory_sm75.h"
+
 namespace aso {
 namespace threadblock {
 
@@ -104,7 +106,6 @@ public:
     Fragment tb_fragment;
     // The last kblock is loaded in the prolog
     dmem_iterator.load(tb_fragment);
-    return;
     smem_iterator.store(tb_fragment);
   }
 
@@ -178,7 +179,6 @@ public:
     Fragment tb_fragment;
     // The last kblock is loaded in the prolog
     dmem_iterator.load(tb_fragment);
-    return;
     smem_iterator.store(tb_fragment);
   }
 
@@ -187,13 +187,64 @@ public:
   SmemIterator smem_iterator;
 };
 
+template<typename ElementType>
+class SimpleRowMajorInputLoader {
+public:
+  CUTLASS_DEVICE
+  SimpleRowMajorInputLoader(ElementType *dmem_ptr,
+                            ElementType *smem_ptr,
+                            int kRow,
+                            int kColumn,
+                            MatrixCoord dtensor_matrix_shape,
+                            int thread_id,
+                            int num_threads,
+                            MatrixCoord matrix_offset,
+                            int global_offset) {
+    int base_offset = global_offset + matrix_offset.row() * dtensor_matrix_shape.column() + matrix_offset.column();
+    // Each thread loads 16 bytes using cp.async
+    for (int i = thread_id * 8; i < kRow * kColumn; i += 8 * num_threads) {
+      //smem_ptr[i] = dmem_ptr[(i / kColumn) * dtensor_matrix_shape.column() + i % kColumn];
+      unsigned smem_int_ptr = cutlass::arch::cutlass_get_smem_pointer(smem_ptr + i);
+      ElementType *global_ptr = dmem_ptr + base_offset + (i / kColumn) * dtensor_matrix_shape.column() + i % kColumn;
+      asm volatile("cp.async.ca.shared.global.L2::128B [%0], [%1], %2, %3;\n" ::"r"(smem_int_ptr), "l"(global_ptr), "n"(16), "r"(16));
+    }
+    asm volatile("cp.async.wait_all;\n" ::);
+  }
+};
+
+template<typename ElementType>
+class SimpleColumnMajorInputLoader {
+public:
+  CUTLASS_DEVICE
+  SimpleColumnMajorInputLoader(ElementType *dmem_ptr,
+                            ElementType *smem_ptr,
+                            int kRow,
+                            int kColumn,
+                            MatrixCoord dtensor_matrix_shape,
+                            int thread_id,
+                            int num_threads,
+                            MatrixCoord matrix_offset,
+                            int global_offset) {
+    int base_offset = global_offset + matrix_offset.column() * dtensor_matrix_shape.row() + matrix_offset.row();
+    // Each thread loads 16 bytes using cp.async
+    for (int i = thread_id * 8; i < kRow * kColumn; i += 8 * num_threads) {
+      unsigned smem_int_ptr = cutlass::arch::cutlass_get_smem_pointer(smem_ptr + i);
+      ElementType *global_ptr = dmem_ptr + base_offset + (i / kRow) * dtensor_matrix_shape.row() + i % kRow;
+      asm volatile("cp.async.ca.shared.global.L2::128B [%0], [%1], %2, %3;\n" ::"r"(smem_int_ptr), "l"(global_ptr), "n"(16), "r"(16));
+    }
+    asm volatile("cp.async.wait_all;\n" ::);
+  }
+};
+
 template <int kRow, int kColumn>
 class ShapedInputLoader {
 public:
   CUTLASS_DEVICE
-  ShapedInputLoader(char *smem_buffer,
-                    aso::kernel::DTensor const &dtensor,
-                    aso::threadblock::STensor const &stensor,
+  ShapedInputLoader(void *dtensor_ptr,
+                    void *stensor_ptr,
+                    int2 dtensor_matrix_shape,
+                    aso::layout::DmemLayout dlayout,
+                    aso::layout::SmemLayout slayout,
                     int thread_id,
                     int num_threads,
                     MatrixCoord matrix_offset,
@@ -206,9 +257,9 @@ public:
     // assert(stensor.data_type == aso::type::DT_FLOAT16);
     // assert(dtensor.data_type == aso::type::DT_FLOAT16);
     MatrixCoord extent(
-        {dtensor.dim[stensor.num_dims - 2], dtensor.dim[stensor.num_dims - 1]});
-    aso::layout::DmemLayout dlayout = dtensor.layout;
-    aso::layout::SmemLayout slayout = stensor.layout;
+        {dtensor_matrix_shape.x, dtensor_matrix_shape.y});
+    //aso::layout::DmemLayout dlayout = dtensor.layout;
+    //aso::layout::SmemLayout slayout = stensor.layout;
     if (dlayout == aso::layout::DmemRowMajor) {
       using DmemLayout = cutlass::layout::RowMajor;
       if (slayout == aso::layout::SmemRowMajor) {
@@ -220,8 +271,8 @@ public:
                                                 DmemLayout,
                                                 SmemLayout>;
         InputLoader loader(
-            ((cutlass::half_t *)dtensor.data_ptr) + global_offset,
-            (cutlass::half_t *)(smem_buffer + stensor.smem_offset),
+            ((cutlass::half_t *)dtensor_ptr) + global_offset,
+            (cutlass::half_t *)stensor_ptr,
             extent,
             thread_id,
             matrix_offset);
@@ -242,8 +293,8 @@ public:
                                                 DmemLayout,
                                                 SmemLayout>;
         InputLoader loader(
-            ((cutlass::half_t *)dtensor.data_ptr) + global_offset,
-            (cutlass::half_t *)(smem_buffer + stensor.smem_offset),
+            ((cutlass::half_t *)dtensor_ptr) + global_offset,
+            (cutlass::half_t *)stensor_ptr,
             extent,
             thread_id,
             matrix_offset);
@@ -260,8 +311,8 @@ public:
                                                    DmemLayout,
                                                    SmemLayout>;
         InputLoader loader(
-            ((cutlass::half_t *)dtensor.data_ptr) + global_offset,
-            (cutlass::half_t *)(smem_buffer + stensor.smem_offset),
+            ((cutlass::half_t *)dtensor_ptr) + global_offset,
+            (cutlass::half_t *)stensor_ptr,
             extent,
             thread_id,
             matrix_offset);
@@ -281,8 +332,8 @@ public:
                                                    DmemLayout,
                                                    SmemLayout>;
         InputLoader loader(
-            ((cutlass::half_t *)dtensor.data_ptr) + global_offset,
-            (cutlass::half_t *)(smem_buffer + stensor.smem_offset),
+            ((cutlass::half_t *)dtensor_ptr) + global_offset,
+            (cutlass::half_t *)stensor_ptr,
             extent,
             thread_id,
             matrix_offset);
@@ -294,73 +345,110 @@ public:
 class GenericInputLoader {
 public:
   CUTLASS_DEVICE
-  GenericInputLoader(char *smem_buffer,
-                     aso::kernel::DTensor const &dtensor,
-                     aso::threadblock::STensor const &stensor,
+  GenericInputLoader(void* dtensor_ptr,
+                     void* stensor_ptr,
+                     int2 dtensor_matrix_shape,
+                     int2 stensor_matrix_shape,
+                     aso::layout::DmemLayout dlayout,
+                     aso::layout::SmemLayout slayout,
                      int thread_id,
                      int num_threads,
                      MatrixCoord matrix_offset,
                      int global_offset) {
-    int kRow = stensor.dim[stensor.num_dims - 2];
-    int kColumn = stensor.dim[stensor.num_dims - 1];
-
-    if (kRow == 64 && kColumn == 64) {
-      ShapedInputLoader<64, 64>(smem_buffer,
-                                dtensor,
-                                stensor,
-                                thread_id,
-                                num_threads,
-                                matrix_offset,
-                                global_offset);
-    } else if (kRow == 32 && kColumn == 64) {
-      ShapedInputLoader<32, 64>(smem_buffer,
-                                dtensor,
-                                stensor,
-                                thread_id,
-                                num_threads,
-                                matrix_offset,
-                                global_offset);
-    } else if (kRow == 64 && kColumn == 32) {
-      ShapedInputLoader<64, 32>(smem_buffer,
-                                dtensor,
-                                stensor,
-                                thread_id,
-                                num_threads,
-                                matrix_offset,
-                                global_offset);
-    } else if (kRow == 16 && kColumn == 64) {
-      ShapedInputLoader<16, 64>(smem_buffer,
-                                dtensor,
-                                stensor,
+    int kRow = stensor_matrix_shape.x;
+    int kColumn = stensor_matrix_shape.y;
+    MatrixCoord extent(
+        {dtensor_matrix_shape.x, dtensor_matrix_shape.y});
+    if (dlayout == aso::layout::DmemRowMajor) {
+      SimpleRowMajorInputLoader((cutlass::half_t*)dtensor_ptr,
+                                (cutlass::half_t*)stensor_ptr,
+                                kRow,
+                                kColumn,
+                                extent,
                                 thread_id,
                                 num_threads,
                                 matrix_offset,
                                 global_offset);
     } else {
-      // if (threadIdx.x == 0 && blockIdx.x == 0) {
-      //   printf("kRow = %d kColumn = %d\n", kRow, kColumn);
-      // }
-      //  assert(false && "Unimplemented");
+      SimpleColumnMajorInputLoader((cutlass::half_t*)dtensor_ptr,
+                                   (cutlass::half_t*)stensor_ptr,
+                                   kRow,
+                                   kColumn,
+                                   extent,
+                                   thread_id,
+                                   num_threads,
+                                   matrix_offset,
+                                   global_offset);
     }
+#ifdef DEADCODE
+    if (kRow == 64 && kColumn == 64) {
+      ShapedInputLoader<64, 64>(dtensor_ptr,
+                                stensor_ptr,
+                                dtensor_matrix_shape,
+                                dlayout,
+                                slayout,
+                                thread_id,
+                                num_threads,
+                                matrix_offset,
+                                global_offset);
+    } else if (kRow == 32 && kColumn == 64) {
+      ShapedInputLoader<32, 64>(dtensor_ptr,
+                                stensor_ptr,
+                                dtensor_matrix_shape,
+                                dlayout,
+                                slayout,
+                                thread_id,
+                                num_threads,
+                                matrix_offset,
+                                global_offset);
+    } else if (kRow == 64 && kColumn == 32) {
+      ShapedInputLoader<64, 32>(dtensor_ptr,
+                                stensor_ptr,
+                                dtensor_matrix_shape,
+                                dlayout,
+                                slayout,
+                                thread_id,
+                                num_threads,
+                                matrix_offset,
+                                global_offset);
+    } else if (kRow <= 16 && kColumn == 64) {
+      ShapedInputLoader<16, 64>(dtensor_ptr,
+                                stensor_ptr,
+                                dtensor_matrix_shape,
+                                dlayout,
+                                slayout,
+                                thread_id,
+                                num_threads,
+                                matrix_offset,
+                                global_offset);
+    } else {
+      //if (threadIdx.x == 0 && blockIdx.x == 0) {
+      //  printf("kRow = %d kColumn = %d\n", kRow, kColumn);
+      //}
+      //assert(false && "Unimplemented");
+    }
+#endif
   }
 };
 
 class TBInputLoaderFingerprinter {
 public:
   CUTLASS_DEVICE
-  TBInputLoaderFingerprinter(char *smem_buffer,
-                             aso::kernel::DTensor const &dtensor,
-                             aso::threadblock::STensor const &stensor,
+  TBInputLoaderFingerprinter(aso::type::FPType* dtensor_ptr,
+                             aso::type::FPType* stensor_ptr,
+                             int2 dtensor_matrix_shape,
+                             int2 stensor_matrix_shape,
+                             aso::layout::DmemLayout dlayout,
+                             aso::layout::SmemLayout slayout,
                              int thread_id,
                              int num_threads,
                              MatrixCoord matrix_offset,
                              int global_offset) {
-    aso::type::FPType *smem_ptr =
-        (aso::type::FPType *)(smem_buffer + stensor.smem_offset);
-    aso::type::FPType *dmem_ptr = dtensor.fp_ptr + global_offset;
-    int num_elements = (int)stensor.num_elements();
-    int smem_num_column = stensor.dim[stensor.num_dims - 1];
-    int dmem_num_column = dtensor.dim[dtensor.num_dims - 1];
+    aso::type::FPType *smem_ptr = stensor_ptr;
+    aso::type::FPType *dmem_ptr = dtensor_ptr + global_offset;
+    int num_elements = stensor_matrix_shape.x * stensor_matrix_shape.y;
+    int smem_num_column = stensor_matrix_shape.y;
+    int dmem_num_column = dtensor_matrix_shape.y;
     for (int idx = thread_id; idx < num_elements; idx += num_threads) {
       int dmem_row_idx = matrix_offset.row() + idx / smem_num_column;
       int dmem_column_idx = matrix_offset.column() + idx % smem_num_column;
