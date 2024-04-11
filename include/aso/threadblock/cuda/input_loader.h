@@ -208,6 +208,7 @@ public:
       ElementType *global_ptr = dmem_ptr + base_offset + (i / kColumn) * dtensor_matrix_shape.column() + i % kColumn;
       asm volatile("cp.async.ca.shared.global.L2::128B [%0], [%1], %2, %3;\n" ::"r"(smem_int_ptr), "l"(global_ptr), "n"(16), "r"(16));
     }
+    asm volatile("cp.async.commit_group;\n" ::);
     asm volatile("cp.async.wait_all;\n" ::);
   }
 };
@@ -232,6 +233,7 @@ public:
       ElementType *global_ptr = dmem_ptr + base_offset + (i / kRow) * dtensor_matrix_shape.row() + i % kRow;
       asm volatile("cp.async.ca.shared.global.L2::128B [%0], [%1], %2, %3;\n" ::"r"(smem_int_ptr), "l"(global_ptr), "n"(16), "r"(16));
     }
+    asm volatile("cp.async.commit_group;\n" ::);
     asm volatile("cp.async.wait_all;\n" ::);
   }
 };
