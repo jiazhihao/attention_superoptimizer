@@ -97,6 +97,16 @@ void from_json(json const &j, Graph &g) {
         guid_mapping[output.guid] = guidO;
         break;
       }
+      case type::KNOperatorType::KN_ADD_OP: {
+        size_t guidA, guidB, guidO;
+        jop.at("input_tensors")[0].at("guid").get_to(guidA);
+        jop.at("input_tensors")[1].at("guid").get_to(guidB);
+        jop.at("output_tensors")[0].at("guid").get_to(guidO);
+        DTensor const &output =
+            g.add(get_tensor_from_guid(guidA), get_tensor_from_guid(guidB));
+        guid_mapping[output.guid] = guidO;
+        break;
+      }
       case type::KNOperatorType::KN_REDUCTION_0_OP:
       case type::KNOperatorType::KN_REDUCTION_1_OP:
       case type::KNOperatorType::KN_REDUCTION_2_OP: {

@@ -8,10 +8,7 @@ bool is_binary(type::TBOperatorType op) {
   std::unordered_set<type::TBOperatorType> true_values{
       type::TBOperatorType::TB_ADD_OP,
       type::TBOperatorType::TB_MATMUL_OP,
-      type::TBOperatorType::TB_DIV_OP,
-      type::TBOperatorType::TB_CONCAT_0_OP,
-      type::TBOperatorType::TB_CONCAT_1_OP,
-      type::TBOperatorType::TB_CONCAT_2_OP};
+      type::TBOperatorType::TB_DIV_OP};
   return contains(true_values, op);
 }
 
@@ -107,7 +104,7 @@ std::shared_ptr<AlgebraicPattern>
       if (tensor.num_dims <= 2 || tensor.dim[2] <= reduction_dimx) {
         return nullptr;
       }
-     return std::make_shared<Red>(tensor.dim[2] / reduction_dimx, opd);
+      return std::make_shared<Red>(tensor.dim[2] / reduction_dimx, opd);
     case type::TBOperatorType::TB_OUTPUT_OP:
       return opd;
     default:
@@ -147,7 +144,7 @@ std::shared_ptr<AlgebraicPattern>
                 std::shared_ptr<AlgebraicPattern> rhs) {
 
   switch (op) {
-    case type::TBOperatorType::TB_MATMUL_OP: 
+    case type::TBOperatorType::TB_MATMUL_OP:
       if (tensor_l.dim[tensor_l.num_dims - 1] > 1) {
         return std::make_shared<Red>(tensor_l.dim[tensor_l.num_dims - 1],
                                      std::make_shared<Mul>(lhs, rhs));
@@ -161,6 +158,58 @@ std::shared_ptr<AlgebraicPattern>
     default:
       assert(false);
   }
+}
+
+std::shared_ptr<AlgebraicPattern>
+    get_pattern(type::KNOperatorType op,
+                std::vector<DTensor> const &tensors,
+                std::vector<std::shared_ptr<AlgebraicPattern>> const &opds) {
+  if (tensors.size() == 1) {
+    return get_pattern(op, tensors[0], opds[0]);
+  }
+  if (tensors.size() == 2) {
+    return get_pattern(op,
+                       tensors[0],
+                       tensors[1],
+                       opds[0],
+                       opds[1]);
+  }
+  assert(false && "Unsupported operator");
+}
+
+std::shared_ptr<AlgebraicPattern>
+    get_pattern(type::TBOperatorType op,
+                std::vector<STensor> const &tensors,
+                std::vector<std::shared_ptr<AlgebraicPattern>> const &opds) {
+
+  if (opds.size() == 1) {
+    return get_pattern(op, tensors[0], opds[0]);
+  }
+  if (opds.size() == 2) {
+    return get_pattern(op,
+                       tensors[0],
+                       tensors[1],
+                       opds[0],
+                       opds[1]);
+  }
+
+  if (op == type::TBOperatorType::TB_CONCAT_THEN_MATMUL_OP) {
+    assert(tensors.size() == 4);
+    if (tensors[0].num_dims != tensors[1].num_dims ||
+        tensors[0].num_dims != tensors[2].num_dims ||
+        tensors[0].num_dims != tensors[3].num_dims) {
+      return nullptr;
+    }
+    int num_dims = tensors[0].num_dims;
+    int reduction_dim1 = tensors[0].dim[num_dims - 1],
+        reduction_dim2 = tensors[1].dim[num_dims - 1];
+    return std::make_shared<Add>(
+        std::make_shared<Red>(reduction_dim1,
+                              std::make_shared<Mul>(opds[0], opds[2])),
+        std::make_shared<Red>(reduction_dim2,
+                              std::make_shared<Mul>(opds[1], opds[3])));
+  }
+  assert(false && "Unsupported operator");
 }
 
 KNOperator *create_op(kernel::Graph &g,
@@ -217,7 +266,8 @@ TBOperator *create_op(threadblock::Graph &g,
     case type::TBOperatorType::TB_REDUCTION_1_OP:
     case type::TBOperatorType::TB_REDUCTION_2_OP: {
       int dim = (int)type - (int)type::TBOperatorType::TB_REDUCTION_0_OP;
-      if (input.num_dims <= dim || (input.num_dims > dim && input.dim[dim] == 1)) {
+      if (input.num_dims <= dim ||
+          (input.num_dims > dim && input.dim[dim] == 1)) {
         return nullptr;
       }
       return g.create_reduction_op(input, dim);
@@ -225,11 +275,13 @@ TBOperator *create_op(threadblock::Graph &g,
     case type::TBOperatorType::TB_REDUCTION_0_TO_DIMX_OP:
     case type::TBOperatorType::TB_REDUCTION_1_TO_DIMX_OP:
     case type::TBOperatorType::TB_REDUCTION_2_TO_DIMX_OP: {
-      int dim = (int)type - (int)type::TBOperatorType::TB_REDUCTION_0_TO_DIMX_OP;
+      int dim =
+          (int)type - (int)type::TBOperatorType::TB_REDUCTION_0_TO_DIMX_OP;
       if (input.num_dims <= dim) {
         return nullptr;
       }
-      if ((input.dim[dim] <= g.reduction_dimx) || (input.dim[dim] % g.reduction_dimx != 0)) {
+      if ((input.dim[dim] <= g.reduction_dimx) ||
+          (input.dim[dim] % g.reduction_dimx != 0)) {
         return nullptr;
       }
       return g.create_reduction_to_dimx_op(input, dim);
@@ -262,6 +314,26 @@ TBOperator *create_op(threadblock::Graph &g,
   }
   if (inputs.size() == 2) {
     return create_op(g, type, inputs[0], inputs[1]);
+  }
+  if (type == type::TBOperatorType::TB_CONCAT_THEN_MATMUL_OP) {
+    TBOperator *concat1 = g.create_concat_op(inputs[0], inputs[1], inputs[0].num_dims - 1);
+    if (concat1 == nullptr) {
+      return nullptr;
+    }
+    TBOperator *concat2 = g.create_concat_op(inputs[2], inputs[3], inputs[2].num_dims - 2);
+    if (concat2 == nullptr) {
+      delete concat1;
+      return nullptr;
+    }
+    TBOperator *matmul = g.create_matmul_op(concat1->output_tensors[0], concat2->output_tensors[0]);
+    if (matmul == nullptr) {
+      delete concat2;
+      delete concat1;
+      return nullptr;
+    }
+    g.operators.push_back(concat1);
+    g.operators.push_back(concat2);
+    return matmul;
   }
   return nullptr;
 }

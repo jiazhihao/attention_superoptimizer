@@ -20,6 +20,16 @@ bool contains_key(C const &m, typename C::key_type const &k) {
   return m.find(k) != m.end();
 }
 
+template <typename T>
+bool contains(std::vector<T> const &v, T const &e) {
+  for (auto const &x : v) {
+    if (x == e) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool operator==(dim3 const &lhs, dim3 const &rhs);
 bool operator==(int3 const &lhs, int3 const &rhs);
 
