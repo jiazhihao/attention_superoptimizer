@@ -26,6 +26,7 @@ struct DimStrategy {
                              std::vector<int> const &forloop_dim);
   std::vector<std::vector<int>> get_unary_input(int num_tensors);
   std::vector<std::vector<int>> get_binary_input(int num_tensors);
+  std::vector<std::vector<int>> get_nary_input(int num_tensors, int n);
 
   template <typename OpType, typename TensorType>
   std::vector<std::vector<int>>
@@ -36,6 +37,9 @@ struct DimStrategy {
     }
     if (is_binary(op_type)) {
       return get_binary_input(all_inputs.size());
+    }
+    if (op_type == type::TBOperatorType::TB_CONCAT_THEN_MATMUL_OP) {
+      return get_nary_input(all_inputs.size(), 4);
     }
     assert(false && "Unsupported operator");
   }

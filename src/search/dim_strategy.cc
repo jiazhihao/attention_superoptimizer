@@ -202,6 +202,27 @@ std::vector<std::vector<int>> DimStrategy::get_binary_input(int num_tensors) {
   return result;
 }
 
+void get_nary_input(int n, int num_tensors, std::vector<int> &cur, std::vector<std::vector<int>> &result) {
+  if (cur.size() == n) {
+    result.push_back(cur);
+    return;
+  }
+  for (int i = 0; i < num_tensors; ++i) {
+    if (!contains(cur, i)) {
+      cur.push_back(i);
+      get_nary_input(n, num_tensors, cur, result);
+      cur.pop_back();
+    }
+  }
+}
+
+std::vector<std::vector<int>> DimStrategy::get_nary_input(int num_tensors, int n) {
+  std::vector<std::vector<int>> result;
+  std::vector<int> cur;
+  aso::search::get_nary_input(n, num_tensors, cur, result);
+  return result;
+}
+
 std::vector<std::vector<int>> DimStrategy::get_customized_input_cand_idx(
     std::vector<DTensor> const &all_input,
     std::vector<int> const &open_tensor_idx) {
@@ -211,10 +232,13 @@ std::vector<std::vector<int>> DimStrategy::get_customized_input_cand_idx(
   int opt_level = 0;
   if (opt_level == 0)
   {
+    if (contains(config.tbop_to_explore, type::TBOperatorType::TB_CONCAT_THEN_MATMUL_OP)) {
+      return {{0, 1, 2, 3}};
+    }
     if (all_input.size() == 3) {
       return {{0, 1, 2}, {0, 1}};
     } else {
-      return {{0, 1, 2, 3}, {num_inputs - 2, num_inputs - 1}};
+      return {{num_inputs - 2, num_inputs - 1}};
     }
   } else if (opt_level == 1) {
     std::vector<std::vector<int>> results {{0, 1}, {0, 1, 2}};

@@ -184,6 +184,16 @@ void KernelGraphGenerator::generate_next_tb_operator(
       assert(g.operators.back() == new_op);
       delete g.operators.back();
       g.operators.pop_back();
+      if (op_type == type::TBOperatorType::TB_CONCAT_THEN_MATMUL_OP) {
+        assert(g.operators.back()->op_type ==
+               type::TB_CONCAT_FIRST_OP_ID + output.num_dims - 2);
+        delete g.operators.back();
+        g.operators.pop_back();
+        assert(g.operators.back()->op_type ==
+               type::TB_CONCAT_FIRST_OP_ID + output.num_dims - 1);
+        delete g.operators.back();
+        g.operators.pop_back();
+      }
       callstack.back().input_idx_explored.insert(input_idx);
     }
     callstack.back().tbop_explored.insert(op_type);
@@ -612,6 +622,16 @@ bool KernelGraphGenerator::have_same_fingerprint(
 std::vector<layout::SmemLayout> KernelGraphGenerator::get_valid_output_layout(
     threadblock::TBOperator const *op, int idx) {
   assert(idx == 0);
+  config.smem_layout_to_explore = {
+      layout::SmemRowMajor,
+      layout::SmemColumnMajor,
+      // layout::SmemRowMajorTensorOpMultiplicand_Crosswise16,
+      layout::SmemRowMajorTensorOpMultiplicand_Crosswise32,
+      // layout::SmemRowMajorTensorOpMultiplicand_Crosswise64,
+      // layout::SmemColumnMajorTensorOpMultiplicand_Crosswise16,
+      layout::SmemColumnMajorTensorOpMultiplicand_Crosswise32,
+      // layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64,
+  };
   switch (op->op_type) {
     case type::TBOperatorType::TB_INPUT_OP:
       return config.smem_layout_to_explore;
@@ -635,7 +655,11 @@ std::vector<layout::SmemLayout> KernelGraphGenerator::get_valid_output_layout(
     case type::TBOperatorType::TB_EXP_OP: {
       return {op->input_tensors[0].layout};
     }
-    case type::TBOperatorType::TB_DIV_OP: {
+    case type::TBOperatorType::TB_DIV_OP:
+    case type::TBOperatorType::TB_ADD_OP:
+    case type::TBOperatorType::TB_CONCAT_0_OP:
+    case type::TBOperatorType::TB_CONCAT_1_OP:
+    case type::TBOperatorType::TB_CONCAT_2_OP: {
       return {op->input_tensors[0].layout};
     }
     case type::TBOperatorType::TB_REDUCTION_0_OP:
