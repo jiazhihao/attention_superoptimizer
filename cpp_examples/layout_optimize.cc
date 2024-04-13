@@ -7,6 +7,23 @@
 using namespace aso;
 using namespace aso::search;
 
+bool has_no_small_tensor(kernel::Graph const &g) {
+  for (auto const &op : g.operators) {
+    if (op->op_type == type::KN_CUSTOMIZED_OP) {
+      for (auto const &bop : static_cast<kernel::KNCustomizedOp *>(op)->bgraph.operators) {
+        for (auto const &output : bop->output_tensors) {
+          for (int d = 0; d < output.num_dims; ++d) {
+            if (output.dim[d] <= 8) {
+              return false;
+            }
+          }
+        }
+      }
+    }
+  }
+  return true;
+}
+
 int main(int argc, char **argv) {
   if (argc < 2) {
     std::cerr << "Missing checkpoint file" << std::endl;
@@ -25,6 +42,7 @@ int main(int argc, char **argv) {
 
   int index = 0;
   for (json const &j : gen.generated_graphs) {
+    std::cout << "optimizing " << j << std::endl;
     if (index_to_skip.find(index) == index_to_skip.end()) {
       kernel::Graph g;
       from_json(j, g);
