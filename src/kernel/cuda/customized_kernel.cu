@@ -625,10 +625,16 @@ bool KNCustomizedOp::profile(ProfileResult &result) {
   cudaEvent_t events[2];
   checkCUDA(cudaEventCreate(&events[0]));
   checkCUDA(cudaEventCreate(&events[1]));
-  checkCUDA(cudaEventRecord(events[0]));
   // aso::threadblock::KernelParams params = bgraph.get_kernel_params();
   aso::threadblock::NewKernelParams new_params =
       bgraph.get_new_kernel_params(false /*fingerprint_kernel*/);
+  for (int i = 0; i < 1024; i++) {
+    customized_kernel_function<<<bgraph.grid_dim,
+                                 bgraph.block_dim,
+                                 bgraph.smem_offset>>>(new_params,
+                                                       bgraph.forloop_range);
+  }
+  checkCUDA(cudaEventRecord(events[0]));
   for (int i = 0; i < ProfileResult::NUM_ITERATIONS; i++) {
     customized_kernel_function<<<bgraph.grid_dim,
                                  bgraph.block_dim,
