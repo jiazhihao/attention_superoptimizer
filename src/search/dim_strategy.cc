@@ -236,7 +236,7 @@ std::vector<std::vector<int>> DimStrategy::get_customized_input_cand_idx(
       return {{0, 1, 2, 3}};
     }
     if (all_input.size() == 3) {
-      return {{0, 1, 2}, {0, 1}};
+      return {{0, 1, 2}};
     } else {
       return {{num_inputs - 2, num_inputs - 1}};
     }
