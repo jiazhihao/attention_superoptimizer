@@ -627,10 +627,10 @@ std::vector<layout::SmemLayout> KernelGraphGenerator::get_valid_output_layout(
       layout::SmemColumnMajor,
       // layout::SmemRowMajorTensorOpMultiplicand_Crosswise16,
       layout::SmemRowMajorTensorOpMultiplicand_Crosswise32,
-      // layout::SmemRowMajorTensorOpMultiplicand_Crosswise64,
+      layout::SmemRowMajorTensorOpMultiplicand_Crosswise64,
       // layout::SmemColumnMajorTensorOpMultiplicand_Crosswise16,
       layout::SmemColumnMajorTensorOpMultiplicand_Crosswise32,
-      // layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64,
+      layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64,
   };
   switch (op->op_type) {
     case type::TBOperatorType::TB_INPUT_OP:
@@ -651,7 +651,19 @@ std::vector<layout::SmemLayout> KernelGraphGenerator::get_valid_output_layout(
         return {};
       }
     }
-    case type::TBOperatorType::TB_OUTPUT_OP:
+    case type::TBOperatorType::TB_OUTPUT_OP: {
+      if (op->input_tensors[0].layout == layout::SmemRowMajor ||
+          op->input_tensors[0].layout ==
+              layout::SmemRowMajorTensorOpMultiplicand_Crosswise16 ||
+          op->input_tensors[0].layout ==
+              layout::SmemRowMajorTensorOpMultiplicand_Crosswise32 ||
+          op->input_tensors[0].layout ==
+              layout::SmemRowMajorTensorOpMultiplicand_Crosswise64) {
+        return {op->input_tensors[0].layout};
+      } else {
+        return {};
+      }
+    }
     case type::TBOperatorType::TB_EXP_OP: {
       return {op->input_tensors[0].layout};
     }
@@ -730,7 +742,7 @@ void KernelGraphGenerator::optimize_layout(
   }
 
   for (layout::DmemLayout layout :
-       {layout::DmemRowMajor /*, layout::DmemColumnMajor*/}) {
+       {layout::DmemRowMajor, layout::DmemColumnMajor}) {
     g.operators[op_idx]->output_tensors[ts_idx].layout = layout;
     for (KNOperator *op : g.operators) {
       for (DTensor &dtensor : op->input_tensors) {
@@ -744,7 +756,7 @@ void KernelGraphGenerator::optimize_layout(
 }
 
 void KernelGraphGenerator::update_best_graph(kernel::Graph &g) {
-  std::cerr << "kernel graph candidate: " << json(g) << std::endl;
+  // std::cerr << "kernel graph candidate: " << json(g) << std::endl;
   ProfileResult result{0};
   for (auto op : g.operators) {
     ProfileResult op_result;
@@ -754,6 +766,7 @@ void KernelGraphGenerator::update_best_graph(kernel::Graph &g) {
   if (result.run_time < best_profile_result.run_time) {
     best_graph = json(g);
     best_profile_result = result;
+    save_checkpoint();
   }
   return;
 }
