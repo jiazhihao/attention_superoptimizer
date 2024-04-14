@@ -51,6 +51,12 @@
     } else if (VARNAME <= 32) {                                                \
       constexpr static int CONSTNAME = 32;                                     \
       return __VA_ARGS__();                                                    \
+    } else if (VARNAME <= 64) {                                                \
+      constexpr static int CONSTNAME = 64;                                     \
+      return __VA_ARGS__();                                                    \
+    } else if (VARNAME <= 128) {                                               \
+      constexpr static int CONSTNAME = 128;                                    \
+      return __VA_ARGS__();                                                    \
     } else {                                                                   \
       assert(false);                                                           \
     }                                                                          \
@@ -70,8 +76,8 @@
     } else if (VARNAME <= 64) {                                                \
       constexpr static int CONSTNAME = 64;                                     \
       return __VA_ARGS__();                                                    \
-    } else if (VARNAME <= 128) {                                               \
-      constexpr static int CONSTNAME = 128;                                    \
+    } else if (VARNAME <= 128) {                                                \
+      constexpr static int CONSTNAME = 128;                                     \
       return __VA_ARGS__();                                                    \
     } else {                                                                   \
       assert(false);                                                           \
