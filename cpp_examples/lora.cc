@@ -7,8 +7,8 @@ using namespace aso;
 int main(int argc, char **argv) {
   kernel::Graph ref_graph;
   {
-    kernel::DTensor X = ref_graph.new_input(
-        {16, 256}, type::DT_FLOAT16, layout::DmemRowMajor);
+    kernel::DTensor X =
+        ref_graph.new_input({16, 256}, type::DT_FLOAT16, layout::DmemRowMajor);
     kernel::DTensor W = ref_graph.new_input(
         {256, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor A = ref_graph.new_input(
@@ -31,14 +31,14 @@ int main(int argc, char **argv) {
     printf("[cudnn kernel graph] Total runtime = %.4lfms\n", total_runtime);
   }
   kernel::Graph graph;
-  kernel::DTensor X = graph.new_input(
-      {16, 256}, type::DT_FLOAT16, layout::DmemRowMajor);
-  kernel::DTensor W = graph.new_input(
-      {256, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
-  kernel::DTensor A = graph.new_input(
-      {256, 16}, type::DT_FLOAT16, layout::DmemColumnMajor);
-  kernel::DTensor B = graph.new_input(
-      {16, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+  kernel::DTensor X =
+      graph.new_input({16, 256}, type::DT_FLOAT16, layout::DmemRowMajor);
+  kernel::DTensor W =
+      graph.new_input({256, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+  kernel::DTensor A =
+      graph.new_input({256, 16}, type::DT_FLOAT16, layout::DmemColumnMajor);
+  kernel::DTensor B =
+      graph.new_input({16, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
 
   std::vector<kernel::DTensor> outputs;
   {
@@ -80,16 +80,13 @@ int main(int argc, char **argv) {
       graph.operators.back()->output_tensors[0]));
 
   clock_t st = clock();
-  search::GeneratorConfig config = search::GeneratorConfig::get_default_config();
+  search::GeneratorConfig config =
+      search::GeneratorConfig::get_default_config();
+  config.tbop_to_explore.push_back(type::TBOperatorType::TB_CONCAT_THEN_MATMUL_OP);
   config.grid_dim_to_explore = {{128, 1, 1}};
-  config.tbop_to_explore.push_back(aso::type::TB_CONCAT_0_OP);
-  config.tbop_to_explore.push_back(aso::type::TB_CONCAT_1_OP);
   config.imap_to_explore = {{-1, -1, -1}, {1, -1, -1}};
   config.omap_to_explore = {{1, -1, -1}};
-  search::KernelGraphGenerator gen(
-      ref_graph,
-      config,
-      "checkpoint_lora.json");
+  search::KernelGraphGenerator gen(ref_graph, config, "checkpoint_lora.json");
   gen.generate_kernel_graphs();
 
   clock_t et = clock();
