@@ -25,7 +25,7 @@ DeviceMemoryManager *DeviceMemoryManager::singleton = nullptr;
 
 DeviceMemoryManager::DeviceMemoryManager() {
   // preallocate 10 GB of device memory
-  total_size = (size_t)1 * 1024 * 1024 * 1024;
+  total_size = (size_t)10 * 1024 * 1024 * 1024;
   offset = 0;
   checkCUDA(cudaMalloc(&base_ptr, total_size));
   checkCUDA(cublasCreate(&blas));
