@@ -24,7 +24,7 @@ int const MAX_NUM_THREADBLOCK_OUTPUT = 2;
 struct GeneratorConfig {
   std::vector<type::KNOperatorType> knop_to_explore;
   std::vector<type::TBOperatorType> tbop_to_explore;
-  std::vector<int3> imap_to_explore;
+  std::vector<std::vector<int3>> imap_to_explore;
   std::vector<int3> omap_to_explore;
   std::vector<dim3> grid_dim_to_explore;
   std::vector<dim3> block_dim_to_explore;
@@ -33,7 +33,8 @@ struct GeneratorConfig {
   std::vector<layout::SmemLayout> smem_layout_to_explore;
   int reduction_dimx;
 
-  static GeneratorConfig get_default_config();
+  static GeneratorConfig get_attention_default_config();
+  static GeneratorConfig get_mlp_default_config();
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(GeneratorConfig,

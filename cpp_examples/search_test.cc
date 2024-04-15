@@ -24,8 +24,11 @@ int main(int argc, char **argv) {
     ref_graph.matmul(D, V);
   }
 
-  search::KernelGraphGenerator gen(ref_graph, GeneratorConfig::get_default_config(), "checkpoint.json");
-  
+  search::KernelGraphGenerator gen(
+      ref_graph,
+      GeneratorConfig::get_attention_default_config(),
+      "checkpoint.json");
+
   gen.generate_kernel_graphs();
 
   clock_t et = clock();

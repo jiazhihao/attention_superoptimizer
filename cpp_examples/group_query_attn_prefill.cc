@@ -1,6 +1,6 @@
 #include "aso/kernel/graph.h"
-#include "aso/threadblock/graph.h"
 #include "aso/search/search.h"
+#include "aso/threadblock/graph.h"
 #include "common.h"
 
 using namespace aso;
@@ -8,6 +8,9 @@ using namespace aso;
 int main(int argc, char **argv) {
   // Currently only optimize for these two batch sizes
   int batch_size = asotest::BATCH_SIZE;
+  if (argc > 1) {
+    batch_size = std::atoi(argv[1]);
+  }
   assert(batch_size == 1 || batch_size == 8);
   kernel::Graph ref_graph;
   {
@@ -34,12 +37,12 @@ int main(int argc, char **argv) {
     printf("[cudnn kernel graph] Total runtime = %.4lfms\n", total_runtime);
   }
   kernel::Graph graph;
-  kernel::DTensor Q =
-      graph.new_input({2 * batch_size, 256, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
-  kernel::DTensor K =
-      graph.new_input({2 * batch_size, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
-  kernel::DTensor V =
-      graph.new_input({2 * batch_size, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
+  kernel::DTensor Q = graph.new_input(
+      {2 * batch_size, 256, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
+  kernel::DTensor K = graph.new_input(
+      {2 * batch_size, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+  kernel::DTensor V = graph.new_input(
+      {2 * batch_size, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
   std::vector<kernel::DTensor> outputs;
   {
     threadblock::ExecutionPlan plan;
@@ -112,13 +115,16 @@ int main(int argc, char **argv) {
   printf("[2 Block Graphs] Total runtime = %.4lfms\n", total_ms);
 
   clock_t st = clock();
-  search::GeneratorConfig config = search::GeneratorConfig::get_default_config();
-  config.grid_dim_to_explore = {{2 * batch_size, 16, 4}, {2 * batch_size, 8, 4}, {2 * batch_size, 16, 1}, {2 * batch_size, 8, 1}};
-  std::string checkpoint_file_name = "checkpoint_group_query_attn_prefill_bs" + std::to_string(batch_size) + ".json";
+  search::GeneratorConfig config =
+      search::GeneratorConfig::get_attention_default_config();
+  config.grid_dim_to_explore = {{2 * batch_size, 16, 4},
+                                {2 * batch_size, 8, 4},
+                                {2 * batch_size, 16, 1},
+                                {2 * batch_size, 8, 1}};
+  std::string checkpoint_file_name = "checkpoint_group_query_attn_prefill_bs" +
+                                     std::to_string(batch_size) + ".json";
   search::KernelGraphGenerator gen(
-      ref_graph,
-      config,
-      checkpoint_file_name.data());
+      ref_graph, config, checkpoint_file_name.data());
   gen.generate_kernel_graphs();
 
   clock_t et = clock();

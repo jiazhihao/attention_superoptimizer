@@ -79,8 +79,6 @@ int main(int argc, char **argv) {
     assert(outputs.size() == 1);
   }
 
-  std::cout << "ref graph:" << json(graph) << std::endl;
-
   ProfileResult result;
   float total_ms = 0.0f;
   for (auto const &op : graph.operators) {
@@ -88,6 +86,7 @@ int main(int argc, char **argv) {
     total_ms = total_ms + result.run_time;
   }
   printf("[2 Block Graphs] Total runtime = %.4lfms\n", total_ms);
+
   for (auto const &op : graph.operators) {
     op->fingerprint();
   }
@@ -95,9 +94,7 @@ int main(int argc, char **argv) {
       graph.operators.back()->output_tensors[0]));
 
   clock_t st = clock();
-  search::GeneratorConfig config = search::GeneratorConfig::get_default_config();
-  config.imap_to_explore = {{0, -1, -1}, {1, -1, -1}, {-1, -1, -1}};
-  config.omap_to_explore = {{1, -1, -1}};
+  search::GeneratorConfig config = search::GeneratorConfig::get_mlp_default_config();
   config.fmap_to_explore = {-1};
   config.grid_dim_to_explore = {{32, 1, 1}, {64, 1, 1}};
   config.reduction_dimx = 8;

@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
       graph.operators.back()->output_tensors[0]));
 
   clock_t st = clock();
-  search::GeneratorConfig config = search::GeneratorConfig::get_default_config();
+  search::GeneratorConfig config = search::GeneratorConfig::get_attention_default_config();
   config.grid_dim_to_explore = {{32, 8, 1}, {32, 1, 1}};
   search::KernelGraphGenerator gen(
       ref_graph,

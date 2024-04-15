@@ -5,7 +5,7 @@
 namespace aso {
 
 ProfileResult ProfileResult::infinity() {
-  return ProfileResult{std::numeric_limits<float>::infinity()};
+  return ProfileResult{1000};
 }
 
 }

@@ -79,12 +79,45 @@ void generate_input_map_cand(std::vector<DTensor> const &tensors,
   }
 }
 
+bool is_valid_input_map(std::vector<DTensor> const &tensors, dim3 grid_dim, std::vector<int3> const &input_maps) {
+  if (tensors.size() != input_maps.size()) {
+    return false;
+  }
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    DTensor const &tensor = tensors[i];
+    int3 input_map = input_maps[i];
+    if (tensor.num_dims <= input_map.x || tensor.num_dims <= input_map.y ||
+        tensor.num_dims <= input_map.z) {
+      return false;
+    }
+    if ((grid_dim.x == 1 && input_map.x != -1) ||
+        (grid_dim.y == 1 && input_map.y != -1) ||
+        (grid_dim.z == 1 && input_map.z != -1)) {
+      return false;
+    }
+    if ((input_map.x != -1 && tensor.dim[input_map.x] % grid_dim.x != 0) ||
+        (input_map.y != -1 && tensor.dim[input_map.y] % grid_dim.y != 0) ||
+        (input_map.z != -1 && tensor.dim[input_map.z] % grid_dim.z != 0)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 std::vector<std::vector<int3>>
     DimStrategy::get_input_map_cand(std::vector<DTensor> const &tensors,
                                     dim3 grid_dim) {
   std::vector<std::vector<int3>> results;
-  generate_input_map_cand(
-      tensors, grid_dim, config.imap_to_explore, {}, results);
+  if (config.imap_to_explore.size() == 1) {
+    generate_input_map_cand(
+      tensors, grid_dim, config.imap_to_explore[0], {}, results);
+  } else {
+    for (const auto input_maps : config.imap_to_explore) {
+      if (is_valid_input_map(tensors, grid_dim, input_maps)) {
+        results.push_back(input_maps);
+      }
+    }
+  }
   return results;
 }
 

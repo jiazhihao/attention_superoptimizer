@@ -11,10 +11,13 @@ bool has_no_small_tensor(kernel::Graph const &g) {
   for (auto const &op : g.operators) {
     if (op->op_type == type::KN_CUSTOMIZED_OP) {
       for (auto const &bop : static_cast<kernel::KNCustomizedOp *>(op)->bgraph.operators) {
-        for (auto const &output : bop->output_tensors) {
-          for (int d = 0; d < output.num_dims; ++d) {
-            if (output.dim[d] <= 8) {
-              return false;
+        if (bop->op_type == type::TB_OUTPUT_OP) {
+          for (auto const &output : bop->output_tensors) {
+            for (int d = output.num_dims - 2; d < output.num_dims; ++d) {
+              if (output.dim[d] < 8) {
+                std::cerr << output.dim[0] << ", " << output.dim[1] << ", " << output.dim[2] << std::endl;
+                return false;
+              }
             }
           }
         }
@@ -38,7 +41,6 @@ int main(int argc, char **argv) {
   }
 
   search::KernelGraphGenerator gen(argv[1]);
-  gen.config = GeneratorConfig::get_default_config();
 
   int index = 0;
   for (json const &j : gen.generated_graphs) {

@@ -1,4 +1,5 @@
 #include "aso/kernel/graph.h"
+#include "aso/search/search.h"
 #include "aso/threadblock/graph.h"
 #include "common.h"
 
@@ -7,6 +8,9 @@ using namespace aso;
 int main(int argc, char **argv) {
   // Currently only optimize for these two batch sizes
   int batch_size = asotest::BATCH_SIZE;
+  if (argc > 1) {
+    batch_size = std::atoi(argv[1]);
+  }
   assert(batch_size == 1 || batch_size == 8);
   kernel::Graph ref_graph;
   {
@@ -109,5 +113,22 @@ int main(int argc, char **argv) {
     total_ms = total_ms + result.run_time;
   }
   printf("[2 Block Graphs] Total runtime = %.4lfms\n", total_ms);
+
+  clock_t st = clock();
+  search::GeneratorConfig config =
+      search::GeneratorConfig::get_attention_default_config();
+  config.grid_dim_to_explore = {{2 * batch_size, 16, 4},
+                                {2 * batch_size, 8, 2},
+                                {2 * batch_size, 16, 1},
+                                {2 * batch_size, 8, 1}};
+  std::string checkpoint_file_name = "checkpoint_group_query_attn_spec_decode_bs" +
+                                     std::to_string(batch_size) + ".json";
+  search::KernelGraphGenerator gen(
+      ref_graph, config, checkpoint_file_name.data());
+  gen.generate_kernel_graphs();
+
+  clock_t et = clock();
+
+  printf("Search time = %.4lfsec\n", (float)(et - st) / CLOCKS_PER_SEC);
   return 0;
 }

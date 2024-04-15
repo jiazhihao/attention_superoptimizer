@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
   printf("[2 Block Graphs] Total runtime = %.4lfms\n", total_ms);
 
   clock_t st = clock();
-  search::GeneratorConfig config = search::GeneratorConfig::get_default_config();
+  search::GeneratorConfig config = search::GeneratorConfig::get_attention_default_config();
   config.grid_dim_to_explore = {{8, 8, 1}, {8, 1, 1}};
   search::KernelGraphGenerator gen(
       ref_graph,

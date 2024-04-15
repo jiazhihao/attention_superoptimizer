@@ -8,6 +8,11 @@ using namespace aso;
 using namespace aso::search;
 
 int main(int argc, char **argv) {
+  if (argc < 2) {
+    std::cerr << "Missing checkpoint file" << std::endl;
+    return 1;
+  }
+
   clock_t st = clock();
   // kernel::Graph ref_graph;
   // {
@@ -25,7 +30,7 @@ int main(int argc, char **argv) {
   // }
 
   // search::KernelGraphGenerator gen(ref_graph, GeneratorConfig::get_default_config(), "checkpoint.json");
-  search::KernelGraphGenerator gen("checkpoint.json");
+  search::KernelGraphGenerator gen(argv[1]);
 
   gen.generate_kernel_graphs();
 
