@@ -1,17 +1,20 @@
 #include "aso/kernel/graph.h"
 #include "aso/threadblock/graph.h"
 
+#include "common.h"
+
 using namespace aso;
 
 int main(int argc, char **argv) {
+  int batch_size = asotest::BATCH_SIZE;
   kernel::Graph ref_graph;
   {
     kernel::DTensor Q = ref_graph.new_input(
-        {8, 8, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
+        {2*batch_size, 8, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
     kernel::DTensor K = ref_graph.new_input(
-        {8, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+        {2*batch_size, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor V = ref_graph.new_input(
-        {8, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
+        {2*batch_size, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor A = ref_graph.matmul(Q, K);
     kernel::DTensor E = ref_graph.exp(A);
     kernel::DTensor S = ref_graph.reduction(E, 2 /*dim*/);
@@ -30,11 +33,11 @@ int main(int argc, char **argv) {
   }
   kernel::Graph graph;
   kernel::DTensor Q =
-      graph.new_input({8, 8, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
+      graph.new_input({2*batch_size, 8, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
   kernel::DTensor K =
-      graph.new_input({8, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      graph.new_input({2*batch_size, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
   kernel::DTensor V =
-      graph.new_input({8, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      graph.new_input({2*batch_size, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
   std::vector<kernel::DTensor> outputs;
   {
     threadblock::ExecutionPlan plan;
@@ -56,9 +59,13 @@ int main(int argc, char **argv) {
     };
     plan.output_map = {0, 2, -1};
     plan.forloop_dim = {-1, 2, 1};
-    plan.grid_dim = {8, 8, 1};
+    if (batch_size == 1) {
+      plan.grid_dim = {2, 16, 1};
+    } else {
+      plan.grid_dim = {16, 8, 1};
+    }
     plan.block_dim = {128, 1, 1};
-    plan.forloop_range = 8;
+    plan.forloop_range = 4;
     plan.reduction_dimx = 64;
     outputs = graph.customized({Q, K, V}, plan);
     assert(outputs.size() == 2);
@@ -79,7 +86,11 @@ int main(int argc, char **argv) {
     };
     plan.output_map = {0, -1, -1};
     plan.forloop_dim = {-1, -1};
-    plan.grid_dim = {8, 1, 1};
+    if (batch_size == 1) {
+      plan.grid_dim = {2, 1, 1};
+    } else {
+      plan.grid_dim = {16, 1, 1};
+    }
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 1;
     plan.reduction_dimx = 64;
