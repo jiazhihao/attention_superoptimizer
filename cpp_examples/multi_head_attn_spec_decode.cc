@@ -7,6 +7,9 @@ using namespace aso;
 
 int main(int argc, char **argv) {
   int batch_size = asotest::BATCH_SIZE;
+  if (argc > 1) {
+    batch_size = std::atoi(argv[1]);
+  }
   kernel::Graph ref_graph;
   {
     kernel::DTensor Q = ref_graph.new_input(

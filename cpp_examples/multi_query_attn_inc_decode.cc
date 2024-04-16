@@ -6,13 +6,17 @@ using namespace aso;
 
 int main(int argc, char **argv) {
   kernel::Graph ref_graph;
+  int batch_size = 8;
+  if (argc > 1) {
+    batch_size = std::atoi(argv[1]);
+  }
   {
     kernel::DTensor Q = ref_graph.new_input(
-        {8, 32, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
+        {batch_size * 8, 32, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
     kernel::DTensor K = ref_graph.new_input(
-        {8, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+        {batch_size * 8, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor V = ref_graph.new_input(
-        {8, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
+        {batch_size * 8, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor A = ref_graph.matmul(Q, K);
     kernel::DTensor E = ref_graph.exp(A);
     kernel::DTensor S = ref_graph.reduction(E, 2 /*dim*/);
@@ -31,11 +35,11 @@ int main(int argc, char **argv) {
   }
   kernel::Graph graph;
   kernel::DTensor Q =
-      graph.new_input({8, 32, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
+      graph.new_input({batch_size * 8, 32, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
   kernel::DTensor K =
-      graph.new_input({8, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      graph.new_input({batch_size * 8, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
   kernel::DTensor V =
-      graph.new_input({8, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      graph.new_input({batch_size * 8, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
   std::vector<kernel::DTensor> outputs;
   {
     threadblock::ExecutionPlan plan;
@@ -57,7 +61,7 @@ int main(int argc, char **argv) {
     };
     plan.output_map = {0, 2, -1};
     plan.forloop_dim = {-1, 2, 1};
-    plan.grid_dim = {8, 8, 1};
+    plan.grid_dim = {batch_size * 8, 8, 1};
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 4;
     plan.reduction_dimx = 64;
@@ -80,7 +84,7 @@ int main(int argc, char **argv) {
     };
     plan.output_map = {0, -1, -1};
     plan.forloop_dim = {-1, -1};
-    plan.grid_dim = {8, 1, 1};
+    plan.grid_dim = {batch_size * 8, 1, 1};
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 1;
     plan.reduction_dimx = 64;
@@ -102,11 +106,13 @@ int main(int argc, char **argv) {
 
   clock_t st = clock();
   search::GeneratorConfig config = search::GeneratorConfig::get_attention_default_config();
-  config.grid_dim_to_explore = {{8, 8, 1}, {8, 1, 1}};
+  config.grid_dim_to_explore = {{batch_size * 8, 8, 1}, {batch_size * 8, 1, 1}};
+  std::string checkpoint_file_name = "checkpoint_multi_query_attn_inc_decode_bs" +
+                                     std::to_string(batch_size) + ".json";
   search::KernelGraphGenerator gen(
       ref_graph,
       config,
-      "checkpoint_multi_query_attn_inc_decode.json");
+      checkpoint_file_name.data());
   gen.generate_kernel_graphs();
 
   clock_t et = clock();

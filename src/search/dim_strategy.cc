@@ -90,11 +90,6 @@ bool is_valid_input_map(std::vector<DTensor> const &tensors, dim3 grid_dim, std:
         tensor.num_dims <= input_map.z) {
       return false;
     }
-    if ((grid_dim.x == 1 && input_map.x != -1) ||
-        (grid_dim.y == 1 && input_map.y != -1) ||
-        (grid_dim.z == 1 && input_map.z != -1)) {
-      return false;
-    }
     if ((input_map.x != -1 && tensor.dim[input_map.x] % grid_dim.x != 0) ||
         (input_map.y != -1 && tensor.dim[input_map.y] % grid_dim.y != 0) ||
         (input_map.z != -1 && tensor.dim[input_map.z] % grid_dim.z != 0)) {

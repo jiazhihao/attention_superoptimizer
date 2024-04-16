@@ -8,6 +8,9 @@ using namespace aso;
 int main(int argc, char **argv) {
   // Currently only optimize for these two batch sizes
   int batch_size = asotest::BATCH_SIZE;
+  if (argc > 1) {
+    batch_size = std::atoi(argv[1]);
+  }
   assert(batch_size == 1 || batch_size == 8);
   kernel::Graph ref_graph;
   {

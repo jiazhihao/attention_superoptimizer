@@ -8,6 +8,9 @@ using namespace aso;
 
 int main(int argc, char **argv) {
   int batch_size = asotest::BATCH_SIZE;
+  if (argc > 1) {
+    batch_size = std::atoi(argv[1]);
+  }
   kernel::Graph ref_graph;
   {
     kernel::DTensor Q = ref_graph.new_input(
@@ -114,11 +117,13 @@ int main(int argc, char **argv) {
   clock_t st = clock();
 
   search::GeneratorConfig config = search::GeneratorConfig::get_attention_default_config();
-  config.grid_dim_to_explore = {{8, 8, 1}, {8, 1, 1}};
+  config.grid_dim_to_explore = {{2 * batch_size, 16, 1}, {2 * batch_size, 8, 1}, {2 * batch_size, 1, 1}};
+  std::string checkpoint_file_name = "checkpoint_group_query_attn_inc_decode_bs" +
+                                     std::to_string(batch_size) + ".json";
   search::KernelGraphGenerator gen(
       ref_graph,
       config,
-      "checkpoint_group_query_attn_inc_decode.json");
+      checkpoint_file_name.data());
   gen.generate_kernel_graphs();
 
   clock_t et = clock();
