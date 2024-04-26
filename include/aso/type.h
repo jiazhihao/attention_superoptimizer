@@ -36,13 +36,13 @@ size_t const MAX_SMEM_SIZE = 164 * 1024; // 64 KB
 int const TB_REDUCTION_DIMX = 64;
 
 enum DataType {
-  DT_INT8,
-  DT_UINT16,
-  DT_BFLOAT16,
-  DT_FLOAT16,
-  DT_FLOAT32,
-  DT_DOUBLE,
-  DT_UNKNOWN,
+  DT_INT8 = 900,
+  DT_UINT16 = 910,
+  DT_BFLOAT16 = 920,
+  DT_FLOAT16 = 921,
+  DT_FLOAT32 = 930,
+  DT_DOUBLE = 940,
+  DT_UNKNOWN = 999,
 };
 
 size_t get_datatype_size(DataType type);
