@@ -20,8 +20,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
 #add_subdirectory(deps/cutlass)
 
-set(CMAKE_CUDA_ARCHITECTURES 80 86)
-set(CUTLASS_NVCC_ARCHS "80;86")
+set(CMAKE_CUDA_ARCHITECTURES 80)
+set(CUTLASS_NVCC_ARCHS "80")
 
 file(GLOB_RECURSE ASO_SRCS
   src/*.cc
@@ -96,7 +96,7 @@ add_library(aso_runtime ${ASO_SRCS})
 set_target_properties(aso_runtime
   PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-set_target_properties(aso_runtime PROPERTIES CUDA_ARCHITECTURES "86")
+set_target_properties(aso_runtime PROPERTIES CUDA_ARCHITECTURES "80")
 
 
 target_compile_features(aso_runtime PUBLIC cxx_std_17)
@@ -133,6 +133,28 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
 endif()
 
+# Multi-Query Attention Speculative Decoding
+if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
+  set(CPP_EXAMPLES_DIR cpp_examples)
+  set(CPP_EXAMPLES_BIN multi_query_attn_spec_decode)
+  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
+  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
+  set_target_properties(${CPP_EXAMPLES_BIN}
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
+  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+endif()
+
+# Multi-Query Attention Prefilling
+if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
+  set(CPP_EXAMPLES_DIR cpp_examples)
+  set(CPP_EXAMPLES_BIN multi_query_attn_prefill)
+  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
+  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
+  set_target_properties(${CPP_EXAMPLES_BIN}
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
+  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+endif()
+
 # Group-Query Attention Incremental Decoding
 if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   set(CPP_EXAMPLES_DIR cpp_examples)
@@ -144,10 +166,54 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
 endif()
 
+# Group-Query Attention Spec Decoding
+if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
+  set(CPP_EXAMPLES_DIR cpp_examples)
+  set(CPP_EXAMPLES_BIN group_query_attn_spec_decode)
+  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
+  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
+  set_target_properties(${CPP_EXAMPLES_BIN}
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
+  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+endif()
+
+# Group-Query Attention Prefilling
+if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
+  set(CPP_EXAMPLES_DIR cpp_examples)
+  set(CPP_EXAMPLES_BIN group_query_attn_prefill)
+  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
+  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
+  set_target_properties(${CPP_EXAMPLES_BIN}
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
+  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+endif()
+
 # Multi-Head Attention Incremental Decoding
 if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   set(CPP_EXAMPLES_DIR cpp_examples)
   set(CPP_EXAMPLES_BIN multi_head_attn_inc_decode)
+  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
+  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
+  set_target_properties(${CPP_EXAMPLES_BIN}
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
+  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+endif()
+
+# Multi-Head Attention Speculative Decoding
+if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
+  set(CPP_EXAMPLES_DIR cpp_examples)
+  set(CPP_EXAMPLES_BIN multi_head_attn_spec_decode)
+  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
+  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
+  set_target_properties(${CPP_EXAMPLES_BIN}
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
+  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+endif()
+
+# Multi-Head Attention Prefilling
+if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
+  set(CPP_EXAMPLES_DIR cpp_examples)
+  set(CPP_EXAMPLES_BIN multi_head_attn_prefill)
   file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
@@ -170,6 +236,17 @@ endif()
 if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   set(CPP_EXAMPLES_DIR cpp_examples)
   set(CPP_EXAMPLES_BIN mlp)
+  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
+  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
+  set_target_properties(${CPP_EXAMPLES_BIN}
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
+  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+endif()
+
+# MoE
+if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
+  set(CPP_EXAMPLES_DIR cpp_examples)
+  set(CPP_EXAMPLES_BIN moe)
   file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}

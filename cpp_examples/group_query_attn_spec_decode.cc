@@ -1,20 +1,21 @@
 #include "aso/kernel/graph.h"
 #include "aso/threadblock/graph.h"
-
 #include "common.h"
 
 using namespace aso;
 
 int main(int argc, char **argv) {
+  // Currently only optimize for these two batch sizes
   int batch_size = asotest::BATCH_SIZE;
+  assert(batch_size == 1 || batch_size == 8);
   kernel::Graph ref_graph;
   {
     kernel::DTensor Q = ref_graph.new_input(
-        {2*batch_size, 8, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
+        {2 * batch_size, 128, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
     kernel::DTensor K = ref_graph.new_input(
-        {2*batch_size, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+        {2 * batch_size, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor V = ref_graph.new_input(
-        {2*batch_size, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
+        {2 * batch_size, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor A = ref_graph.matmul(Q, K);
     kernel::DTensor E = ref_graph.exp(A);
     kernel::DTensor S = ref_graph.reduction(E, 2 /*dim*/);
@@ -33,11 +34,11 @@ int main(int argc, char **argv) {
   }
   kernel::Graph graph;
   kernel::DTensor Q =
-      graph.new_input({2*batch_size, 8, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
+      graph.new_input({2 * batch_size, 128, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
   kernel::DTensor K =
-      graph.new_input({2*batch_size, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      graph.new_input({2 * batch_size, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
   kernel::DTensor V =
-      graph.new_input({2*batch_size, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      graph.new_input({2 * batch_size, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
   std::vector<kernel::DTensor> outputs;
   {
     threadblock::ExecutionPlan plan;
@@ -46,7 +47,7 @@ int main(int argc, char **argv) {
     plan.ops.push_back({aso::type::TB_EXP_OP, {{3, 0}}});
     plan.ops.push_back({aso::type::TB_MATMUL_OP, {{4, 0}, {2, 0}}});
     plan.ops.push_back({aso::type::TB_REDUCTION_2_OP, {{4, 0}}});
-    plan.input_map.push_back({0, -1, -1});
+    plan.input_map.push_back({0, -1, 1});
     plan.input_map.push_back({0, 2, -1});
     plan.input_map.push_back({0, 1, -1});
     plan.input_smem_layouts = {
@@ -57,12 +58,12 @@ int main(int argc, char **argv) {
         layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64,
         layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64,
     };
-    plan.output_map = {0, 2, -1};
+    plan.output_map = {0, 2, 1};
     plan.forloop_dim = {-1, 2, 1};
     if (batch_size == 1) {
-      plan.grid_dim = {2, 16, 1};
+      plan.grid_dim = {2, 16, 4};
     } else {
-      plan.grid_dim = {16, 8, 1};
+      plan.grid_dim = {16, 8, 2};
     }
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 4;
@@ -78,18 +79,17 @@ int main(int argc, char **argv) {
     plan.ops.push_back({aso::type::TB_REDUCTION_2_TO_DIMX_OP, {{0, 0}}});
     plan.ops.push_back({aso::type::TB_REDUCTION_2_OP, {{1, 0}}});
     plan.ops.push_back({aso::type::TB_DIV_OP, {{2, 0}, {3, 0}}});
-    plan.input_map.push_back({0, -1, -1});
-    plan.input_map.push_back({0, -1, -1});
+    plan.input_map.push_back({0, 1, -1});
+    plan.input_map.push_back({0, 1, -1});
     plan.input_smem_layouts = {
         layout::SmemRowMajor,
         layout::SmemRowMajor,
     };
-    plan.output_map = {0, -1, -1};
+    plan.output_map = {0, 1, -1};
     plan.forloop_dim = {-1, -1};
-    if (batch_size == 1) {
-      plan.grid_dim = {2, 1, 1};
-    } else {
-      plan.grid_dim = {16, 1, 1};
+    plan.grid_dim = {2, 16, 1};
+    if (batch_size == 8) {
+      plan.grid_dim = {16, 8, 1};
     }
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 1;

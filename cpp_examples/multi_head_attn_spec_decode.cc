@@ -1,6 +1,6 @@
 #include "aso/kernel/graph.h"
+#include "aso/search/search.h"
 #include "aso/threadblock/graph.h"
-
 #include "common.h"
 
 using namespace aso;
@@ -10,11 +10,11 @@ int main(int argc, char **argv) {
   kernel::Graph ref_graph;
   {
     kernel::DTensor Q = ref_graph.new_input(
-        {2*batch_size, 8, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
+        {32*batch_size, 16, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
     kernel::DTensor K = ref_graph.new_input(
-        {2*batch_size, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+        {32*batch_size, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor V = ref_graph.new_input(
-        {2*batch_size, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
+        {32*batch_size, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor A = ref_graph.matmul(Q, K);
     kernel::DTensor E = ref_graph.exp(A);
     kernel::DTensor S = ref_graph.reduction(E, 2 /*dim*/);
@@ -33,11 +33,11 @@ int main(int argc, char **argv) {
   }
   kernel::Graph graph;
   kernel::DTensor Q =
-      graph.new_input({2*batch_size, 8, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
-  kernel::DTensor K =
-      graph.new_input({2*batch_size, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
-  kernel::DTensor V =
-      graph.new_input({2*batch_size, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
+      graph.new_input({32*batch_size, 16, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
+  kernel::DTensor K = graph.new_input(
+      {32*batch_size, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
+  kernel::DTensor V = graph.new_input(
+      {32*batch_size, 4096, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
   std::vector<kernel::DTensor> outputs;
   {
     threadblock::ExecutionPlan plan;
@@ -59,11 +59,7 @@ int main(int argc, char **argv) {
     };
     plan.output_map = {0, 2, -1};
     plan.forloop_dim = {-1, 2, 1};
-    if (batch_size == 1) {
-      plan.grid_dim = {2, 16, 1};
-    } else {
-      plan.grid_dim = {16, 8, 1};
-    }
+    plan.grid_dim = {32 * batch_size, 4, 1};
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 4;
     plan.reduction_dimx = 64;
@@ -86,22 +82,13 @@ int main(int argc, char **argv) {
     };
     plan.output_map = {0, -1, -1};
     plan.forloop_dim = {-1, -1};
-    if (batch_size == 1) {
-      plan.grid_dim = {2, 1, 1};
-    } else {
-      plan.grid_dim = {16, 1, 1};
-    }
+    plan.grid_dim = {32 * batch_size, 1, 1};
     plan.block_dim = {128, 1, 1};
     plan.forloop_range = 1;
     plan.reduction_dimx = 64;
     outputs = graph.customized({outputs[0], outputs[1]}, plan);
     assert(outputs.size() == 1);
   }
-  for (auto const &op : graph.operators) {
-    op->fingerprint();
-  }
-  assert(ref_graph.operators.back()->output_tensors[0].has_same_fingerprint(
-      graph.operators.back()->output_tensors[0]));
   ProfileResult result;
   float total_ms = 0.0f;
   for (auto const &op : graph.operators) {
@@ -109,5 +96,24 @@ int main(int argc, char **argv) {
     total_ms = total_ms + result.run_time;
   }
   printf("[2 Block Graphs] Total runtime = %.4lfms\n", total_ms);
+  for (auto const &op : graph.operators) {
+    op->fingerprint();
+  }
+  assert(ref_graph.operators.back()->output_tensors[0].has_same_fingerprint(
+      graph.operators.back()->output_tensors[0]));
+
+  clock_t st = clock();
+  search::GeneratorConfig config = search::GeneratorConfig::get_default_config();
+  config.grid_dim_to_explore = {{40, 4, 1}, {40, 1, 1}};
+  search::KernelGraphGenerator gen(
+      ref_graph,
+      config,
+      "checkpoint_multi_head_attn_inc_decode.json");
+  gen.generate_kernel_graphs();
+
+  clock_t et = clock();
+
+  printf("Search time = %.4lfsec\n", (float)(et - st) / CLOCKS_PER_SEC);
+
   return 0;
 }

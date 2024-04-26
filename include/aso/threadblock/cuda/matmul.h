@@ -673,9 +673,9 @@ public:
     int warp_n = 0;
     calculate_warp_shape(
         m, n, InstructionShape::kM, InstructionShape::kN, warp_m, warp_n);
-    // if (thread_id == 0 && blockIdx.x == 0) {
-    //   printf("warp_m(%d) warp_n(%d)\n", warp_m, warp_n);
-    // }
+    //if (thread_id == 0 && blockIdx.x == 0) {
+    //  printf("warp_m(%d) warp_n(%d)\n", warp_m, warp_n);
+    //}
     WARP_SHAPE_M_SWITCH(warp_m, WARP_M, [&] {
       WARP_SHAPE_N_SWITCH(warp_n, WARP_N, [&] {
           using WarpShape =

@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
     plan.forloop_dim = {-1, 2, 1};
     plan.grid_dim = {8, 8, 1};
     plan.block_dim = {128, 1, 1};
-    plan.forloop_range = 8;
+    plan.forloop_range = 4;
     plan.reduction_dimx = 64;
     outputs = graph.customized({Q, K, V}, plan);
     assert(outputs.size() == 2);
