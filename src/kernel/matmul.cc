@@ -32,6 +32,13 @@ DTensor Graph::matmul(DTensor const &A, DTensor const &B) {
   return output;
 }
 
+DTensor* Graph::matmul(DTensor const *A, DTensor const *B) {
+  KNOperator *op = create_matmul_op(*A, *B);
+  assert(op != nullptr);
+  operators.push_back(op);
+  return &op->output_tensors[0];
+}
+
 KNOperator *Graph::create_matmul_op(DTensor const &A, DTensor const &B) {
   if (A.num_dims != B.num_dims) {
     return nullptr;

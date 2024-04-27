@@ -32,6 +32,14 @@ DTensor Graph::exp(DTensor const &input) {
   return output;
 }
 
+DTensor* Graph::exp(DTensor const *input) {
+  KNOperator *op = create_elementunary_op(*input, aso::type::KN_EXP_OP);
+  assert(op != nullptr);
+  operators.push_back(op);
+  assert(op->output_tensors.size() == 1);
+  return &op->output_tensors[0];
+}
+
 KNOperator *Graph::create_elementunary_op(DTensor const &input,
                                           aso::type::KNOperatorType type) {
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();

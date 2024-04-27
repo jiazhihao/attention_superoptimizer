@@ -33,6 +33,11 @@ DTensor Graph::add(DTensor const &input1, DTensor const &input2) {
   return output;
 }
 
+DTensor* Graph::add(DTensor const *input1, DTensor const *input2) {
+  DTensor output = add(*input1, *input2);
+  return &(output.owner_op->output_tensors[0]);
+}
+
 DTensor Graph::mul(DTensor const &input1, DTensor const &input2) {
   KNOperator *op =
       create_elementbinary_op(input1, input2, aso::type::KN_MUL_OP);
@@ -43,6 +48,11 @@ DTensor Graph::mul(DTensor const &input1, DTensor const &input2) {
   return output;
 }
 
+DTensor* Graph::mul(DTensor const *input1, DTensor const *input2) {
+  DTensor output = mul(*input1, *input2);
+  return &(output.owner_op->output_tensors[0]);
+}
+
 DTensor Graph::div(DTensor const &input1, DTensor const &input2) {
   KNOperator *op =
       create_elementbinary_op(input1, input2, aso::type::KN_DIV_OP);
@@ -51,6 +61,11 @@ DTensor Graph::div(DTensor const &input1, DTensor const &input2) {
   assert(op->output_tensors.size() == 1);
   DTensor output = op->output_tensors[0];
   return output;
+}
+
+DTensor* Graph::div(DTensor const *input1, DTensor const *input2) {
+  DTensor output = div(*input1, *input2);
+  return &(output.owner_op->output_tensors[0]);
 }
 
 KNOperator *Graph::create_elementbinary_op(DTensor const &input1,

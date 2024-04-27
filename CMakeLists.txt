@@ -93,8 +93,14 @@ list(APPEND ASO_LINK_LIBS nlohmann_json::nlohmann_json)
 
 add_library(aso_runtime ${ASO_SRCS})
 
-set_target_properties(aso_runtime
-  PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+# Note(zhihao): CUDA_SEPARABLE_COMPILATION is non-compatible with
+# cython's installation, since enabling separable compilation
+# will let cmake generate a seperate object file called
+# cmake_device_link.o, and cython's installation cannot
+# automatically link to that file, resulting in:
+# undefined symbol: __cudaRegisterLinkedBinary_...
+#set_target_properties(aso_runtime
+#  PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
 set_target_properties(aso_runtime PROPERTIES CUDA_ARCHITECTURES "86")
 

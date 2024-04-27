@@ -38,10 +38,10 @@ def config_cython():
                 "aso.%s" % fn[:-4],
                 ["%s/%s" % (path, fn)],
                 include_dirs=["../include", "../deps/json/include", "../deps/cutlass/include", "/usr/local/cuda/include"],
-                libraries=["aso_runtime", "cudadevrt", "cudart_static", "cudnn", "cublas", "cudart", "z", "cuda"],
+                libraries=["aso_runtime", "cudadevrt", "cudart_static", "cudnn", "cublas", "cudart", "cuda"],
                 library_dirs=["../build", "/usr/local/cuda/lib64", "/usr/local/cuda/lib64/stubs"],
                 extra_compile_args=["-std=c++17"],
-                extra_link_args=[],
+                extra_link_args=["-fPIC"],
                 language="c++"))
         return cythonize(ret, compiler_directives={"language_level" : 3})
     except ImportError:

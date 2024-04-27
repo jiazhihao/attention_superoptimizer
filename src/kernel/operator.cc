@@ -54,6 +54,15 @@ DTensor Graph::new_input(std::vector<int> const &dims,
   return op->output_tensors[0];
 }
 
+DTensor* Graph::new_input_ptr(std::vector<int> const &dims,
+                              aso::type::DataType data_type,
+                              aso::layout::DmemLayout layout) {
+  KNOperator *op = create_input_op(dims, data_type, layout);
+  assert(op != nullptr);
+  operators.push_back(op);
+  return &op->output_tensors[0];
+}
+
 KNOperator *Graph::create_input_op(std::vector<int> const &dims,
                                    aso::type::DataType data_type,
                                    aso::layout::DmemLayout layout) {

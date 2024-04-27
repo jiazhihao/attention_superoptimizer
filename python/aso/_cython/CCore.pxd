@@ -36,15 +36,26 @@ cdef extern from "aso/layout.h" namespace "aso::layout":
         DmemUnknowLayout = 199,
 
 cdef extern from "aso/kernel/graph.h" namespace "aso::kernel":
+    cdef cppclass KNOperator:
+        pass
     ctypedef struct DTensor:
+        DataType data_type
+        DmemLayout layout
         int num_dims
         int dim[4]
+        size_t guid
+        #KNOperator *owner_op
+        #void *data_ptr
+        int owner_ts_idx
+        pass
 
     cdef cppclass Graph:
         Graph()
-        DTensor new_input(vector[int] dims,
-                          DataType data_type,
-                          DmemLayout layout)
-        DTensor matmul(const DTensor A, const DTensor B)
-        DTensor exp(const DTensor A)
-        DTensor add(const DTensor op1, const DTensor op2)
+        DTensor* new_input_ptr(vector[int] dims,
+                               DataType data_type,
+                               DmemLayout layout)
+        DTensor* matmul(const DTensor* A, const DTensor* B)
+        DTensor* exp(const DTensor* input)
+        DTensor* add(const DTensor* op1, const DTensor* op2)
+        DTensor* mul(const DTensor* op1, const DTensor* op2)
+        DTensor* div(const DTensor* op1, const DTensor* op2)
