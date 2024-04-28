@@ -76,9 +76,11 @@ std::string block_offset_calculation(int off_x, int off_y, int off_z) {
 
 std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
                                  int forloop_range,
+                                 int reduction_dimx,
                                  std::string func_name,
                                  std::vector<std::string> input_names,
-                                 std::vector<std::string> output_names) {
+                                 std::vector<std::string> output_names,
+                                 std::map<int, aso::threadblock::STensor> offset_to_stensor) {
   using namespace aso::threadblock;
   using namespace std;
   stringstream header;
@@ -101,6 +103,7 @@ std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
   main << "\tfor i in range(" << forloop_range << "):\n";
   map<int, string> stensor_guid_to_name;
   int param_idx = 0;
+  int output_idx = 0;
   for (int op = 0; op < params.num_operators; op++) {
     aso::type::TBOperatorType op_type = params.operator_types[op];
     if (op_type == aso::type::TB_INPUT_OP) {
@@ -171,7 +174,31 @@ std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
           dtensor_layout,
           stensor_layout,
           input_smem_offset,
-          accum_smem_offset);     
+          accum_smem_offset);
+      header << "\t" << stensor_name(accum_smem_offset)
+           << " = tl.make_block_ptr(\n"
+           << "\t\tbase = " << output_names[output_idx++] << " + "
+           << block_offset_calculation(global_offset_block_stride.x, global_offset_block_stride.y, global_offset_block_stride.z)
+           << ",\n";
+      header << "\t\tshape = ("
+           << dtensor_matrix_shape.x << ", "
+           << dtensor_matrix_shape.y << "),\n";
+      header << "\t\tblock_shape = ("
+           << stensor_matrix_shape.x << ", "
+           << stensor_matrix_shape.y << "),\n";
+      string tb_offset_row = block_offset_calculation(output_matrix_row_offset_block_stride.x,
+                                                      output_matrix_row_offset_block_stride.y,
+                                                      output_matrix_row_offset_block_stride.z);
+      string tb_offset_col = block_offset_calculation(output_matrix_column_offset_block_stride.x,
+                                                      output_matrix_column_offset_block_stride.y,
+                                                      output_matrix_column_offset_block_stride.z);
+      header << "\t\toffsets = ("
+           << tb_offset_row << ", "
+           << tb_offset_col << "),\n";
+      // Assume row major layout for now
+      header << "\t\tstrides = ("
+           << stensor_matrix_shape.y << ", 1)\n";
+      header << "\t\torders = (1, 0))\n";
     } else if (op_type == aso::type::TB_MATMUL_OP) {
       int m, n, k;
       int A_smem_offset, B_smem_offset, C_smem_offset;
@@ -223,18 +250,47 @@ std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
       if (op_type >= aso::type::TB_REDUCTION_0_TO_DIMX_OP &&
           op_type <= aso::type::TB_REDUCTION_2_TO_DIMX_OP) {
         reduction_dim = op_type - aso::type::TB_REDUCTION_0_TO_DIMX_OP;
+        assert(offset_to_stensor.find(output_smem_offset) != offset_to_stensor.end());
+        STensor stensor = offset_to_stensor[output_smem_offset];
+        // Assert that only the last two dimensions can be non-zero
+        for (int i = 0; i < stensor.num_dims - 2; i++) {
+          assert(stensor.dim[i] == 1);
+        }
+        if (reduction_dim == stensor.num_dims - 1) {
+          main << "\t\t" << stensor_name(output_smem_offset) << " =  tl.reshape("
+               << stensor_name(input_smem_offset) << ", ("
+               << stensor.dim[stensor.num_dims-2] << ", "
+               << stensor.dim[stensor.num_dims-1] / reduction_dimx << ", "
+               << reduction_dimx << "))\n";
+          main << "\t\t" << stensor_name(output_smem_offset) << " = tl.sum("
+               << stensor_name(output_smem_offset) << ", axis=1, keep_dims=False)\n";
+        } else if (reduction_dim == stensor.num_dims - 2) {
+          main << "\t\t" << stensor_name(output_smem_offset) << " = tl.reshape("
+               << stensor_name(input_smem_offset) << ", ("
+               << stensor.dim[stensor.num_dims-2] / reduction_dimx << ", "
+               << reduction_dimx << ", "
+               << stensor.dim[stensor.num_dims-1] << "))\n";
+          main << "\t\t" << stensor_name(output_smem_offset) << " = tl.sum("
+               << stensor_name(output_smem_offset) << ", axis=0, keep_dims=False)\n";
+        } else {
+          assert(false && "Unsupported reduction dim");
+        }
       } else if (op_type >= aso::type::TB_REDUCTION_0_OP &&
                  op_type <= aso::type::TB_REDUCTION_2_OP) {
         reduction_dim = op_type - aso::type::TB_REDUCTION_0_OP;
+        assert(offset_to_stensor.find(output_smem_offset) != offset_to_stensor.end());
+        STensor stensor = offset_to_stensor[output_smem_offset];
+        // The tensor in triton is 2D, so we need to adjust the reduction dimension
         main << "\t\t" << stensor_name(output_smem_offset) << " = tl.sum("
              << stensor_name(input_smem_offset) << ", axis="
-             << reduction_dim << ", keep_dims=True)\n";
+             << reduction_dim - stensor.num_dims + 2 << ", keep_dims=True)\n";
       } else {
         assert(false);
       }
     }
   }
   assert(params.num_parameters == param_idx);
+  assert(output_names.size() == output_idx);
   return header.str() + main.str();
 }
 
@@ -242,23 +298,28 @@ std::string Graph::generate_triton_program() {
   using namespace std;
   stringstream header;
   vector<std::string> kernels;
-  map<int, string> dtensor_guid_to_name;
   stringstream launcher;
   stringstream main_program;
   main_program << "def main():\n";
   header << "import triton\nimport torch\nimport triton.language as tl\n";
+  launcher << "def launcher(\n";
   for (KNOperator *const op : this->operators) {
+    for (const auto & output : op->output_tensors) {
+      launcher << "\t" << dtensor_name(output.guid) << ",\n";
+    }
+  }
+  launcher << "):\n";
+  for (KNOperator *const op : this->operators) {
+    for (const auto & output : op->output_tensors) {
+        main_program << "\t"
+            << dtensor_name(output.guid)
+            << " = torch.randn("
+            << tensor_dims(output)
+            << ", dtype=torch.float16, device=\"cuda\", requires_grad=False)\n";
+    }
     switch (op->op_type) {
       case type::KNOperatorType::KN_INPUT_OP: {
         assert(op->output_tensors.size() == 1);
-        DTensor output = op->output_tensors[0];
-        assert(dtensor_guid_to_name.find(output.guid) == dtensor_guid_to_name.end());
-        dtensor_guid_to_name[output.guid] = dtensor_name(output.guid);
-        main_program << "\t"
-            << dtensor_guid_to_name[output.guid]
-            << " = torch.randn("
-            << tensor_dims(op->output_tensors[0])
-            << ", dtype=torch.float16, device=\"cuda\", requires_grad=False)\n";
         break;
       }
       case type::KNOperatorType::KN_CUSTOMIZED_OP: {
@@ -271,8 +332,36 @@ std::string Graph::generate_triton_program() {
         for (const auto& t : op->output_tensors) {
           output_names.push_back(dtensor_name(t.guid));
         }
+        std::map<int, aso::threadblock::STensor> offset_to_stensor;
+        for (const auto& tbo : customized->bgraph.operators) {
+          for (const auto & t : tbo->output_tensors) {
+            offset_to_stensor[t.smem_offset] = t;
+          }
+        }
         aso::threadblock::NewKernelParams params = customized->bgraph.get_new_kernel_params(false/*fingerprint*/);
-        string kernel_code = generate_kernel_code(params, customized->bgraph.forloop_range, "graphdef_kernel", input_names, output_names);
+        string kernel_code = generate_kernel_code(
+            params,
+            customized->bgraph.forloop_range,
+            customized->bgraph.reduction_dimx,
+            "graphdef_kernel" + kernels.size(),
+            input_names,
+            output_names,
+            offset_to_stensor);
+        launcher << "\tgrid = (" << customized->bgraph.grid_dim.x << ", "
+                 << customized->bgraph.grid_dim.y << ", "
+                 << customized->bgraph.grid_dim.z << ")\n";
+        launcher << "\tgraphdef_kernel" << kernels.size()
+                 << "[grid](\n\t\t";
+        for (size_t i = 0; i < input_names.size(); i++) {
+          if (i > 0)
+            launcher << ", \n\t\t";
+          launcher << input_names[i];
+        }
+        for (size_t i = 0; i < output_names.size(); i++) {
+          launcher << ", \n\t\t";
+          launcher << output_names[i];
+        }
+        launcher << ")\n";
         kernels.push_back(kernel_code);
         break;
       }
