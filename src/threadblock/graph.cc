@@ -63,7 +63,7 @@ void Graph::free(std::vector<STensor> const &tensors) {
   }
 }
 
-NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
+NewKernelParams Graph::get_new_kernel_params(bool fingerprint) const {
   NewKernelParams params;
   params.num_operators = operators.size();
   params.num_parameters = 0;

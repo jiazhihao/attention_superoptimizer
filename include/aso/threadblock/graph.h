@@ -101,7 +101,7 @@ public:
   void free(std::vector<STensor> const &tensors);
 
   KernelParams get_kernel_params();
-  NewKernelParams get_new_kernel_params(bool fingerprint);
+  NewKernelParams get_new_kernel_params(bool fingerprint) const;
 
   operator json() const;
 
