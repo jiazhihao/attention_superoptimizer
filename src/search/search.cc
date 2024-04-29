@@ -436,6 +436,7 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
 void KernelGraphGenerator::generate_kernel_graphs() {
   pattern_eval();
   fingerprint_eval();
+  generated_graphs.push_back(json(computation_graph));
 
   kernel::Graph g;
   SearchContext<DTensor> c;
@@ -743,6 +744,9 @@ void KernelGraphGenerator::optimize_layout(
 
   for (layout::DmemLayout layout :
        {layout::DmemRowMajor, layout::DmemColumnMajor}) {
+    if (g.operators[op_idx]->op_type == type::KN_MATMUL_OP && layout != layout::DmemRowMajor) {
+      continue;
+    }
     g.operators[op_idx]->output_tensors[ts_idx].layout = layout;
     for (KNOperator *op : g.operators) {
       for (DTensor &dtensor : op->input_tensors) {

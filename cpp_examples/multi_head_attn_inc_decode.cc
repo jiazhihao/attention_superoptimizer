@@ -113,6 +113,8 @@ int main(int argc, char **argv) {
   assert(ref_graph.operators.back()->output_tensors[0].has_same_fingerprint(
       graph.operators.back()->output_tensors[0]));
 
+  return 0;
+
   clock_t st = clock();
   search::GeneratorConfig config = search::GeneratorConfig::get_attention_default_config();
   config.grid_dim_to_explore = {{32 * batch_size, 4, 1}, {32 * batch_size, 1, 1}};

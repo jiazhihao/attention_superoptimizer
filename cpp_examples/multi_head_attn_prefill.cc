@@ -112,6 +112,7 @@ int main(int argc, char **argv) {
   }
   assert(ref_graph.operators.back()->output_tensors[0].has_same_fingerprint(
       graph.operators.back()->output_tensors[0]));
+  return 0;
 
   clock_t st = clock();
   search::GeneratorConfig config = search::GeneratorConfig::get_attention_default_config();

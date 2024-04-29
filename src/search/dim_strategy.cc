@@ -107,7 +107,7 @@ std::vector<std::vector<int3>>
     generate_input_map_cand(
       tensors, grid_dim, config.imap_to_explore[0], {}, results);
   } else {
-    for (const auto input_maps : config.imap_to_explore) {
+    for (const auto &input_maps : config.imap_to_explore) {
       if (is_valid_input_map(tensors, grid_dim, input_maps)) {
         results.push_back(input_maps);
       }

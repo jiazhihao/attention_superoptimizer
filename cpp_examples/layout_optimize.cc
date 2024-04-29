@@ -27,6 +27,15 @@ bool has_no_small_tensor(kernel::Graph const &g) {
   return true;
 }
 
+bool filter(kernel::Graph const &g) {
+  for (auto const &op : g.operators) {
+    if (op->op_type == type::KN_CUSTOMIZED_OP) {
+      return false;
+    }
+  }
+  return true;
+}
+
 int main(int argc, char **argv) {
   if (argc < 2) {
     std::cerr << "Missing checkpoint file" << std::endl;
