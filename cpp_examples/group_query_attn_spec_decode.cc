@@ -109,6 +109,6 @@ int main(int argc, char **argv) {
     total_ms = total_ms + result.run_time;
   }
   printf("[2 Block Graphs] Total runtime = %.4lfms\n", total_ms);
-  printf("%s", graph.generate_triton_program().c_str());
+  graph.generate_triton_program("test.py");
   return 0;
 }

@@ -76,7 +76,7 @@ public:
   KNOperator *create_customized_op(std::vector<DTensor> const &inputs,
                                    aso::threadblock::Graph const &_graph);
   // helper functions
-  std::string generate_triton_program();
+  bool generate_triton_program(std::string const &filepath);
   std::vector<aso::kernel::KNOperator *> operators;
   // std::unordered_map<std::pair<int, int>, DTensor, pair_hash> tensors;
   // std::unordered_map<std::pair<int, int>, std::pair<int, int>, pair_hash>
