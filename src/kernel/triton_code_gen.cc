@@ -90,6 +90,7 @@ std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
   using namespace std;
   stringstream header;
   stringstream main;
+  stringstream ending;
   {
     header << "@triton.jit\n";
     header << "def " << func_name << "(";
@@ -195,9 +196,9 @@ std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
           stensor_layout,
           input_smem_offset,
           accum_smem_offset);
-      header << "\t" << stensor_name(accum_smem_offset) << "_ptr"
+      header << "\t" << stensor_ptr_name(accum_smem_offset)
            << " = tl.make_block_ptr(\n"
-           << "\t\tbase = " << output_names[output_idx++] << " + "
+           << "\t\tbase = " << output_names[output_idx] << " + "
            << block_offset_calculation(global_offset_block_stride.x, global_offset_block_stride.y, global_offset_block_stride.z)
            << ",\n";
       header << "\t\tshape = ("
@@ -219,6 +220,17 @@ std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
       header << "\t\tstrides = ("
            << stensor_matrix_shape.y << ", 1),\n";
       header << "\t\torder = (1, 0))\n";
+      header << "\t" << stensor_name(accum_smem_offset)
+             << " = tl.zeros(["
+             << stensor_matrix_shape.x << ", "
+             << stensor_matrix_shape.y << "]"
+             << ", dtype = tl.float16)\n";
+      main << "\t\t" << stensor_name(accum_smem_offset)
+           << " = " << stensor_name(accum_smem_offset) << " + "
+           << stensor_name(input_smem_offset) << "\n";
+      ending << "\ttl.store(" << stensor_ptr_name(accum_smem_offset) << ", "
+             << stensor_name(accum_smem_offset) <<")\n" ;
+      output_idx ++;
     } else if (op_type == aso::type::TB_MATMUL_OP) {
       int m, n, k;
       int A_smem_offset, B_smem_offset, C_smem_offset;
@@ -252,8 +264,8 @@ std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
           input2_smem_offset,
           output_smem_offset);
       main << "\t\t" << stensor_name(output_smem_offset) << " = tl.fdiv("
-           << stensor_name(input1_smem_offset) << ", "
-           << stensor_name(input2_smem_offset) << ")\n";
+           << stensor_name(input1_smem_offset) << ".to(tl.float32)" << ", "
+           << stensor_name(input2_smem_offset) << ".to(tl.float32)).to(tl.float16)\n";
     } else if ((op_type >= aso::type::TB_REDUCTION_FIRST_OP_ID) &&
                (op_type <= aso::type::TB_REDUCTION_LAST_OP_ID)) {
       int output_num_elements, reduction_degree, inner_range;
@@ -336,7 +348,7 @@ std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
   }
   assert(params.num_parameters == param_idx);
   assert(output_names.size() == output_idx);
-  return header.str() + main.str();
+  return header.str() + main.str() + ending.str();
 }
 
 bool Graph::generate_triton_program(std::string const &file_path) {
@@ -347,7 +359,7 @@ bool Graph::generate_triton_program(std::string const &file_path) {
   stringstream main_program;
   main_program << "def main():\n";
   header << "import triton\nimport torch\nimport triton.language as tl\n";
-  launcher << "def kernel_launcher(\n";
+  launcher << "def kernel_launcher(";
   for (KNOperator *const op : this->operators) {
     for (const auto & output : op->output_tensors) {
       launcher << dtensor_name(output.guid) << ", ";
