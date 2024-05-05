@@ -33,6 +33,7 @@ struct GeneratorConfig {
   std::vector<layout::SmemLayout> smem_layout_to_explore;
 
   static GeneratorConfig get_default_config();
+  void print_config() const;
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(GeneratorConfig,

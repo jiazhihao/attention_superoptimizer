@@ -450,7 +450,7 @@ void KernelGraphGenerator::generate_kernel_graphs() {
 
   printf("Total kernel graphs explored: %d\n", num_total_kernel_graphs);
   printf("Random tests performed: %d\n", num_total_random_tests);
-  printf("Valid kernel graphs explored: %d", num_valid_kernel_graphs);
+  printf("Valid kernel graphs explored: %d\n", num_valid_kernel_graphs);
 }
 
 void KernelGraphGenerator::fingerprint_eval() {
@@ -548,7 +548,7 @@ void KernelGraphGenerator::pattern_eval() {
 bool KernelGraphGenerator::verify(SearchContext<DTensor> &c,
                                   kernel::Graph const &g) {
   ++num_total_kernel_graphs;
-  if (num_total_kernel_graphs % 10000 == 1) {
+  if (num_total_kernel_graphs % 1 == 0) {
     save_checkpoint();
     printf("Checkpoint saved. Total kernel graphs explored: %d\n",
            num_total_kernel_graphs);
@@ -643,6 +643,7 @@ std::vector<layout::SmemLayout> KernelGraphGenerator::get_valid_output_layout(
     }
     default:
       assert("Unsupported op type");
+      return {};
   }
 }
 

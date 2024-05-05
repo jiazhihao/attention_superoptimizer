@@ -37,7 +37,7 @@ public:
   // output-related fields
   int3 output_map; // assume that all output must use the same map
   int forloop_range;
-  int reduction_dimx;
+  int reduction_dimx = aso::type::TB_REDUCTION_DIMX;
   dim3 grid_dim, block_dim;
 };
 

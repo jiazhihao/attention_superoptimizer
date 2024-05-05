@@ -347,11 +347,11 @@ std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
     }
   }
   assert(params.num_parameters == param_idx);
-  assert(output_names.size() == output_idx);
+  assert(output_names.size() == (size_t)output_idx);
   return header.str() + main.str() + ending.str();
 }
 
-bool Graph::generate_triton_program(std::string const &file_path) {
+void Graph::generate_triton_program(char const *file_path) {
   using namespace std;
   stringstream header;
   vector<std::string> kernels;
@@ -447,7 +447,6 @@ bool Graph::generate_triton_program(std::string const &file_path) {
   file << launcher.str() << "\n" << main_program.str() << "\n";
   file << "if __name__ == \"__main__\":\n\tmain()\n";
   file.close();
-  return true;
 }
 
 } // namespace kernel

@@ -30,16 +30,16 @@ def config_cython():
     try:
         from Cython.Build import cythonize
         ret = []
-        path = "aso/_cython"
+        path = "mirage/_cython"
         for fn in os.listdir(path):
             if not fn.endswith(".pyx"):
                 continue
             ret.append(Extension(
-                "aso.%s" % fn[:-4],
+                "mirage.%s" % fn[:-4],
                 ["%s/%s" % (path, fn)],
                 include_dirs=["../include", "../deps/json/include", "../deps/cutlass/include", "/usr/local/cuda/include"],
-                libraries=["aso_runtime", "cudadevrt", "cudart_static", "cudnn", "cublas", "cudart", "cuda"],
-                library_dirs=["../build", "/usr/local/cuda/lib64", "/usr/local/cuda/lib64/stubs"],
+                libraries=["aso_runtime", "cudadevrt", "cudart_static", "cudnn", "cublas", "cudart", "cuda", "z3"],
+                library_dirs=["../build", "../deps/z3/build", "/usr/local/cuda/lib64", "/usr/local/cuda/lib64/stubs"],
                 extra_compile_args=["-std=c++17"],
                 extra_link_args=["-fPIC"],
                 language="c++"))
@@ -59,13 +59,13 @@ setup_args = {}
 #        "data_files": [('aso', LIB_LIST)]
 #    }
 
-setup(name='aso',
+setup(name='mirage',
       version="0.1.0",
-      description="TASO: A Tensor Algebra SuperOptimizer for Deep Learning",
+      description="Mirage: A Multi-Level Superoptimizer for Tensor Algebra",
       zip_safe=False,
       install_requires=[],
       packages=find_packages(),
-      url='https://github.com/jiazhihao/aso',
+      url='https://github.com/mirage-project/mirage',
       ext_modules=config_cython(),
       #**setup_args,
       )

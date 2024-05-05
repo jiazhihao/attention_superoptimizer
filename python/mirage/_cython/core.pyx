@@ -203,6 +203,11 @@ cdef class PyGraph:
         t = ctypes.cast(<unsigned long long>ptr, ctypes.c_void_p)
         return PyTensor(t)
 
+    def reduction(self, PyTensor input, int dim):
+        cdef DTensor* ptr = self.p_graph.reduction(input.c_ptr, dim, 1)
+        t = ctypes.cast(<unsigned long long>ptr, ctypes.c_void_p)
+        return PyTensor(t)
+
     def exp(self, PyTensor input):
         cdef DTensor* ptr = self.p_graph.exp(input.c_ptr)
         t = ctypes.cast(<unsigned long long>ptr, ctypes.c_void_p)
@@ -223,3 +228,76 @@ cdef class PyGraph:
         t = ctypes.cast(<unsigned long long>ptr, ctypes.c_void_p)
         return PyTensor(t)
 
+    def generate_triton_program(self, str filepath):
+        assert filepath is not None, "filepath cannot be empty"
+        py_byte_string = filepath.encode('UTF-8')
+        cdef char* cfilepath = NULL
+        cfilepath = py_byte_string
+        self.p_graph.generate_triton_program(cfilepath)
+
+def optimize(PyGraph input_graph, *, list imaps = None, list omaps = None, list griddims = None, list blockdims = None, list fmaps = None, list franges = None, str previous_checkpoint = None):
+    # set cimaps
+    cdef vector[MInt3] cimaps
+    cimaps.resize(0)
+    if imaps is not None:
+        cimaps.resize(len(imaps))
+        for i in range(len(imaps)):
+            assert type(imaps[i]) is tuple, "Each imap must be a tuple of 3 integers"
+            assert len(imaps[i]) == 3, "Each imap must be a tuple of 3 integers"
+            cimaps[i].x = imaps[i][0]
+            cimaps[i].y = imaps[i][1]
+            cimaps[i].z = imaps[i][2]
+    #set comaps
+    cdef vector[MInt3] comaps
+    comaps.resize(0)
+    if omaps is not None:
+        comaps.resize(len(omaps))
+        for i in range(len(omaps)):
+            assert type(omaps[i]) is tuple, "Each omap must be a tuple of 3 integers"
+            assert len(omaps[i]) == 3, "Each omap must be a tuple of 3 integers"
+            comaps[i].x = omaps[i][0]
+            comaps[i].y = omaps[i][1]
+            comaps[i].z = omaps[i][2]
+    # set griddims
+    cdef vector[MDim3] cgriddims
+    cgriddims.resize(0)
+    if griddims is not None:
+        cgriddims.resize(len(griddims))
+        for i in range(len(griddims)):
+            assert type(griddims[i]) is tuple, "Each griddim must be a tuple of 3 integers"
+            assert len(griddims[i]) == 3, "Each griddim must be a tuple of 3 integers"
+            cgriddims[i].x = griddims[i][0]
+            cgriddims[i].y = griddims[i][1]
+            cgriddims[i].z = griddims[i][2]
+    # set blockdims
+    assert blockdims is None, "TODO: support blockdims"
+    cdef vector[MDim3] cblockdims
+    cblockdims.resize(0)
+    # set fmaps
+    cdef vector[int] cfmaps
+    cfmaps.resize(0)
+    if fmaps is not None:
+        cfmaps.resize(len(fmaps))
+        for i in range(len(fmaps)):
+            cfmaps[i] = fmaps[i]
+    #set franges
+    cdef vector[int] cfranges
+    cfranges.resize(0)
+    if franges is not None:
+        cfranges.resize(len(franges))
+        for i in range(len(franges)):
+            cfranges[i] = franges[i]
+    # allocate new graphs
+    # currently support up to 1024 new graphs
+    cdef Graph* cnewgraphs[1024]
+    # convert file path
+    cdef char* cfilepath = NULL
+    if previous_checkpoint is not None:
+        py_byte_string = previous_checkpoint.encode('UTF-8')
+        cfilepath = py_byte_string
+    num = cython_optimize(input_graph.p_graph, 1024, cnewgraphs, cimaps, comaps, cgriddims, cblockdims, cfmaps, cfranges, cfilepath)
+    new_graphs = list()
+    for i in range(num):
+        ptr = ctypes.cast(<unsigned long long>cnewgraphs[i], ctypes.c_void_p)
+        new_graphs.append(PyGraph(ptr))
+    return new_graphs

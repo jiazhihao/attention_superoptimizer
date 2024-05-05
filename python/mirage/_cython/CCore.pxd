@@ -55,7 +55,29 @@ cdef extern from "aso/kernel/graph.h" namespace "aso::kernel":
                                DataType data_type,
                                DmemLayout layout)
         DTensor* matmul(const DTensor* A, const DTensor* B)
+        DTensor* reduction(const DTensor* input, int dim, int size)
         DTensor* exp(const DTensor* input)
         DTensor* add(const DTensor* op1, const DTensor* op2)
         DTensor* mul(const DTensor* op1, const DTensor* op2)
         DTensor* div(const DTensor* op1, const DTensor* op2)
+        void generate_triton_program(const char *filepath)
+
+cdef extern from "aso/search/search_c.h" namespace "aso::search_c":
+    ctypedef struct MInt3:
+        int x
+        int y
+        int z
+    ctypedef struct MDim3:
+        unsigned int x
+        unsigned int y
+        unsigned int z
+    cdef int cython_optimize(const Graph *input_graph,
+                             int max_num_new_graphs,
+                             Graph** new_graphs,
+                             vector[MInt3] imaps,
+                             vector[MInt3] omaps,
+                             vector[MDim3] griddims,
+                             vector[MDim3] blockdims,
+                             vector[int] fmaps,
+                             vector[int] franges,
+                             const char * check_point_file_path)

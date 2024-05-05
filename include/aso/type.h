@@ -32,7 +32,7 @@ uint16_t const FP_PQ = 25651;
 uint16_t const FP_P_MUL_Q_MOD_1 = 227;
 // FP_Q_MUL_P_MOD_1 is a multiplier of Q and is 1 module P
 uint16_t const FP_Q_MUL_P_MOD_1 = 25425;
-size_t const MAX_SMEM_SIZE = 164 * 1024; // 64 KB
+size_t const MAX_SMEM_SIZE = 64 * 1024; // 64 KB
 int const TB_REDUCTION_DIMX = 64;
 
 enum DataType {

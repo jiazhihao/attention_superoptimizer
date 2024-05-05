@@ -34,6 +34,14 @@ DTensor Graph::reduction(DTensor const &input, int dim, int size) {
   return output;
 }
 
+DTensor* Graph::reduction(DTensor const *input, int dim, int size) {
+  KNOperator *op = create_reduction_op(*input, dim, size);
+  assert(op != nullptr);
+  operators.push_back(op);
+  assert(op->output_tensors.size() == 1);
+  return &op->output_tensors[0];
+}
+
 KNOperator *
     Graph::create_reduction_op(DTensor const &input, int dim, int size) {
   if (input.num_dims <= dim) {
