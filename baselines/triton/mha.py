@@ -271,7 +271,7 @@ for mode in ["fwd"]:
             configs.append(
                 triton.testing.Benchmark(
                     x_names=["Q_CTX"],
-                    x_vals=[1, 16, 4096],
+                    x_vals=[1, 16, 256],
                     line_arg="provider",
                     line_vals=["triton"] + (["flash"] if HAS_FLASH else []),
                     line_names=["Triton"] + (["Flash-2"] if HAS_FLASH else []),

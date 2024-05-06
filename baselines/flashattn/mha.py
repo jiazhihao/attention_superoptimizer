@@ -2,9 +2,9 @@ from flash_attn import flash_attn_qkvpacked_func, flash_attn_func
 import torch
 import numpy as np
 
-Q = torch.rand([8, 256, 32, 64], dtype=torch.float16, device='cuda')
-K = torch.rand([8, 4096, 32, 64], dtype=torch.float16, device='cuda')
-V = torch.rand([8, 4096, 32, 64], dtype=torch.float16, device='cuda')
+Q = torch.rand([1, 256, 32, 64], dtype=torch.float16, device='cuda')
+K = torch.rand([1, 4096, 32, 64], dtype=torch.float16, device='cuda')
+V = torch.rand([1, 4096, 32, 64], dtype=torch.float16, device='cuda')
 
 starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
 

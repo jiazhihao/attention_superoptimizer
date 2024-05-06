@@ -11,7 +11,7 @@ config = builder.create_builder_config()
 runtime = trt.Runtime(TRT_LOGGER)
 config.set_memory_pool_limit(trt.MemoryPoolType.WORKSPACE, 10 * 1024*1024*1024)
 
-Q_shape = [1, 32, 1, 64]
+Q_shape = [1, 32, 256, 64]
 K_shape = [1, 32, 64, 4096]
 V_shape = [1, 32, 4096, 64]
 

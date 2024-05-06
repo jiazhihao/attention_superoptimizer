@@ -106,6 +106,7 @@ bool KNMatmulOp::profile(ProfileResult &result) {
       int strideA = row_A * column_A;
       int strideB = row_B * column_B;
       int strideC = row_C * column_C;
+      printf("m(%d) n(%d) k(%d) b(%d)\n", row_C, column_C, column_A, batch);
       checkCUDA(cublasGemmStridedBatchedEx(dmm->blas,
                                            trans_A,
                                            trans_B,

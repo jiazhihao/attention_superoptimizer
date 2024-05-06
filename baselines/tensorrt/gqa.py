@@ -11,9 +11,9 @@ config = builder.create_builder_config()
 runtime = trt.Runtime(TRT_LOGGER)
 config.set_memory_pool_limit(trt.MemoryPoolType.WORKSPACE, 10 * 1024*1024*1024)
 
-Q_shape = [8, 16, 16, 64]
-K_shape = [8, 16, 64, 4096]
-V_shape = [8, 16, 4096, 64]
+Q_shape = [8, 8, 8, 64]
+K_shape = [8, 8, 64, 4096]
+V_shape = [8, 8, 4096, 64]
 
 Q = network.add_input("Q", dtype=trt.float16, shape=Q_shape)
 K = network.add_input("K", dtype=trt.float16, shape=K_shape)
