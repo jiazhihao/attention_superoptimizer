@@ -13,20 +13,20 @@
  * limitations under the License.
  */
 
-#include "aso/threadblock/smem_tensor.h"
-#include "aso/utils/hash_utils.h"
+#include "mirage/threadblock/smem_tensor.h"
+#include "mirage/utils/hash_utils.h"
 #include <functional>
 
-namespace aso {
+namespace mirage {
 namespace threadblock {
 int STensor::next_guid = 10000;
 } // namespace threadblock
-} // namespace aso
+} // namespace mirage
 
 namespace std {
 
-size_t hash<aso::threadblock::STensor>::operator()(
-    aso::threadblock::STensor const &tensor) const {
+size_t hash<mirage::threadblock::STensor>::operator()(
+    mirage::threadblock::STensor const &tensor) const {
   size_t ret = hash<int>()((tensor.data_type));
   hash_combine(ret, tensor.layout);
   hash_combine(ret, tensor.num_dims);

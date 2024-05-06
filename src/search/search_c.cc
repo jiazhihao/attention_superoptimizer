@@ -1,19 +1,19 @@
-#include "aso/search/search_c.h"
-#include "aso/search/search.h"
-#include "aso/kernel/customized.h"
-#include "aso/search/dim_strategy.h"
-#include "aso/search/op_utils.h"
-#include "aso/utils/containers.h"
+#include "mirage/search/search_c.h"
+#include "mirage/search/search.h"
+#include "mirage/kernel/customized.h"
+#include "mirage/search/dim_strategy.h"
+#include "mirage/search/op_utils.h"
+#include "mirage/utils/containers.h"
 
 #include <fstream>
 #include <iostream>
 
-namespace aso {
+namespace mirage {
 namespace search_c {
 
-int cython_optimize(aso::kernel::Graph const *input_graph,
+int cython_optimize(mirage::kernel::Graph const *input_graph,
                     int max_num_graphs,
-                    aso::kernel::Graph** new_graphs,
+                    mirage::kernel::Graph** new_graphs,
                     std::vector<MInt3> imap_to_explore,
                     std::vector<MInt3> omap_to_explore,
                     std::vector<MDim3> grid_dim_to_explore,
@@ -96,4 +96,4 @@ int cython_optimize(aso::kernel::Graph const *input_graph,
 }
 
 } // namespace search_c
-} // namespace aso
+} // namespace mirage

@@ -80,7 +80,7 @@ message(STATUS "Z3_FOUND: ${Z3_FOUND}")
 message(STATUS "Found Z3 ${Z3_VERSION_STRING}")
 message(STATUS "Z3_DIR: ${Z3_DIR}")
 include_directories(${Z3_CXX_INCLUDE_DIRS})
-#target_link_libraries(aso_runtime PUBLIC ${Z3_LIBRARIES})
+#target_link_libraries(mirage_runtime PUBLIC ${Z3_LIBRARIES})
 list(APPEND ASO_LINK_LIBS ${Z3_LIBRARIES})
 
 add_subdirectory(deps/json)
@@ -91,7 +91,7 @@ list(APPEND ASO_LINK_LIBS nlohmann_json::nlohmann_json)
 #include_directories(deps/z3/src/api)
 #list(APPEND ASO_LINK_LIBS z3)
 
-add_library(aso_runtime ${ASO_SRCS})
+add_library(mirage_runtime ${ASO_SRCS})
 
 # Note(zhihao): CUDA_SEPARABLE_COMPILATION is non-compatible with
 # cython's installation, since enabling separable compilation
@@ -99,20 +99,20 @@ add_library(aso_runtime ${ASO_SRCS})
 # cmake_device_link.o, and cython's installation cannot
 # automatically link to that file, resulting in:
 # undefined symbol: __cudaRegisterLinkedBinary_...
-#set_target_properties(aso_runtime
+#set_target_properties(mirage_runtime
 #  PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-set_target_properties(aso_runtime PROPERTIES CUDA_ARCHITECTURES native)
+set_target_properties(mirage_runtime PROPERTIES CUDA_ARCHITECTURES native)
 
 
-target_compile_features(aso_runtime PUBLIC cxx_std_17)
+target_compile_features(mirage_runtime PUBLIC cxx_std_17)
 
-target_link_libraries(aso_runtime ${ASO_LINK_LIBS})
+target_link_libraries(mirage_runtime ${ASO_LINK_LIBS})
 
-target_include_directories(aso_runtime
+target_include_directories(mirage_runtime
   PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
-install(TARGETS aso_runtime
+install(TARGETS mirage_runtime
     LIBRARY DESTINATION lib)
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include
@@ -125,7 +125,7 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+  target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
 # Multi-Query Attention Incremental Decoding
@@ -136,7 +136,7 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+  target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
 # Multi-Query Attention Speculative Decoding
@@ -147,7 +147,7 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+  target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
 # Multi-Query Attention Prefilling
@@ -158,7 +158,7 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+  target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
 # Group-Query Attention Incremental Decoding
@@ -169,7 +169,7 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+  target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
 # Group-Query Attention Spec Decoding
@@ -180,7 +180,7 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+  target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
 # Group-Query Attention Prefilling
@@ -191,7 +191,7 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+  target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
 # Multi-Head Attention Incremental Decoding
@@ -202,7 +202,7 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+  target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
 # Multi-Head Attention Speculative Decoding
@@ -213,7 +213,7 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+  target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
 # Multi-Head Attention Prefilling
@@ -224,7 +224,7 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+  target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
 # LoRA
@@ -235,7 +235,7 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+  target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
 # MLP
@@ -246,7 +246,7 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+  target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
 # MoE
@@ -257,7 +257,7 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+  target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
 if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
@@ -267,7 +267,7 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+  target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
 if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
@@ -277,7 +277,7 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+  target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
 if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
@@ -287,7 +287,7 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+  target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
 if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
@@ -297,7 +297,7 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
+  target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
 option(ASO_BUILD_UNIT_TEST "build unit tests" OFF)

@@ -13,15 +13,15 @@
  * limitations under the License.
  */
 
-#include "aso/threadblock/graph.h"
-#include "aso/threadblock/matmul.h"
-#include "aso/utils/cuda_helper.h"
-#include "aso/utils/hash_utils.h"
+#include "mirage/threadblock/graph.h"
+#include "mirage/threadblock/matmul.h"
+#include "mirage/utils/cuda_helper.h"
+#include "mirage/utils/hash_utils.h"
 #include "cutlass/cutlass.h"
 #include <cassert>
 
-namespace aso {
+namespace mirage {
 namespace threadblock {
 namespace matmul {} // namespace matmul
 } // namespace threadblock
-} // namespace aso
+} // namespace mirage

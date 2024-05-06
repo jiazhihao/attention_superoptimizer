@@ -1,12 +1,12 @@
-#include "aso/search/algebraic_pattern.h"
+#include "mirage/search/algebraic_pattern.h"
 #include <cassert>
 #include <cmath>
 #include <iostream>
 #include <vector>
 
-#include "aso/utils/containers.h"
+#include "mirage/utils/containers.h"
 
-namespace aso {
+namespace mirage {
 namespace search {
 
 std::unordered_set<std::string> AlgebraicPattern::all_variables;
@@ -194,4 +194,4 @@ std::string Red::to_string() const {
 }
 
 } // namespace search
-} // namespace aso
+} // namespace mirage

@@ -13,24 +13,24 @@
  * limitations under the License.
  */
 
-#include "aso/threadblock/operator.h"
-#include "aso/threadblock/graph.h"
+#include "mirage/threadblock/operator.h"
+#include "mirage/threadblock/graph.h"
 
-namespace aso {
+namespace mirage {
 namespace threadblock {
 
-TBOperator::TBOperator(Graph *_graph, aso::type::TBOperatorType _type)
+TBOperator::TBOperator(Graph *_graph, mirage::type::TBOperatorType _type)
     : bgraph(_graph), op_type(_type) {}
 
 TBOperator::TBOperator(Graph *_graph,
-                       aso::type::TBOperatorType _type,
+                       mirage::type::TBOperatorType _type,
                        STensor const &input1)
     : bgraph(_graph), op_type(_type) {
   input_tensors.push_back(input1);
 }
 
 TBOperator::TBOperator(Graph *_graph,
-                       aso::type::TBOperatorType _type,
+                       mirage::type::TBOperatorType _type,
                        STensor const &input1,
                        STensor const &input2)
     : bgraph(_graph), op_type(_type) {
@@ -41,4 +41,4 @@ TBOperator::TBOperator(Graph *_graph,
 TBOperator::~TBOperator() {}
 
 } // namespace threadblock
-} // namespace aso
+} // namespace mirage

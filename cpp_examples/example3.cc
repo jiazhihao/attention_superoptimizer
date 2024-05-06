@@ -1,9 +1,9 @@
-#include "aso/kernel/graph.h"
-#include "aso/threadblock/graph.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/threadblock/graph.h"
 
 #include <iostream>
 
-using namespace aso;
+using namespace mirage;
 
 int main(int argc, char **argv) {
   kernel::Graph graph;
@@ -16,10 +16,10 @@ int main(int argc, char **argv) {
   bool construct_from_plan = true;
   if (construct_from_plan) {
     threadblock::ExecutionPlan plan;
-    plan.ops.push_back({aso::type::TB_MATMUL_OP, {{0, 0}, {1, 0}}});
-    plan.ops.push_back({aso::type::TB_EXP_OP, {{3, 0}}});
-    plan.ops.push_back({aso::type::TB_MATMUL_OP, {{4, 0}, {2, 0}}});
-    plan.ops.push_back({aso::type::TB_REDUCTION_2_TO_DIMX_OP, {{5, 0}}});
+    plan.ops.push_back({mirage::type::TB_MATMUL_OP, {{0, 0}, {1, 0}}});
+    plan.ops.push_back({mirage::type::TB_EXP_OP, {{3, 0}}});
+    plan.ops.push_back({mirage::type::TB_MATMUL_OP, {{4, 0}, {2, 0}}});
+    plan.ops.push_back({mirage::type::TB_REDUCTION_2_TO_DIMX_OP, {{5, 0}}});
     plan.input_map.push_back({0, -1, -1});
     plan.input_map.push_back({0, 2, -1});
     plan.input_map.push_back({0, 1, -1});

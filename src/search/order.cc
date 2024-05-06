@@ -1,8 +1,8 @@
-#include "aso/search/order.h"
+#include "mirage/search/order.h"
 
 #include <iostream>
 
-namespace aso {
+namespace mirage {
 namespace search {
 
 bool Order::operator<(Order const &other) const {
@@ -30,4 +30,4 @@ bool Order::operator<=(Order const &other) const {
 Order::Order(std::vector<int> const &v, int type) : v(v), type(type) {}
 
 } // namespace search
-} // namespace aso
+} // namespace mirage

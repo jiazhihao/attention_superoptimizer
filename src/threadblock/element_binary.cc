@@ -13,16 +13,16 @@
  * limitations under the License.
  */
 
-#include "aso/threadblock/element_binary.h"
-#include "aso/threadblock/graph.h"
-#include "aso/threadblock/operator.h"
+#include "mirage/threadblock/element_binary.h"
+#include "mirage/threadblock/graph.h"
+#include "mirage/threadblock/operator.h"
 
-namespace aso {
+namespace mirage {
 namespace threadblock {
 
 STensor Graph::add(STensor const &input1, STensor const &input2) {
   TBOperator *op =
-      create_elementbinary_op(input1, input2, aso::type::TB_ADD_OP);
+      create_elementbinary_op(input1, input2, mirage::type::TB_ADD_OP);
   assert(op != nullptr);
   operators.push_back(op);
   return op->output_tensors[0];
@@ -30,7 +30,7 @@ STensor Graph::add(STensor const &input1, STensor const &input2) {
 
 STensor Graph::mul(STensor const &input1, STensor const &input2) {
   TBOperator *op =
-      create_elementbinary_op(input1, input2, aso::type::TB_MUL_OP);
+      create_elementbinary_op(input1, input2, mirage::type::TB_MUL_OP);
   assert(op != nullptr);
   operators.push_back(op);
   return op->output_tensors[0];
@@ -38,7 +38,7 @@ STensor Graph::mul(STensor const &input1, STensor const &input2) {
 
 STensor Graph::div(STensor const &input1, STensor const &input2) {
   TBOperator *op =
-      create_elementbinary_op(input1, input2, aso::type::TB_DIV_OP);
+      create_elementbinary_op(input1, input2, mirage::type::TB_DIV_OP);
   assert(op != nullptr);
   operators.push_back(op);
   return op->output_tensors[0];
@@ -46,7 +46,7 @@ STensor Graph::div(STensor const &input1, STensor const &input2) {
 
 TBOperator *Graph::create_elementbinary_op(STensor const &input1,
                                            STensor const &input2,
-                                           aso::type::TBOperatorType _type) {
+                                           mirage::type::TBOperatorType _type) {
   if (input1.num_dims != input2.num_dims) {
     return nullptr;
   }
@@ -61,7 +61,7 @@ TBOperator *Graph::create_elementbinary_op(STensor const &input1,
     output.dim[i] = std::max(input1.dim[i], input2.dim[i]);
   }
 
-  if (smem_offset + output.size() > (off_t)aso::type::MAX_SMEM_SIZE) {
+  if (smem_offset + output.size() > (off_t)mirage::type::MAX_SMEM_SIZE) {
     return nullptr;
   }
 
@@ -72,7 +72,7 @@ TBOperator *Graph::create_elementbinary_op(STensor const &input1,
 TBElementBinaryOp::TBElementBinaryOp(Graph *_graph,
                                      STensor const &input1,
                                      STensor const &input2,
-                                     aso::type::TBOperatorType _type)
+                                     mirage::type::TBOperatorType _type)
     : TBOperator(_graph, _type, input1, input2) {
   assert(input1.num_dims == input2.num_dims);
   for (int i = 0; i < input1.num_dims; i++) {
@@ -103,4 +103,4 @@ TBElementBinaryOp::operator json() const {
 }
 
 } // namespace threadblock
-} // namespace aso
+} // namespace mirage

@@ -13,17 +13,17 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/reduction.h"
-#include "aso/kernel/device_memory_manager.h"
-#include "aso/kernel/graph.h"
-#include "aso/layout.h"
-#include "aso/utils/hash_utils.h"
+#include "mirage/kernel/reduction.h"
+#include "mirage/kernel/device_memory_manager.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/layout.h"
+#include "mirage/utils/hash_utils.h"
 #include <cassert>
 
-namespace aso {
+namespace mirage {
 namespace kernel {
 
-using namespace aso::type;
+using namespace mirage::type;
 
 DTensor Graph::reduction(DTensor const &input, int dim, int size) {
   KNOperator *op = create_reduction_op(input, dim, size);
@@ -89,4 +89,4 @@ KNReductionOp::operator json() const {
 }
 
 } // namespace kernel
-} // namespace aso
+} // namespace mirage

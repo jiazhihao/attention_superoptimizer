@@ -1,6 +1,6 @@
-#include "aso/search/config.h"
+#include "mirage/search/config.h"
 
-namespace aso {
+namespace mirage {
 namespace search {
 
 GeneratorConfig GeneratorConfig::get_default_config() {
@@ -68,4 +68,4 @@ void GeneratorConfig::print_config() const {
 }
 
 } // namespace search
-} // namespace aso
+} // namespace mirage

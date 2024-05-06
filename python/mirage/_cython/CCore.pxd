@@ -17,8 +17,8 @@ from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
 from libcpp cimport bool
 
-cdef extern from "aso/type.h" namespace "aso::type":
-    # This must be consistent with aso/type.h
+cdef extern from "mirage/type.h" namespace "mirage::type":
+    # This must be consistent with mirage/type.h
     cdef enum DataType:
         DT_INT8 = 900,
         DT_UINT16 = 910,
@@ -28,14 +28,14 @@ cdef extern from "aso/type.h" namespace "aso::type":
         DT_DOUBLE = 940,
         DT_UNKNOWN = 999,
   
-cdef extern from "aso/layout.h" namespace "aso::layout":
-    # This must be consistent with aso/layout.h
+cdef extern from "mirage/layout.h" namespace "mirage::layout":
+    # This must be consistent with mirage/layout.h
     cdef enum DmemLayout:
         DmemRowMajor = 100,
         DmemColumnMajor = 101,
         DmemUnknowLayout = 199,
 
-cdef extern from "aso/kernel/graph.h" namespace "aso::kernel":
+cdef extern from "mirage/kernel/graph.h" namespace "mirage::kernel":
     cdef cppclass KNOperator:
         pass
     ctypedef struct DTensor:
@@ -62,7 +62,7 @@ cdef extern from "aso/kernel/graph.h" namespace "aso::kernel":
         DTensor* div(const DTensor* op1, const DTensor* op2)
         void generate_triton_program(const char *filepath)
 
-cdef extern from "aso/search/search_c.h" namespace "aso::search_c":
+cdef extern from "mirage/search/search_c.h" namespace "mirage::search_c":
     ctypedef struct MInt3:
         int x
         int y

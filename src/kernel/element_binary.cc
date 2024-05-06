@@ -13,19 +13,19 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/element_binary.h"
-#include "aso/kernel/device_memory_manager.h"
-#include "aso/kernel/graph.h"
-#include "aso/layout.h"
-#include "aso/utils/hash_utils.h"
+#include "mirage/kernel/element_binary.h"
+#include "mirage/kernel/device_memory_manager.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/layout.h"
+#include "mirage/utils/hash_utils.h"
 #include <cassert>
 
-namespace aso {
+namespace mirage {
 namespace kernel {
 
 DTensor Graph::add(DTensor const &input1, DTensor const &input2) {
   KNOperator *op =
-      create_elementbinary_op(input1, input2, aso::type::KN_ADD_OP);
+      create_elementbinary_op(input1, input2, mirage::type::KN_ADD_OP);
   assert(op != nullptr);
   operators.push_back(op);
   assert(op->output_tensors.size() == 1);
@@ -40,7 +40,7 @@ DTensor* Graph::add(DTensor const *input1, DTensor const *input2) {
 
 DTensor Graph::mul(DTensor const &input1, DTensor const &input2) {
   KNOperator *op =
-      create_elementbinary_op(input1, input2, aso::type::KN_MUL_OP);
+      create_elementbinary_op(input1, input2, mirage::type::KN_MUL_OP);
   assert(op != nullptr);
   operators.push_back(op);
   assert(op->output_tensors.size() == 1);
@@ -55,7 +55,7 @@ DTensor* Graph::mul(DTensor const *input1, DTensor const *input2) {
 
 DTensor Graph::div(DTensor const &input1, DTensor const &input2) {
   KNOperator *op =
-      create_elementbinary_op(input1, input2, aso::type::KN_DIV_OP);
+      create_elementbinary_op(input1, input2, mirage::type::KN_DIV_OP);
   assert(op != nullptr);
   operators.push_back(op);
   assert(op->output_tensors.size() == 1);
@@ -70,7 +70,7 @@ DTensor* Graph::div(DTensor const *input1, DTensor const *input2) {
 
 KNOperator *Graph::create_elementbinary_op(DTensor const &input1,
                                            DTensor const &input2,
-                                           aso::type::KNOperatorType type) {
+                                           mirage::type::KNOperatorType type) {
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
   if (input1.num_dims != input2.num_dims) {
     return nullptr;
@@ -96,8 +96,8 @@ KNOperator *Graph::create_elementbinary_op(DTensor const &input1,
 
 KNElementBinaryOp::KNElementBinaryOp(DTensor const &input1,
                                      DTensor const &input2,
-                                     aso::type::KNOperatorType type)
-    : aso::kernel::KNOperator(type, input1, input2) {
+                                     mirage::type::KNOperatorType type)
+    : mirage::kernel::KNOperator(type, input1, input2) {
   assert(input1.num_dims == input2.num_dims);
   for (int i = 0; i < input1.num_dims; i++) {
     if (input1.dim[i] != input2.dim[i]) {
@@ -131,4 +131,4 @@ KNElementBinaryOp::operator json() const {
 }
 
 } // namespace kernel
-} // namespace aso
+} // namespace mirage

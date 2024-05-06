@@ -38,7 +38,7 @@ def config_cython():
                 "mirage.%s" % fn[:-4],
                 ["%s/%s" % (path, fn)],
                 include_dirs=["../include", "../deps/json/include", "../deps/cutlass/include", "/usr/local/cuda/include"],
-                libraries=["aso_runtime", "cudadevrt", "cudart_static", "cudnn", "cublas", "cudart", "cuda", "z3"],
+                libraries=["mirage_runtime", "cudadevrt", "cudart_static", "cudnn", "cublas", "cudart", "cuda", "z3"],
                 library_dirs=["../build", "../deps/z3/build", "/usr/local/cuda/lib64", "/usr/local/cuda/lib64/stubs"],
                 extra_compile_args=["-std=c++17"],
                 extra_link_args=["-fPIC"],
@@ -56,7 +56,7 @@ setup_args = {}
 #    LIB_LIST[i] = os.path.relpath(path, curr_path)
 #    setup_args = {
 #        "include_package_data": True,
-#        "data_files": [('aso', LIB_LIST)]
+#        "data_files": [('mirage', LIB_LIST)]
 #    }
 
 setup(name='mirage',

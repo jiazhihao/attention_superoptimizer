@@ -13,22 +13,22 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/graph.h"
-#include "aso/kernel/customized.h"
-#include "aso/utils/hash_utils.h"
-#include "aso/threadblock/serializer/concat_serializer.h"
-#include "aso/threadblock/serializer/element_binary_serializer.h"
-#include "aso/threadblock/serializer/element_unary_serializer.h"
-#include "aso/threadblock/serializer/input_loader_serializer.h"
-#include "aso/threadblock/serializer/matmul_serializer.h"
-#include "aso/threadblock/serializer/output_saver_serializer.h"
-#include "aso/threadblock/serializer/reduction_serializer.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/kernel/customized.h"
+#include "mirage/utils/hash_utils.h"
+#include "mirage/threadblock/serializer/concat_serializer.h"
+#include "mirage/threadblock/serializer/element_binary_serializer.h"
+#include "mirage/threadblock/serializer/element_unary_serializer.h"
+#include "mirage/threadblock/serializer/input_loader_serializer.h"
+#include "mirage/threadblock/serializer/matmul_serializer.h"
+#include "mirage/threadblock/serializer/output_saver_serializer.h"
+#include "mirage/threadblock/serializer/reduction_serializer.h"
 
 #include <iostream>
 #include <fstream>
 #include <map>
 
-namespace aso {
+namespace mirage {
 namespace kernel {
 
 std::string dtensor_name(int i) {
@@ -79,14 +79,14 @@ std::string block_offset_calculation(int off_x, int off_y, int off_z) {
   return ret.str();
 }
 
-std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
+std::string generate_kernel_code(mirage::threadblock::NewKernelParams params,
                                  int forloop_range,
                                  int reduction_dimx,
                                  std::string func_name,
                                  std::vector<std::string> input_names,
                                  std::vector<std::string> output_names,
-                                 std::map<int, aso::threadblock::STensor> offset_to_stensor) {
-  using namespace aso::threadblock;
+                                 std::map<int, mirage::threadblock::STensor> offset_to_stensor) {
+  using namespace mirage::threadblock;
   using namespace std;
   stringstream header;
   stringstream main;
@@ -114,8 +114,8 @@ std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
   int param_idx = 0;
   int output_idx = 0;
   for (int op = 0; op < params.num_operators; op++) {
-    aso::type::TBOperatorType op_type = params.operator_types[op];
-    if (op_type == aso::type::TB_INPUT_OP) {
+    mirage::type::TBOperatorType op_type = params.operator_types[op];
+    if (op_type == mirage::type::TB_INPUT_OP) {
       int3 input_matrix_row_offset_block_stride;
       int3 input_matrix_column_offset_block_stride;
       int input_matrix_row_offset_forloop_stride;
@@ -124,9 +124,9 @@ std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
       int global_offset_forloop_stride;
       int2 dtensor_matrix_shape, stensor_matrix_shape;
       int input_smem_offset;
-      aso::layout::DmemLayout dtensor_layout;
-      aso::layout::SmemLayout stensor_layout;
-      aso::threadblock::deserialize_input_loader_parameters(
+      mirage::layout::DmemLayout dtensor_layout;
+      mirage::layout::SmemLayout stensor_layout;
+      mirage::threadblock::deserialize_input_loader_parameters(
           params.parameters,
           param_idx,
           input_matrix_row_offset_block_stride,
@@ -176,15 +176,15 @@ std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
         header << "\t" << stensor_name(input_smem_offset)
                << " = tl.load(" << stensor_ptr_name(input_smem_offset) << ")\n";
       }
-    } else if (op_type == aso::type::TB_OUTPUT_OP) {
+    } else if (op_type == mirage::type::TB_OUTPUT_OP) {
       int3 output_matrix_row_offset_block_stride;
       int3 output_matrix_column_offset_block_stride;
       int3 global_offset_block_stride;
       int2 dtensor_matrix_shape, stensor_matrix_shape;
       int input_smem_offset, accum_smem_offset;
-      aso::layout::DmemLayout dtensor_layout;
-      aso::layout::SmemLayout stensor_layout;
-      aso::threadblock::deserialize_output_saver_parameters(
+      mirage::layout::DmemLayout dtensor_layout;
+      mirage::layout::SmemLayout stensor_layout;
+      mirage::threadblock::deserialize_output_saver_parameters(
           params.parameters,
           param_idx,
           output_matrix_row_offset_block_stride,
@@ -231,10 +231,10 @@ std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
       ending << "\ttl.store(" << stensor_ptr_name(accum_smem_offset) << ", "
              << stensor_name(accum_smem_offset) <<")\n" ;
       output_idx ++;
-    } else if (op_type == aso::type::TB_MATMUL_OP) {
+    } else if (op_type == mirage::type::TB_MATMUL_OP) {
       int m, n, k;
       int A_smem_offset, B_smem_offset, C_smem_offset;
-      aso::threadblock::deserialize_matmul_op_parameters(
+      mirage::threadblock::deserialize_matmul_op_parameters(
           params.parameters,
           param_idx,
           m,
@@ -246,16 +246,16 @@ std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
       main << "\t\t" << stensor_name(C_smem_offset) << " = tl.dot("
            << stensor_name(A_smem_offset) << ", "
            << stensor_name(B_smem_offset) << ", out_dtype=tl.float16)\n";
-    } else if (op_type == aso::type::TB_EXP_OP) {
+    } else if (op_type == mirage::type::TB_EXP_OP) {
       int smem_offset, num_elements;
-      aso::threadblock::deserialize_elementunary_op_parameters(
+      mirage::threadblock::deserialize_elementunary_op_parameters(
           params.parameters, param_idx, smem_offset, num_elements);
       main << "\t\t" << stensor_name(smem_offset) << " = tl.math.exp("
            << stensor_name(smem_offset) << ".to(tl.float32)).to(tl.float16)\n";
-    } else if (op_type == aso::type::TB_DIV_OP) {
+    } else if (op_type == mirage::type::TB_DIV_OP) {
       int3 input1_shape, input2_shape;
       int input1_smem_offset, input2_smem_offset, output_smem_offset;
-      aso::threadblock::deserialize_elementbinary_op_parameters(
+      mirage::threadblock::deserialize_elementbinary_op_parameters(
           params.parameters,
           param_idx,
           input1_shape,
@@ -266,11 +266,11 @@ std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
       main << "\t\t" << stensor_name(output_smem_offset) << " = tl.fdiv("
            << stensor_name(input1_smem_offset) << ".to(tl.float32)" << ", "
            << stensor_name(input2_smem_offset) << ".to(tl.float32)).to(tl.float16)\n";
-    } else if ((op_type >= aso::type::TB_REDUCTION_FIRST_OP_ID) &&
-               (op_type <= aso::type::TB_REDUCTION_LAST_OP_ID)) {
+    } else if ((op_type >= mirage::type::TB_REDUCTION_FIRST_OP_ID) &&
+               (op_type <= mirage::type::TB_REDUCTION_LAST_OP_ID)) {
       int output_num_elements, reduction_degree, inner_range;
       int input_smem_offset, output_smem_offset;
-      aso::threadblock::deserialize_reduction_op_parameters(
+      mirage::threadblock::deserialize_reduction_op_parameters(
           params.parameters,
           param_idx,
           output_num_elements,
@@ -279,9 +279,9 @@ std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
           input_smem_offset,
           output_smem_offset);
       int reduction_dim = -1;
-      if (op_type >= aso::type::TB_REDUCTION_0_TO_DIMX_OP &&
-          op_type <= aso::type::TB_REDUCTION_2_TO_DIMX_OP) {
-        reduction_dim = op_type - aso::type::TB_REDUCTION_0_TO_DIMX_OP;
+      if (op_type >= mirage::type::TB_REDUCTION_0_TO_DIMX_OP &&
+          op_type <= mirage::type::TB_REDUCTION_2_TO_DIMX_OP) {
+        reduction_dim = op_type - mirage::type::TB_REDUCTION_0_TO_DIMX_OP;
         assert(offset_to_stensor.find(input_smem_offset) != offset_to_stensor.end());
         STensor stensor = offset_to_stensor[input_smem_offset];
         // Assert that only the last two dimensions can be non-zero
@@ -307,9 +307,9 @@ std::string generate_kernel_code(aso::threadblock::NewKernelParams params,
         } else {
           assert(false && "Unsupported reduction dim");
         }
-      } else if (op_type >= aso::type::TB_REDUCTION_0_OP &&
-                 op_type <= aso::type::TB_REDUCTION_2_OP) {
-        reduction_dim = op_type - aso::type::TB_REDUCTION_0_OP;
+      } else if (op_type >= mirage::type::TB_REDUCTION_0_OP &&
+                 op_type <= mirage::type::TB_REDUCTION_2_OP) {
+        reduction_dim = op_type - mirage::type::TB_REDUCTION_0_OP;
         assert(offset_to_stensor.find(input_smem_offset) != offset_to_stensor.end());
         STensor stensor = offset_to_stensor[input_smem_offset];
         // Assert that only the last two dimensions can be non-zero
@@ -389,13 +389,13 @@ void Graph::generate_triton_program(char const *file_path) {
         for (const auto& t : op->output_tensors) {
           output_names.push_back(dtensor_name(t.guid));
         }
-        std::map<int, aso::threadblock::STensor> offset_to_stensor;
+        std::map<int, mirage::threadblock::STensor> offset_to_stensor;
         for (const auto& tbo : customized->bgraph.operators) {
           for (const auto & t : tbo->output_tensors) {
             offset_to_stensor[t.smem_offset] = t;
           }
         }
-        aso::threadblock::NewKernelParams params = customized->bgraph.get_new_kernel_params(false/*fingerprint*/);
+        mirage::threadblock::NewKernelParams params = customized->bgraph.get_new_kernel_params(false/*fingerprint*/);
         string kernel_code = generate_kernel_code(
             params,
             customized->bgraph.forloop_range,
@@ -450,4 +450,4 @@ void Graph::generate_triton_program(char const *file_path) {
 }
 
 } // namespace kernel
-} // namespace aso
+} // namespace mirage

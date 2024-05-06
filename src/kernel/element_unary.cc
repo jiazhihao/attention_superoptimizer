@@ -13,18 +13,18 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/element_unary.h"
-#include "aso/kernel/device_memory_manager.h"
-#include "aso/kernel/graph.h"
-#include "aso/layout.h"
-#include "aso/utils/hash_utils.h"
+#include "mirage/kernel/element_unary.h"
+#include "mirage/kernel/device_memory_manager.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/layout.h"
+#include "mirage/utils/hash_utils.h"
 #include <cassert>
 
-namespace aso {
+namespace mirage {
 namespace kernel {
 
 DTensor Graph::exp(DTensor const &input) {
-  KNOperator *op = create_elementunary_op(input, aso::type::KN_EXP_OP);
+  KNOperator *op = create_elementunary_op(input, mirage::type::KN_EXP_OP);
   assert(op != nullptr);
   operators.push_back(op);
   assert(op->output_tensors.size() == 1);
@@ -33,7 +33,7 @@ DTensor Graph::exp(DTensor const &input) {
 }
 
 DTensor* Graph::exp(DTensor const *input) {
-  KNOperator *op = create_elementunary_op(*input, aso::type::KN_EXP_OP);
+  KNOperator *op = create_elementunary_op(*input, mirage::type::KN_EXP_OP);
   assert(op != nullptr);
   operators.push_back(op);
   assert(op->output_tensors.size() == 1);
@@ -41,7 +41,7 @@ DTensor* Graph::exp(DTensor const *input) {
 }
 
 KNOperator *Graph::create_elementunary_op(DTensor const &input,
-                                          aso::type::KNOperatorType type) {
+                                          mirage::type::KNOperatorType type) {
   DeviceMemoryManager *dmm = DeviceMemoryManager::get_instance();
   if (dmm->offset + input.data_size() > dmm->total_size) {
     return nullptr;
@@ -52,8 +52,8 @@ KNOperator *Graph::create_elementunary_op(DTensor const &input,
 }
 
 KNElementUnaryOp::KNElementUnaryOp(DTensor const &input,
-                                   aso::type::KNOperatorType type)
-    : aso::kernel::KNOperator(type, input) {
+                                   mirage::type::KNOperatorType type)
+    : mirage::kernel::KNOperator(type, input) {
   DTensor output = input;
   output.owner_op = this;
   output.owner_ts_idx = 0;
@@ -78,4 +78,4 @@ KNElementUnaryOp::operator json() const {
 }
 
 } // namespace kernel
-} // namespace aso
+} // namespace mirage
