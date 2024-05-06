@@ -1,9 +1,9 @@
 import torch
 import numpy as np
 
-Q = torch.rand([8, 32, 256, 64], dtype=torch.float16, device='cuda')
-K = torch.rand([8, 32, 64, 4096], dtype=torch.float16, device='cuda')
-V = torch.rand([8, 32, 4096, 64], dtype=torch.float16, device='cuda')
+Q = torch.rand([1, 32, 1, 64], dtype=torch.float16, device='cuda')
+K = torch.rand([1, 32, 64, 4096], dtype=torch.float16, device='cuda')
+V = torch.rand([1, 32, 4096, 64], dtype=torch.float16, device='cuda')
 
 multihead_attn = torch.nn.MultiheadAttention(embed_dim=32 * 64, num_heads = 32, batch_first=True, device='cuda', dtype=torch.float16)
 

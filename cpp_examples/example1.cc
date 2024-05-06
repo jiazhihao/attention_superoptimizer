@@ -1,7 +1,7 @@
-#include "aso/kernel/graph.h"
-#include "aso/threadblock/graph.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/threadblock/graph.h"
 
-using namespace aso;
+using namespace mirage;
 
 int main(int argc, char **argv) {
   kernel::Graph ref_graph;
@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
         {16, 512, 64}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor A = ref_graph.matmul(Q, K);
     threadblock::ExecutionPlan plan;
-    plan.ops.push_back({aso::type::TB_REDUCTION_1_OP, {{0, 0}}});
+    plan.ops.push_back({mirage::type::TB_REDUCTION_1_OP, {{0, 0}}});
     plan.input_map.push_back({0, -1, -1});
     plan.input_smem_layouts = {layout::SmemRowMajor};
     plan.output_map = {0, 2, -1};

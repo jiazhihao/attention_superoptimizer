@@ -13,21 +13,21 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/device_memory_manager.h"
-#include "aso/kernel/element_binary.h"
-#include "aso/kernel/graph.h"
-#include "aso/utils/cuda_helper.h"
-#include "aso/utils/hash_utils.h"
+#include "mirage/kernel/device_memory_manager.h"
+#include "mirage/kernel/element_binary.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/utils/cuda_helper.h"
+#include "mirage/utils/hash_utils.h"
 #include "cutlass/fast_math.h"
 #include <cassert>
 
-namespace aso {
+namespace mirage {
 namespace kernel {
 
-using namespace aso::type;
+using namespace mirage::type;
 
 template <typename DT>
-__global__ void execute_elementbinary(aso::type::KNOperatorType type,
+__global__ void execute_elementbinary(mirage::type::KNOperatorType type,
                                       DT *input1_ptr,
                                       DT *input2_ptr,
                                       DT *output_ptr,
@@ -38,11 +38,11 @@ __global__ void execute_elementbinary(aso::type::KNOperatorType type,
   if (i < num_elements) {
     DT operand_A = input1_ptr[i / factor1];
     DT operand_B = input2_ptr[i / factor2];
-    if (type == aso::type::KN_ADD_OP) {
+    if (type == mirage::type::KN_ADD_OP) {
       output_ptr[i] = operand_A + operand_B;
-    } else if (type == aso::type::KN_MUL_OP) {
+    } else if (type == mirage::type::KN_MUL_OP) {
       output_ptr[i] = operand_A * operand_B;
-    } else if (type == aso::type::KN_DIV_OP) {
+    } else if (type == mirage::type::KN_DIV_OP) {
       output_ptr[i] = operand_A / operand_B;
     } else {
       assert(false && "Unimplemented");
@@ -95,15 +95,15 @@ bool KNElementBinaryOp::profile(ProfileResult &result) {
 }
 
 __global__ void
-    compute_elementbinary_fingerprint(aso::type::KNOperatorType type,
+    compute_elementbinary_fingerprint(mirage::type::KNOperatorType type,
                                       FPType *div_p_lookup_table,
                                       FPType *div_q_lookup_table,
-                                      aso::kernel::DTensor input1,
-                                      aso::kernel::DTensor input2,
-                                      aso::kernel::DTensor output,
+                                      mirage::kernel::DTensor input1,
+                                      mirage::kernel::DTensor input2,
+                                      mirage::kernel::DTensor output,
                                       int num_elements) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
-  if (type == aso::type::KN_ADD_OP) {
+  if (type == mirage::type::KN_ADD_OP) {
     if (i < num_elements) {
       int input1_stride = 1, input1_idx = 0;
       int input2_stride = 1, input2_idx = 0;
@@ -122,7 +122,7 @@ __global__ void
       //     threadIdx.x + blockIdx.x * blockDim.x, z % FP_PQ,
       //     input1_idx, x, input2_idx, y);
     }
-  } else if (type == aso::type::KN_MUL_OP) {
+  } else if (type == mirage::type::KN_MUL_OP) {
     if (i < num_elements) {
       int input1_stride = 1, input1_idx = 0;
       int input2_stride = 1, input2_idx = 0;
@@ -141,7 +141,7 @@ __global__ void
       //     threadIdx.x + blockIdx.x * blockDim.x, z % FP_PQ,
       //     input1_idx, x, input2_idx, y);
     }
-  } else if (type == aso::type::KN_DIV_OP) {
+  } else if (type == mirage::type::KN_DIV_OP) {
     if (i < num_elements) {
       int input1_stride = 1, input1_idx = 0;
       int input2_stride = 1, input2_idx = 0;
@@ -184,8 +184,8 @@ bool KNElementBinaryOp::fingerprint(void) {
   int const num_threads_per_blk = 1024;
   int num_blocks =
       (num_elements + num_threads_per_blk - 1) / num_threads_per_blk;
-  aso::kernel::DeviceMemoryManager *dmm =
-      aso::kernel::DeviceMemoryManager::get_instance();
+  mirage::kernel::DeviceMemoryManager *dmm =
+      mirage::kernel::DeviceMemoryManager::get_instance();
   compute_elementbinary_fingerprint<<<num_blocks, num_threads_per_blk>>>(
       op_type,
       dmm->div_p_lookup_table,
@@ -199,4 +199,4 @@ bool KNElementBinaryOp::fingerprint(void) {
 }
 
 } // namespace kernel
-} // namespace aso
+} // namespace mirage

@@ -13,11 +13,11 @@
  * limitations under the License.
  */
 
-#include "aso/threadblock/reduction.h"
-#include "aso/threadblock/graph.h"
+#include "mirage/threadblock/reduction.h"
+#include "mirage/threadblock/graph.h"
 #include <cassert>
 
-namespace aso {
+namespace mirage {
 namespace threadblock {
 
 STensor Graph::reduction(STensor const &input, int dim) {
@@ -30,13 +30,13 @@ STensor Graph::reduction(STensor const &input, int dim) {
 TBOperator *Graph::create_reduction_op(STensor const &input, int dim) {
   STensor output = input;
   assert(output.num_dims > dim);
-  assert(output.layout == aso::layout::SmemRowMajor);
+  assert(output.layout == mirage::layout::SmemRowMajor);
   output.dim[dim] = 1;
   if (dim < output.num_dims - 2) {
     return nullptr;
   }
 
-  if (smem_offset + (off_t)output.size() > (off_t)aso::type::MAX_SMEM_SIZE) {
+  if (smem_offset + (off_t)output.size() > (off_t)mirage::type::MAX_SMEM_SIZE) {
     return nullptr;
   }
 
@@ -55,10 +55,10 @@ STensor Graph::reduction_to_dimx(STensor const &input, int dim) {
 TBOperator *Graph::create_reduction_to_dimx_op(STensor const &input, int dim) {
   STensor output = input;
   assert(output.num_dims > dim);
-  assert(output.layout == aso::layout::SmemRowMajor);
+  assert(output.layout == mirage::layout::SmemRowMajor);
   output.dim[dim] = this->reduction_dimx;
 
-  if (smem_offset + (off_t)output.size() > (off_t)aso::type::MAX_SMEM_SIZE) {
+  if (smem_offset + (off_t)output.size() > (off_t)mirage::type::MAX_SMEM_SIZE) {
     return nullptr;
   }
 
@@ -73,18 +73,18 @@ TBReductionOp::TBReductionOp(Graph *bgraph,
                              int dim,
                              int size)
     : TBOperator(bgraph,
-                 size == 1 ? (aso::type::TBOperatorType)(
-                                 aso::type::TB_REDUCTION_0_OP + dim)
-                           : (aso::type::TBOperatorType)(
-                                 aso::type::TB_REDUCTION_0_TO_DIMX_OP + dim),
+                 size == 1 ? (mirage::type::TBOperatorType)(
+                                 mirage::type::TB_REDUCTION_0_OP + dim)
+                           : (mirage::type::TBOperatorType)(
+                                 mirage::type::TB_REDUCTION_0_TO_DIMX_OP + dim),
                  input),
       reduce_dim(dim), reduce_size(size) {
-  // aso::type::TBOperatorType type = static_cast<aso::type::TBOperatorType>(
-  //     aso::type::TB_REDUCTION_0_OP + dim);
+  // mirage::type::TBOperatorType type = static_cast<mirage::type::TBOperatorType>(
+  //     mirage::type::TB_REDUCTION_0_OP + dim);
   // this->op_type = type;
   STensor output = input;
   assert(output.num_dims > reduce_dim);
-  assert(output.layout == aso::layout::SmemRowMajor);
+  assert(output.layout == mirage::layout::SmemRowMajor);
   output.dim[reduce_dim] = reduce_size;
   output.owner_op = this;
   output.owner_ts_idx = 0;
@@ -105,4 +105,4 @@ TBReductionOp::operator json() const {
               {"reduce_size", reduce_size}};
 }
 } // namespace threadblock
-} // namespace aso
+} // namespace mirage

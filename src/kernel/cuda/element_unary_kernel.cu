@@ -13,26 +13,26 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/device_memory_manager.h"
-#include "aso/kernel/element_unary.h"
-#include "aso/kernel/graph.h"
-#include "aso/utils/cuda_helper.h"
-#include "aso/utils/hash_utils.h"
+#include "mirage/kernel/device_memory_manager.h"
+#include "mirage/kernel/element_unary.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/utils/cuda_helper.h"
+#include "mirage/utils/hash_utils.h"
 #include "cutlass/fast_math.h"
 #include <cassert>
 
-namespace aso {
+namespace mirage {
 namespace kernel {
 
-using namespace aso::type;
+using namespace mirage::type;
 
 template <typename DT>
-__global__ void execute_elementunary(aso::type::KNOperatorType type,
+__global__ void execute_elementunary(mirage::type::KNOperatorType type,
                                      DT *input_ptr,
                                      DT *output_ptr,
                                      int num_elements) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
-  if (type == aso::type::KN_EXP_OP) {
+  if (type == mirage::type::KN_EXP_OP) {
     if (i < num_elements) {
       output_ptr[i] = cutlass::fast_exp(input_ptr[i]);
     }
@@ -74,16 +74,16 @@ bool KNElementUnaryOp::profile(ProfileResult &result) {
   return true;
 }
 
-__global__ void compute_elementunary_fingerprint(aso::type::KNOperatorType type,
+__global__ void compute_elementunary_fingerprint(mirage::type::KNOperatorType type,
                                                  FPType *exp_lookup_table,
-                                                 aso::type::FPType *input_ptr,
-                                                 aso::type::FPType *output_ptr,
+                                                 mirage::type::FPType *input_ptr,
+                                                 mirage::type::FPType *output_ptr,
                                                  int num_elements) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
-  if (type == aso::type::KN_EXP_OP) {
+  if (type == mirage::type::KN_EXP_OP) {
     if (i < num_elements) {
-      aso::type::FPType val = input_ptr[i];
-      aso::type::FPType q_residual = val % FP_Q;
+      mirage::type::FPType val = input_ptr[i];
+      mirage::type::FPType q_residual = val % FP_Q;
       uint32_t result = exp_lookup_table[q_residual];
       result = (result * FP_Q_MUL_P_MOD_1) % FP_PQ;
       output_ptr[i] = result;
@@ -99,8 +99,8 @@ bool KNElementUnaryOp::fingerprint(void) {
   int const num_threads_per_blk = 1024;
   int num_blocks =
       (num_elements + num_threads_per_blk - 1) / num_threads_per_blk;
-  aso::kernel::DeviceMemoryManager *dmm =
-      aso::kernel::DeviceMemoryManager::get_instance();
+  mirage::kernel::DeviceMemoryManager *dmm =
+      mirage::kernel::DeviceMemoryManager::get_instance();
   compute_elementunary_fingerprint<<<num_blocks, num_threads_per_blk>>>(
       op_type,
       dmm->exp_lookup_table,
@@ -112,4 +112,4 @@ bool KNElementUnaryOp::fingerprint(void) {
 }
 
 } // namespace kernel
-} // namespace aso
+} // namespace mirage

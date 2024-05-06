@@ -1,6 +1,6 @@
-#include "aso/search/dim_strategy.h"
+#include "mirage/search/dim_strategy.h"
 
-namespace aso {
+namespace mirage {
 namespace search {
 
 DimStrategy::DimStrategy(GeneratorConfig const &config) : config(config) {}
@@ -246,4 +246,4 @@ std::vector<std::vector<int>> DimStrategy::get_customized_input_cand_idx(
 }
 
 } // namespace search
-} // namespace aso
+} // namespace mirage

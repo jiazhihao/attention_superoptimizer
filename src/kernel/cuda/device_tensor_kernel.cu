@@ -13,10 +13,10 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/device_tensor.h"
-#include "aso/utils/cuda_helper.h"
+#include "mirage/kernel/device_tensor.h"
+#include "mirage/utils/cuda_helper.h"
 
-namespace aso {
+namespace mirage {
 namespace kernel {
 
 bool DTensor::has_same_fingerprint(DTensor const &ref) const {
@@ -34,8 +34,8 @@ bool DTensor::has_same_fingerprint(DTensor const &ref) const {
       return false;
     }
   }
-  aso::type::FPType *A = (aso::type::FPType *)malloc(fingerprint_size());
-  aso::type::FPType *B = (aso::type::FPType *)malloc(fingerprint_size());
+  mirage::type::FPType *A = (mirage::type::FPType *)malloc(fingerprint_size());
+  mirage::type::FPType *B = (mirage::type::FPType *)malloc(fingerprint_size());
   checkCUDA(cudaMemcpy(A, fp_ptr, fingerprint_size(), cudaMemcpyDeviceToHost));
   checkCUDA(
       cudaMemcpy(B, ref.fp_ptr, fingerprint_size(), cudaMemcpyDeviceToHost));
@@ -53,4 +53,4 @@ bool DTensor::has_same_fingerprint(DTensor const &ref) const {
 }
 
 } // namespace kernel
-} // namespace aso
+} // namespace mirage

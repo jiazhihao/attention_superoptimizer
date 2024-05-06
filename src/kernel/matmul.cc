@@ -13,15 +13,15 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/matmul.h"
-#include "aso/kernel/device_memory_manager.h"
-#include "aso/kernel/graph.h"
-#include "aso/layout.h"
-#include "aso/utils/hash_utils.h"
+#include "mirage/kernel/matmul.h"
+#include "mirage/kernel/device_memory_manager.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/layout.h"
+#include "mirage/utils/hash_utils.h"
 #include <cassert>
 #include <iostream>
 
-namespace aso {
+namespace mirage {
 namespace kernel {
 
 DTensor Graph::matmul(DTensor const &A, DTensor const &B) {
@@ -30,6 +30,13 @@ DTensor Graph::matmul(DTensor const &A, DTensor const &B) {
   operators.push_back(op);
   DTensor output = op->output_tensors[0];
   return output;
+}
+
+DTensor* Graph::matmul(DTensor const *A, DTensor const *B) {
+  KNOperator *op = create_matmul_op(*A, *B);
+  assert(op != nullptr);
+  operators.push_back(op);
+  return &op->output_tensors[0];
 }
 
 KNOperator *Graph::create_matmul_op(DTensor const &A, DTensor const &B) {
@@ -63,7 +70,7 @@ KNOperator *Graph::create_matmul_op(DTensor const &A, DTensor const &B) {
 }
 
 KNMatmulOp::KNMatmulOp(DTensor const &A, DTensor const &B)
-    : aso::kernel::KNOperator(aso::type::KN_MATMUL_OP, A, B) {
+    : mirage::kernel::KNOperator(mirage::type::KN_MATMUL_OP, A, B) {
   DTensor C;
   assert(A.num_dims == B.num_dims);
   assert(A.dim[A.num_dims - 1] == B.dim[B.num_dims - 2]);
@@ -77,7 +84,7 @@ KNMatmulOp::KNMatmulOp(DTensor const &A, DTensor const &B)
     C.dim[i] = A.dim[i];
   }
   C.dim[C.num_dims - 1] = B.dim[C.num_dims - 1];
-  C.layout = aso::layout::DmemRowMajor;
+  C.layout = mirage::layout::DmemRowMajor;
   C.data_type = A.data_type;
   C.owner_op = this;
   C.owner_ts_idx = 0;
@@ -121,11 +128,11 @@ bool MatmulKey::operator==(MatmulKey const &b) const {
 }
 
 } // namespace kernel
-} // namespace aso
+} // namespace mirage
 
 namespace std {
-size_t hash<aso::kernel::MatmulKey>::operator()(
-    aso::kernel::MatmulKey const &key) const {
+size_t hash<mirage::kernel::MatmulKey>::operator()(
+    mirage::kernel::MatmulKey const &key) const {
   size_t ret = 0;
   hash_combine(ret, key.operand_a);
   hash_combine(ret, key.operand_b);

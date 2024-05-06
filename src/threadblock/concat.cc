@@ -13,11 +13,11 @@
  * limitations under the License.
  */
 
-#include "aso/threadblock/concat.h"
-#include "aso/threadblock/graph.h"
+#include "mirage/threadblock/concat.h"
+#include "mirage/threadblock/graph.h"
 #include <cassert>
 
-namespace aso {
+namespace mirage {
 namespace threadblock {
 
 STensor Graph::concat(STensor const &A, STensor const &B, int concat_dim) {
@@ -41,7 +41,7 @@ TBOperator *Graph::create_concat_op(STensor const &A,
       return nullptr;
   }
 
-  if (smem_offset + A.size() + B.size() > (off_t)aso::type::MAX_SMEM_SIZE) {
+  if (smem_offset + A.size() + B.size() > (off_t)mirage::type::MAX_SMEM_SIZE) {
     return nullptr;
   }
 
@@ -54,8 +54,8 @@ TBConcatOp::TBConcatOp(Graph *bgraph,
                              STensor const &A,
                              STensor const &B,
                              int dim)
-    : TBOperator(bgraph, (aso::type::TBOperatorType)(
-                             aso::type::TB_CONCAT_0_OP + dim),
+    : TBOperator(bgraph, (mirage::type::TBOperatorType)(
+                             mirage::type::TB_CONCAT_0_OP + dim),
                  A, B),
       concat_dim(dim) {
   STensor output = A;
@@ -80,4 +80,4 @@ TBConcatOp::operator json() const {
               {"concat_dim", concat_dim}};
 }
 } // namespace threadblock
-} // namespace aso
+} // namespace mirage

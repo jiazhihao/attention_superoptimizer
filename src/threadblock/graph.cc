@@ -13,23 +13,25 @@
  * limitations under the License.
  */
 
-#include "aso/threadblock/graph.h"
-#include "aso/threadblock/serializer/element_binary_serializer.h"
-#include "aso/threadblock/serializer/element_unary_serializer.h"
-#include "aso/threadblock/serializer/input_loader_serializer.h"
-#include "aso/threadblock/serializer/matmul_serializer.h"
-#include "aso/threadblock/serializer/output_saver_serializer.h"
-#include "aso/threadblock/serializer/reduction_serializer.h"
-#include "aso/threadblock/serializer/concat_serializer.h"
-#include "aso/utils/hash_utils.h"
+#include "mirage/threadblock/graph.h"
+#include "mirage/threadblock/serializer/element_binary_serializer.h"
+#include "mirage/threadblock/serializer/element_unary_serializer.h"
+#include "mirage/threadblock/serializer/input_loader_serializer.h"
+#include "mirage/threadblock/serializer/matmul_serializer.h"
+#include "mirage/threadblock/serializer/output_saver_serializer.h"
+#include "mirage/threadblock/serializer/reduction_serializer.h"
+#include "mirage/threadblock/serializer/concat_serializer.h"
+#include "mirage/utils/hash_utils.h"
 
-namespace aso {
+namespace mirage {
 namespace threadblock {
 
 Graph::Graph(dim3 _grid_dim, dim3 _block_dim, int _forloop_range, int _reduction_dimx)
     : grid_dim(_grid_dim), block_dim(_block_dim),
       forloop_range(_forloop_range), reduction_dimx(_reduction_dimx),
-      smem_offset(0) {}
+      smem_offset(0) {
+        assert(reduction_dimx > 0);
+      }
 
 size_t Graph::pair_hash::operator()(std::pair<int, int> const &p) const {
   size_t h1 = std::hash<int>{}(p.first);
@@ -44,7 +46,7 @@ off_t Graph::allocate(STensor const &tensor) {
   off_t aligns_size = ((tensor.size() + 15) & ~15);
   smem_offset += aligns_size;
 
-  assert(smem_offset <= (off_t)aso::type::MAX_SMEM_SIZE);
+  assert(smem_offset <= (off_t)mirage::type::MAX_SMEM_SIZE);
   allocated_tensors.push_back(std::make_pair(ret, aligns_size));
   return ret;
 }
@@ -63,7 +65,7 @@ void Graph::free(std::vector<STensor> const &tensors) {
   }
 }
 
-NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
+NewKernelParams Graph::get_new_kernel_params(bool fingerprint) const {
   NewKernelParams params;
   params.num_operators = operators.size();
   params.num_parameters = 0;
@@ -76,9 +78,9 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
   for (size_t i = 0; i < operators.size(); i++) {
     params.operator_types[i] = operators[i]->op_type;
     switch (operators[i]->op_type) {
-      case aso::type::TB_INPUT_OP: {
+      case mirage::type::TB_INPUT_OP: {
         TBInputOp *input_op = static_cast<TBInputOp *>(operators[i]);
-        aso::kernel::DTensor dtensor = input_op->dtensor;
+        mirage::kernel::DTensor dtensor = input_op->dtensor;
         int3 input_map = input_op->input_map;
         int forloop_dim = input_op->forloop_dim;
         if (fingerprint) {
@@ -89,7 +91,7 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
               input_op->dtensor.data_ptr;
         }
         // Serialize parameters for input loader
-        aso::threadblock::STensor stensor = operators[i]->output_tensors[0];
+        mirage::threadblock::STensor stensor = operators[i]->output_tensors[0];
         // Assert that stensor and dtensor have the same num of dims
         int num_dims = stensor.num_dims;
         assert(num_dims == dtensor.num_dims);
@@ -99,8 +101,8 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
         stensor_matrix_shape = {stensor.dim[num_dims - 2],
                                 stensor.dim[num_dims - 1]};
         int input_smem_offset = stensor.smem_offset;
-        aso::layout::DmemLayout dtensor_layout = dtensor.layout;
-        aso::layout::SmemLayout stensor_layout = stensor.layout;
+        mirage::layout::DmemLayout dtensor_layout = dtensor.layout;
+        mirage::layout::SmemLayout stensor_layout = stensor.layout;
         int3 input_matrix_row_offset_block_stride = {
             (input_map.x == num_dims - 2 ? stensor.dim[num_dims - 2] : 0) *
                 (forloop_dim == num_dims - 2 ? this->forloop_range : 1),
@@ -162,7 +164,7 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
                 stensor.dim[forloop_dim] * strides[forloop_dim];
           }
         } // if (num_dims > 2)
-        aso::threadblock::serialize_input_loader_parameters(
+        mirage::threadblock::serialize_input_loader_parameters(
             params.parameters,
             params.num_parameters,
             input_matrix_row_offset_block_stride,
@@ -178,9 +180,9 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
             input_smem_offset);
         break;
       }
-      case aso::type::TB_OUTPUT_OP: {
+      case mirage::type::TB_OUTPUT_OP: {
         TBOutputOp *output_op = static_cast<TBOutputOp *>(operators[i]);
-        aso::kernel::DTensor dtensor = output_op->dtensor;
+        mirage::kernel::DTensor dtensor = output_op->dtensor;
         int3 output_map = output_op->output_map;
         if (fingerprint) {
           params.dmem_output_ptrs[params.num_dmem_outputs++] =
@@ -192,9 +194,9 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
         // Serialize parameters for input loader
         assert(operators[i]->input_tensors.size() == 1);
         assert(operators[i]->output_tensors.size() == 1);
-        aso::threadblock::STensor input_stensor =
+        mirage::threadblock::STensor input_stensor =
             operators[i]->input_tensors[0];
-        aso::threadblock::STensor accum_stensor =
+        mirage::threadblock::STensor accum_stensor =
             operators[i]->output_tensors[0];
         // Assert that stensor and dtensor have the same num of dims
         int num_dims = input_stensor.num_dims;
@@ -207,8 +209,8 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
                                 input_stensor.dim[num_dims - 1]};
         int input_smem_offset = input_stensor.smem_offset;
         int accum_smem_offset = accum_stensor.smem_offset;
-        aso::layout::DmemLayout dtensor_layout = dtensor.layout;
-        aso::layout::SmemLayout stensor_layout = input_stensor.layout;
+        mirage::layout::DmemLayout dtensor_layout = dtensor.layout;
+        mirage::layout::SmemLayout stensor_layout = input_stensor.layout;
         int3 output_matrix_row_offset_block_stride = {
             output_map.x == num_dims - 2 ? input_stensor.dim[num_dims - 2] : 0,
             output_map.y == num_dims - 2 ? input_stensor.dim[num_dims - 2] : 0,
@@ -235,7 +237,7 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
             global_offset_block_stride.z = strides[output_map.z];
           }
         }
-        aso::threadblock::serialize_output_saver_parameters(
+        mirage::threadblock::serialize_output_saver_parameters(
             params.parameters,
             params.num_parameters,
             output_matrix_row_offset_block_stride,
@@ -249,12 +251,12 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
             accum_smem_offset);
         break;
       }
-      case aso::type::TB_MATMUL_OP: {
+      case mirage::type::TB_MATMUL_OP: {
         assert(operators[i]->input_tensors.size() == 2);
         assert(operators[i]->output_tensors.size() == 1);
-        aso::threadblock::STensor A = operators[i]->input_tensors[0];
-        aso::threadblock::STensor B = operators[i]->input_tensors[1];
-        aso::threadblock::STensor C = operators[i]->output_tensors[0];
+        mirage::threadblock::STensor A = operators[i]->input_tensors[0];
+        mirage::threadblock::STensor B = operators[i]->input_tensors[1];
+        mirage::threadblock::STensor C = operators[i]->output_tensors[0];
         int num_dims = A.num_dims;
         assert(B.num_dims == num_dims);
         assert(C.num_dims == num_dims);
@@ -270,7 +272,7 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
         assert(B.dim[num_dims - 2] == k);
         assert(C.dim[num_dims - 2] == m);
         assert(C.dim[num_dims - 1] == n);
-        aso::threadblock::serialize_matmul_op_parameters(params.parameters,
+        mirage::threadblock::serialize_matmul_op_parameters(params.parameters,
                                                          params.num_parameters,
                                                          m,
                                                          n,
@@ -280,27 +282,27 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
                                                          C.smem_offset);
         break;
       }
-      case aso::type::TB_EXP_OP: {
+      case mirage::type::TB_EXP_OP: {
         assert(operators[i]->input_tensors.size() == 1);
         assert(operators[i]->output_tensors.size() == 1);
-        aso::threadblock::STensor input = operators[i]->input_tensors[0];
-        aso::threadblock::STensor output = operators[i]->output_tensors[0];
+        mirage::threadblock::STensor input = operators[i]->input_tensors[0];
+        mirage::threadblock::STensor output = operators[i]->output_tensors[0];
         // assert inplace
         assert(input.smem_offset == output.smem_offset);
         assert(input.num_elements() == output.num_elements());
-        aso::threadblock::serialize_elementunary_op_parameters(
+        mirage::threadblock::serialize_elementunary_op_parameters(
             params.parameters,
             params.num_parameters,
             input.smem_offset,
             (int)input.num_elements());
         break;
       }
-      case aso::type::TB_DIV_OP: {
+      case mirage::type::TB_DIV_OP: {
         assert(operators[i]->input_tensors.size() == 2);
         assert(operators[i]->output_tensors.size() == 1);
-        aso::threadblock::STensor input1 = operators[i]->input_tensors[0];
-        aso::threadblock::STensor input2 = operators[i]->input_tensors[1];
-        aso::threadblock::STensor output = operators[i]->output_tensors[0];
+        mirage::threadblock::STensor input1 = operators[i]->input_tensors[0];
+        mirage::threadblock::STensor input2 = operators[i]->input_tensors[1];
+        mirage::threadblock::STensor output = operators[i]->output_tensors[0];
         int3 input1_shape = {1, 1, 1}, input2_shape = {1, 1, 1};
         // assert that only the last three dimensions can be larger than 1
         // since we only serialize these
@@ -322,7 +324,7 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
             input2.num_dims > 1 ? input2.dim[input2.num_dims - 2] : 1;
         input2_shape.x =
             input2.num_dims > 2 ? input2.dim[input2.num_dims - 3] : 1;
-        aso::threadblock::serialize_elementbinary_op_parameters(
+        mirage::threadblock::serialize_elementbinary_op_parameters(
             params.parameters,
             params.num_parameters,
             input1_shape,
@@ -332,24 +334,24 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
             output.smem_offset);
         break;
       }
-      case aso::type::TB_REDUCTION_0_OP:
-      case aso::type::TB_REDUCTION_1_OP:
-      case aso::type::TB_REDUCTION_2_OP:
-      case aso::type::TB_REDUCTION_0_TO_DIMX_OP:
-      case aso::type::TB_REDUCTION_1_TO_DIMX_OP:
-      case aso::type::TB_REDUCTION_2_TO_DIMX_OP: {
+      case mirage::type::TB_REDUCTION_0_OP:
+      case mirage::type::TB_REDUCTION_1_OP:
+      case mirage::type::TB_REDUCTION_2_OP:
+      case mirage::type::TB_REDUCTION_0_TO_DIMX_OP:
+      case mirage::type::TB_REDUCTION_1_TO_DIMX_OP:
+      case mirage::type::TB_REDUCTION_2_TO_DIMX_OP: {
         assert(operators[i]->input_tensors.size() == 1);
         assert(operators[i]->output_tensors.size() == 1);
-        aso::threadblock::STensor input = operators[i]->input_tensors[0];
-        aso::threadblock::STensor output = operators[i]->output_tensors[0];
-        aso::type::TBOperatorType type = operators[i]->op_type;
+        mirage::threadblock::STensor input = operators[i]->input_tensors[0];
+        mirage::threadblock::STensor output = operators[i]->output_tensors[0];
+        mirage::type::TBOperatorType type = operators[i]->op_type;
         int reduction_dim = -1;
-        if (type >= aso::type::TB_REDUCTION_0_TO_DIMX_OP &&
-            type <= aso::type::TB_REDUCTION_2_TO_DIMX_OP) {
-          reduction_dim = type - aso::type::TB_REDUCTION_0_TO_DIMX_OP;
-        } else if (type >= aso::type::TB_REDUCTION_0_OP &&
-                   type <= aso::type::TB_REDUCTION_2_OP) {
-          reduction_dim = type - aso::type::TB_REDUCTION_0_OP;
+        if (type >= mirage::type::TB_REDUCTION_0_TO_DIMX_OP &&
+            type <= mirage::type::TB_REDUCTION_2_TO_DIMX_OP) {
+          reduction_dim = type - mirage::type::TB_REDUCTION_0_TO_DIMX_OP;
+        } else if (type >= mirage::type::TB_REDUCTION_0_OP &&
+                   type <= mirage::type::TB_REDUCTION_2_OP) {
+          reduction_dim = type - mirage::type::TB_REDUCTION_0_OP;
         } else {
           assert(false);
         }
@@ -366,7 +368,7 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
         for (int i = reduction_dim; i < output.num_dims; i++) {
           inner_range *= output.dim[i];
         }
-        aso::threadblock::serialize_reduction_op_parameters(
+        mirage::threadblock::serialize_reduction_op_parameters(
             params.parameters,
             params.num_parameters,
             (int)output.num_elements(),
@@ -376,15 +378,15 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
             output.smem_offset);
         break;
       }
-      case aso::type::TB_CONCAT_0_OP:
-      case aso::type::TB_CONCAT_1_OP:
-      case aso::type::TB_CONCAT_2_OP: {
+      case mirage::type::TB_CONCAT_0_OP:
+      case mirage::type::TB_CONCAT_1_OP:
+      case mirage::type::TB_CONCAT_2_OP: {
         assert(operators[i]->input_tensors.size() == 2);
         assert(operators[i]->output_tensors.size() == 1);
-        aso::threadblock::STensor A = operators[i]->input_tensors[0];
-        aso::threadblock::STensor B = operators[i]->input_tensors[1];
-        aso::threadblock::STensor output = operators[i]->output_tensors[0];
-        int concat_dim = operators[i]->op_type - aso::type::TB_CONCAT_0_OP;
+        mirage::threadblock::STensor A = operators[i]->input_tensors[0];
+        mirage::threadblock::STensor B = operators[i]->input_tensors[1];
+        mirage::threadblock::STensor output = operators[i]->output_tensors[0];
+        int concat_dim = operators[i]->op_type - mirage::type::TB_CONCAT_0_OP;
         assert(A.num_dims == B.num_dims);
         assert(A.num_dims == output.num_dims);
         int inner_size = 1;
@@ -398,7 +400,7 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
           if (i > concat_dim)
             inner_size = inner_size * output.dim[i];
         }
-        aso::threadblock::serialize_concat_op_parameters(
+        mirage::threadblock::serialize_concat_op_parameters(
             params.parameters,
             params.num_parameters,
             (int)output.num_elements(),
@@ -418,12 +420,12 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) {
   // Our serializer assumes that input loaders are the first operators
   // and that output savers are the last operators
   for (int i = 0; i < params.num_dmem_inputs; i++) {
-    assert(params.operator_types[i] == aso::type::TB_INPUT_OP);
+    assert(params.operator_types[i] == mirage::type::TB_INPUT_OP);
   }
   for (int i = params.num_operators - params.num_dmem_outputs;
        i < params.num_operators;
        i++) {
-    assert(params.operator_types[i] == aso::type::TB_OUTPUT_OP);
+    assert(params.operator_types[i] == mirage::type::TB_OUTPUT_OP);
   }
   return params;
 }
@@ -452,7 +454,7 @@ KernelParams Graph::get_kernel_params() {
           operators[i]->output_tensors[j];
       assert(params.num_smem_outputs <= KernelParams::MAX_TOTAL_SMEM_OUTPUTS);
     }
-    if (operators[i]->op_type == aso::type::TB_INPUT_OP) {
+    if (operators[i]->op_type == mirage::type::TB_INPUT_OP) {
       TBInputOp *input_op = static_cast<TBInputOp *>(operators[i]);
       params.input_map[params.num_dmem_inputs] = input_op->input_map;
       params.forloop_dim[params.num_dmem_inputs] = input_op->forloop_dim;
@@ -460,7 +462,7 @@ KernelParams Graph::get_kernel_params() {
       // printf("sizeof(dtensor) = %zu\n", sizeof(input_op->dtensor));
       assert(params.num_dmem_inputs <= KernelParams::MAX_NUM_DMEM_INPUTS);
     }
-    if (operators[i]->op_type == aso::type::TB_OUTPUT_OP) {
+    if (operators[i]->op_type == mirage::type::TB_OUTPUT_OP) {
       TBOutputOp *output_op = static_cast<TBOutputOp *>(operators[i]);
       params.output_map = output_op->output_map;
       params.dmem_outputs[params.num_dmem_outputs++] = output_op->dtensor;
@@ -484,4 +486,4 @@ Graph::operator json() const {
 }
 
 } // namespace threadblock
-} // namespace aso
+} // namespace mirage

@@ -13,21 +13,21 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/customized.h"
-#include "aso/kernel/device_memory_manager.h"
-#include "aso/kernel/graph.h"
-#include "aso/threadblock/graph.h"
-#include "aso/threadblock/operator.h"
-#include "aso/threadblock/reduction.h"
-#include "aso/threadblock/smem_tensor.h"
-#include "aso/utils/hash_utils.h"
+#include "mirage/kernel/customized.h"
+#include "mirage/kernel/device_memory_manager.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/threadblock/graph.h"
+#include "mirage/threadblock/operator.h"
+#include "mirage/threadblock/reduction.h"
+#include "mirage/threadblock/smem_tensor.h"
+#include "mirage/utils/hash_utils.h"
 #include <cassert>
 
-namespace aso {
+namespace mirage {
 namespace kernel {
 
-using aso::threadblock::ExecutionPlan;
-using aso::threadblock::STensor;
+using mirage::threadblock::ExecutionPlan;
+using mirage::threadblock::STensor;
 
 std::vector<DTensor> Graph::customized(std::vector<DTensor> const &inputs,
                                        ExecutionPlan const &plan) {
@@ -64,7 +64,7 @@ KNOperator *Graph::create_customized_op(std::vector<DTensor> const &inputs,
 
 KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
                                ExecutionPlan const &_plan)
-    : KNOperator(aso::type::KN_CUSTOMIZED_OP, _inputs), plan(_plan),
+    : KNOperator(mirage::type::KN_CUSTOMIZED_OP, _inputs), plan(_plan),
       bgraph(_plan.grid_dim, _plan.block_dim, _plan.forloop_range, _plan.reduction_dimx) {
   assert(_inputs.size() == plan.input_map.size());
   assert(plan.forloop_dim.size() == plan.input_map.size());
@@ -91,42 +91,42 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
           bgraph.operators[idx.first]->output_tensors[idx.second]);
     }
     switch (op.first) {
-      case aso::type::TB_MATMUL_OP: {
+      case mirage::type::TB_MATMUL_OP: {
         assert(my_inputs.size() == 2);
         bgraph.matmul(my_inputs[0], my_inputs[1]);
         break;
       }
-      case aso::type::TB_EXP_OP: {
+      case mirage::type::TB_EXP_OP: {
         assert(my_inputs.size() == 1);
         bgraph.exp(my_inputs[0]);
         break;
       }
-      case aso::type::TB_DIV_OP: {
+      case mirage::type::TB_DIV_OP: {
         assert(my_inputs.size() == 2);
         bgraph.div(my_inputs[0], my_inputs[1]);
         break;
       }
-      case aso::type::TB_REDUCTION_0_OP:
-      case aso::type::TB_REDUCTION_1_OP:
-      case aso::type::TB_REDUCTION_2_OP: {
+      case mirage::type::TB_REDUCTION_0_OP:
+      case mirage::type::TB_REDUCTION_1_OP:
+      case mirage::type::TB_REDUCTION_2_OP: {
         assert(my_inputs.size() == 1);
-        int reduce_dim = op.first - aso::type::TB_REDUCTION_0_OP;
+        int reduce_dim = op.first - mirage::type::TB_REDUCTION_0_OP;
         bgraph.reduction(my_inputs[0], reduce_dim);
         break;
       }
-      case aso::type::TB_REDUCTION_0_TO_DIMX_OP:
-      case aso::type::TB_REDUCTION_1_TO_DIMX_OP:
-      case aso::type::TB_REDUCTION_2_TO_DIMX_OP: {
+      case mirage::type::TB_REDUCTION_0_TO_DIMX_OP:
+      case mirage::type::TB_REDUCTION_1_TO_DIMX_OP:
+      case mirage::type::TB_REDUCTION_2_TO_DIMX_OP: {
         assert(my_inputs.size() == 1);
-        int reduce_dim = op.first - aso::type::TB_REDUCTION_0_TO_DIMX_OP;
+        int reduce_dim = op.first - mirage::type::TB_REDUCTION_0_TO_DIMX_OP;
         bgraph.reduction_to_dimx(my_inputs[0], reduce_dim);
         break;
       }
-      case aso::type::TB_CONCAT_0_OP:
-      case aso::type::TB_CONCAT_1_OP:
-      case aso::type::TB_CONCAT_2_OP: {
+      case mirage::type::TB_CONCAT_0_OP:
+      case mirage::type::TB_CONCAT_1_OP:
+      case mirage::type::TB_CONCAT_2_OP: {
         assert(my_inputs.size() == 2);
-        int concat_dim = op.first - aso::type::TB_CONCAT_0_OP;
+        int concat_dim = op.first - mirage::type::TB_CONCAT_0_OP;
         bgraph.concat(my_inputs[0], my_inputs[1], concat_dim);
         break;
       }
@@ -141,15 +141,15 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
   // any other operators
   size_t num_operators = bgraph.operators.size();
   for (size_t op1_idx = 0; op1_idx < num_operators; op1_idx++) {
-    aso::threadblock::TBOperator const *op = bgraph.operators[op1_idx];
-    if (op->op_type == aso::type::TB_INPUT_OP) {
+    mirage::threadblock::TBOperator const *op = bgraph.operators[op1_idx];
+    if (op->op_type == mirage::type::TB_INPUT_OP) {
       // Skip input loader
       continue;
     }
     for (size_t i = 0; i < op->output_tensors.size(); i++) {
       bool found = false;
       for (size_t op2_idx = op1_idx + 1; op2_idx < num_operators; op2_idx++) {
-        aso::threadblock::TBOperator const *op2 = bgraph.operators[op2_idx];
+        mirage::threadblock::TBOperator const *op2 = bgraph.operators[op2_idx];
         for (size_t j = 0; j < op2->input_tensors.size(); j++) {
           if (op2->input_tensors[j] == op->output_tensors[i]) {
             found = true;
@@ -168,9 +168,9 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         dmm->allocate(dtensor);
         // Update dtensor saved by the output operator
         {
-          assert(bgraph.operators.back()->op_type == aso::type::TB_OUTPUT_OP);
-          aso::threadblock::TBOutputOp *output =
-              static_cast<aso::threadblock::TBOutputOp *>(
+          assert(bgraph.operators.back()->op_type == mirage::type::TB_OUTPUT_OP);
+          mirage::threadblock::TBOutputOp *output =
+              static_cast<mirage::threadblock::TBOutputOp *>(
                   bgraph.operators.back());
           output->dtensor = dtensor;
         }
@@ -181,8 +181,8 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
 }
 
 KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
-                               aso::threadblock::Graph const &_graph)
-    : KNOperator(aso::type::KN_CUSTOMIZED_OP, _inputs),
+                               mirage::threadblock::Graph const &_graph)
+    : KNOperator(mirage::type::KN_CUSTOMIZED_OP, _inputs),
       bgraph(_graph.grid_dim, _graph.block_dim, _graph.forloop_range, _graph.reduction_dimx) {
   plan.grid_dim = _graph.grid_dim;
   plan.block_dim = _graph.block_dim;
@@ -203,15 +203,15 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
       my_inputs.push_back(bgraph.operators[op_idx]->output_tensors[ts_idx]);
       indices.push_back({op_idx, ts_idx});
     }
-    if (op->op_type != aso::type::TB_INPUT_OP &&
-        op->op_type != aso::type::TB_OUTPUT_OP) {
+    if (op->op_type != mirage::type::TB_INPUT_OP &&
+        op->op_type != mirage::type::TB_OUTPUT_OP) {
       plan.ops.push_back({op->op_type, indices});
     }
     switch (op->op_type) {
-      case aso::type::TB_INPUT_OP: {
+      case mirage::type::TB_INPUT_OP: {
         assert(my_inputs.size() == 0);
-        aso::threadblock::TBInputOp *input_op =
-            static_cast<aso::threadblock::TBInputOp *>(op);
+        mirage::threadblock::TBInputOp *input_op =
+            static_cast<mirage::threadblock::TBInputOp *>(op);
         bgraph.new_input(input_op->dtensor,
                          input_op->input_map,
                          input_op->forloop_dim,
@@ -221,10 +221,10 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         plan.input_smem_layouts.push_back(input_op->output_tensors[0].layout);
         break;
       }
-      case aso::type::TB_OUTPUT_OP: {
+      case mirage::type::TB_OUTPUT_OP: {
         assert(my_inputs.size() == 1);
-        aso::threadblock::TBOutputOp *output_op =
-            static_cast<aso::threadblock::TBOutputOp *>(op);
+        mirage::threadblock::TBOutputOp *output_op =
+            static_cast<mirage::threadblock::TBOutputOp *>(op);
         DTensor dtensor =
             bgraph.new_output(my_inputs[0], output_op->output_map);
         dtensor.owner_op = this;
@@ -234,9 +234,9 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         dmm->allocate(dtensor);
         // Update dtensor saved by the output operator
         {
-          assert(bgraph.operators.back()->op_type == aso::type::TB_OUTPUT_OP);
-          aso::threadblock::TBOutputOp *output =
-              static_cast<aso::threadblock::TBOutputOp *>(
+          assert(bgraph.operators.back()->op_type == mirage::type::TB_OUTPUT_OP);
+          mirage::threadblock::TBOutputOp *output =
+              static_cast<mirage::threadblock::TBOutputOp *>(
                   bgraph.operators.back());
           output->dtensor = dtensor;
         }
@@ -244,34 +244,34 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         plan.output_map = output_op->output_map;
         break;
       }
-      case aso::type::TB_MATMUL_OP: {
+      case mirage::type::TB_MATMUL_OP: {
         assert(my_inputs.size() == 2);
         bgraph.matmul(my_inputs[0], my_inputs[1]);
         break;
       }
-      case aso::type::TB_EXP_OP: {
+      case mirage::type::TB_EXP_OP: {
         assert(my_inputs.size() == 1);
         bgraph.exp(my_inputs[0]);
         break;
       }
-      case aso::type::TB_DIV_OP: {
+      case mirage::type::TB_DIV_OP: {
         assert(my_inputs.size() == 2);
         bgraph.div(my_inputs[0], my_inputs[1]);
         break;
       }
-      case aso::type::TB_REDUCTION_0_OP:
-      case aso::type::TB_REDUCTION_1_OP:
-      case aso::type::TB_REDUCTION_2_OP: {
+      case mirage::type::TB_REDUCTION_0_OP:
+      case mirage::type::TB_REDUCTION_1_OP:
+      case mirage::type::TB_REDUCTION_2_OP: {
         assert(my_inputs.size() == 1);
-        int reduce_dim = op->op_type - aso::type::TB_REDUCTION_0_OP;
+        int reduce_dim = op->op_type - mirage::type::TB_REDUCTION_0_OP;
         bgraph.reduction(my_inputs[0], reduce_dim);
         break;
       }
-      case aso::type::TB_REDUCTION_0_TO_DIMX_OP:
-      case aso::type::TB_REDUCTION_1_TO_DIMX_OP:
-      case aso::type::TB_REDUCTION_2_TO_DIMX_OP: {
+      case mirage::type::TB_REDUCTION_0_TO_DIMX_OP:
+      case mirage::type::TB_REDUCTION_1_TO_DIMX_OP:
+      case mirage::type::TB_REDUCTION_2_TO_DIMX_OP: {
         assert(my_inputs.size() == 1);
-        int reduce_dim = op->op_type - aso::type::TB_REDUCTION_0_TO_DIMX_OP;
+        int reduce_dim = op->op_type - mirage::type::TB_REDUCTION_0_TO_DIMX_OP;
         bgraph.reduction_to_dimx(my_inputs[0], reduce_dim);
         break;
       }
@@ -302,4 +302,4 @@ KNCustomizedOp::operator json() const {
 }
 
 } // namespace kernel
-} // namespace aso
+} // namespace mirage

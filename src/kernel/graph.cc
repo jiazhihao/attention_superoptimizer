@@ -13,12 +13,12 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/graph.h"
-#include "aso/utils/hash_utils.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/utils/hash_utils.h"
 
 #include <iostream>
 
-namespace aso {
+namespace mirage {
 namespace kernel {
 
 Graph::Graph() {}
@@ -133,4 +133,4 @@ void from_json(json const &j, Graph &g) {
 }
 
 } // namespace kernel
-} // namespace aso
+} // namespace mirage

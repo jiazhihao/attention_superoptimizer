@@ -13,13 +13,13 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/device_memory_manager.h"
-#include "aso/utils/cuda_helper.h"
+#include "mirage/kernel/device_memory_manager.h"
+#include "mirage/utils/cuda_helper.h"
 
-namespace aso {
+namespace mirage {
 namespace kernel {
 
-using namespace aso::type;
+using namespace mirage::type;
 
 DeviceMemoryManager *DeviceMemoryManager::singleton = nullptr;
 
@@ -112,7 +112,7 @@ bool DeviceMemoryManager::allocate(DTensor &tensor, bool allocate_fingerprint) {
     size_t tensor_size = tensor.fingerprint_size();
     tensor_size = (tensor_size + 15) / 16 * 16;
     offset += tensor_size;
-    tensor.fp_ptr = (aso::type::FPType *)ret_ptr;
+    tensor.fp_ptr = (mirage::type::FPType *)ret_ptr;
     allocated_tensors.push_back(std::make_pair(ret_ptr, tensor_size));
   }
   // Assert that we haven't used more than what we pre-allocated
@@ -145,4 +145,4 @@ DeviceMemoryManager *DeviceMemoryManager::get_instance() {
 }
 
 } // namespace kernel
-} // namespace aso
+} // namespace mirage

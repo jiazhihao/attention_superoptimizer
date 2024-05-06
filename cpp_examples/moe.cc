@@ -1,8 +1,16 @@
+<<<<<<< HEAD
 #include "aso/kernel/graph.h"
 #include "aso/search/search.h"
 #include "aso/threadblock/graph.h"
 
 using namespace aso;
+=======
+#include "mirage/kernel/graph.h"
+#include "mirage/search/search.h"
+#include "mirage/threadblock/graph.h"
+
+using namespace mirage;
+>>>>>>> 996671b011f7150286ceaae9d2a1b26e00840a16
 
 int main(int argc, char **argv) {
   kernel::Graph ref_graph;
@@ -39,8 +47,13 @@ int main(int argc, char **argv) {
   kernel::DTensor output = graph.matmul(X, A);
   {
     threadblock::ExecutionPlan plan;
+<<<<<<< HEAD
     plan.ops.push_back({aso::type::TB_EXP_OP, {{0, 0}}});
     plan.ops.push_back({aso::type::TB_MATMUL_OP, {{2, 0}, {1, 0}}});
+=======
+    plan.ops.push_back({mirage::type::TB_EXP_OP, {{0, 0}}});
+    plan.ops.push_back({mirage::type::TB_MATMUL_OP, {{2, 0}, {1, 0}}});
+>>>>>>> 996671b011f7150286ceaae9d2a1b26e00840a16
     plan.input_map.push_back({0, -1, -1});
     plan.input_map.push_back({0, 2, -1});
     plan.input_smem_layouts = {

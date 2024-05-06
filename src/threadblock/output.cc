@@ -13,13 +13,13 @@
  * limitations under the License.
  */
 
-#include "aso/threadblock/graph.h"
-#include "aso/threadblock/operator.h"
+#include "mirage/threadblock/graph.h"
+#include "mirage/threadblock/operator.h"
 
-namespace aso {
+namespace mirage {
 namespace threadblock {
 
-aso::kernel::DTensor Graph::new_output(STensor const &stensor,
+mirage::kernel::DTensor Graph::new_output(STensor const &stensor,
                                        int3 output_map) {
   TBOperator *op = create_output_op(stensor, output_map);
   assert(op != nullptr);
@@ -28,8 +28,8 @@ aso::kernel::DTensor Graph::new_output(STensor const &stensor,
 }
 
 TBOperator *Graph::create_output_op(STensor const &stensor, int3 output_map) {
-  if (smem_offset + stensor.size() >= aso::type::MAX_SMEM_SIZE) {
-    printf("smem_offset(%ld) stensorsize(%d)\n", smem_offset, (int)stensor.size());
+  if (smem_offset + stensor.size() >= mirage::type::MAX_SMEM_SIZE) {
+    //printf("smem_offset(%ld) stensorsize(%d)\n", smem_offset, (int)stensor.size());
     return nullptr;
   }
   TBOutputOp *op = new TBOutputOp(this, stensor, output_map);
@@ -37,7 +37,7 @@ TBOperator *Graph::create_output_op(STensor const &stensor, int3 output_map) {
 }
 
 TBOutputOp::TBOutputOp(Graph *_graph, STensor const &input, int3 _output_map)
-    : TBOperator(_graph, aso::type::TB_OUTPUT_OP, input),
+    : TBOperator(_graph, mirage::type::TB_OUTPUT_OP, input),
       output_map(_output_map) {
   // Create a stensor for accumulating results
   STensor accum = input;
@@ -51,7 +51,7 @@ TBOutputOp::TBOutputOp(Graph *_graph, STensor const &input, int3 _output_map)
   dtensor.num_dims = accum.num_dims;
   dtensor.data_type = accum.data_type;
   // Currently assume that the output layouts are row-major
-  dtensor.layout = aso::layout::DmemRowMajor;
+  dtensor.layout = mirage::layout::DmemRowMajor;
   for (int i = 0; i < dtensor.num_dims; i++) {
     dtensor.dim[i] = accum.dim[i];
   }
@@ -90,4 +90,4 @@ TBOutputOp::operator json() const {
               {"output_map", output_map}};
 }
 } // namespace threadblock
-} // namespace aso
+} // namespace mirage
