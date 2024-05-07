@@ -1,17 +1,18 @@
-#include "aso/kernel/graph.h"
-#include "aso/threadblock/graph.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/search/search.h"
+#include "mirage/threadblock/graph.h"
 #include "common.h"
 
-using namespace aso;
+using namespace mirage;
 
 int main(int argc, char **argv) {
   // Currently only optimize for these two batch sizes
-  int batch_size = asotest::BATCH_SIZE;
+  int batch_size = miragetest::BATCH_SIZE;
   assert(batch_size == 1 || batch_size == 8);
   kernel::Graph ref_graph;
   {
     kernel::DTensor Q = ref_graph.new_input(
-        {2 * batch_size, 128, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
+        {2 * batch_size, 256, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
     kernel::DTensor K = ref_graph.new_input(
         {2 * batch_size, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
     kernel::DTensor V = ref_graph.new_input(
@@ -34,7 +35,7 @@ int main(int argc, char **argv) {
   }
   kernel::Graph graph;
   kernel::DTensor Q =
-      graph.new_input({2 * batch_size, 128, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
+      graph.new_input({2 * batch_size, 256, 64}, type::DT_FLOAT16, layout::DmemRowMajor);
   kernel::DTensor K =
       graph.new_input({2 * batch_size, 64, 4096}, type::DT_FLOAT16, layout::DmemColumnMajor);
   kernel::DTensor V =
@@ -42,11 +43,11 @@ int main(int argc, char **argv) {
   std::vector<kernel::DTensor> outputs;
   {
     threadblock::ExecutionPlan plan;
-    plan.ops.push_back({aso::type::TB_MATMUL_OP, {{0, 0}, {1, 0}}});
-    // plan.ops.push_back({aso::type::TB_MATMUL_OP, {{3, 0}, {2, 0}}});
-    plan.ops.push_back({aso::type::TB_EXP_OP, {{3, 0}}});
-    plan.ops.push_back({aso::type::TB_MATMUL_OP, {{4, 0}, {2, 0}}});
-    plan.ops.push_back({aso::type::TB_REDUCTION_2_OP, {{4, 0}}});
+    plan.ops.push_back({mirage::type::TB_MATMUL_OP, {{0, 0}, {1, 0}}});
+    // plan.ops.push_back({mirage::type::TB_MATMUL_OP, {{3, 0}, {2, 0}}});
+    plan.ops.push_back({mirage::type::TB_EXP_OP, {{3, 0}}});
+    plan.ops.push_back({mirage::type::TB_MATMUL_OP, {{4, 0}, {2, 0}}});
+    plan.ops.push_back({mirage::type::TB_REDUCTION_2_OP, {{4, 0}}});
     plan.input_map.push_back({0, -1, 1});
     plan.input_map.push_back({0, 2, -1});
     plan.input_map.push_back({0, 1, -1});
@@ -76,9 +77,9 @@ int main(int argc, char **argv) {
   }
   {
     threadblock::ExecutionPlan plan;
-    plan.ops.push_back({aso::type::TB_REDUCTION_2_TO_DIMX_OP, {{0, 0}}});
-    plan.ops.push_back({aso::type::TB_REDUCTION_2_OP, {{1, 0}}});
-    plan.ops.push_back({aso::type::TB_DIV_OP, {{2, 0}, {3, 0}}});
+    plan.ops.push_back({mirage::type::TB_REDUCTION_2_TO_DIMX_OP, {{0, 0}}});
+    plan.ops.push_back({mirage::type::TB_REDUCTION_2_OP, {{1, 0}}});
+    plan.ops.push_back({mirage::type::TB_DIV_OP, {{2, 0}, {3, 0}}});
     plan.input_map.push_back({0, 1, -1});
     plan.input_map.push_back({0, 1, -1});
     plan.input_smem_layouts = {
@@ -109,5 +110,20 @@ int main(int argc, char **argv) {
     total_ms = total_ms + result.run_time;
   }
   printf("[2 Block Graphs] Total runtime = %.4lfms\n", total_ms);
+  graph.generate_triton_program("test.py");
+
+  clock_t st = clock();
+  search::GeneratorConfig config = search::GeneratorConfig::get_default_config();
+  config.grid_dim_to_explore = {{2, 16, 1}, {2, 16, 4}};
+  search::KernelGraphGenerator gen(
+      ref_graph,
+      config,
+      "checkpoint_group_query_attn_spec_decode.json");
+  gen.generate_kernel_graphs();
+
+  clock_t et = clock();
+
+  printf("Search time = %.4lfsec\n", (float)(et - st) / CLOCKS_PER_SEC);
+
   return 0;
 }

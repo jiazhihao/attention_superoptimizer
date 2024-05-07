@@ -13,11 +13,11 @@
  * limitations under the License.
  */
 
-#include "aso/threadblock/matmul.h"
-#include "aso/threadblock/graph.h"
-#include "aso/threadblock/operator.h"
+#include "mirage/threadblock/matmul.h"
+#include "mirage/threadblock/graph.h"
+#include "mirage/threadblock/operator.h"
 
-namespace aso {
+namespace mirage {
 namespace threadblock {
 
 STensor Graph::matmul(STensor const &A, STensor const &B) {
@@ -47,7 +47,7 @@ TBOperator *Graph::create_matmul_op(STensor const &A, STensor const &B) {
   }
   C.dim[C.num_dims - 1] = B.dim[C.num_dims - 1];
   C.data_type = A.data_type;
-  if (smem_offset + (off_t)C.size() > (off_t)aso::type::MAX_SMEM_SIZE) {
+  if (smem_offset + (off_t)C.size() > (off_t)mirage::type::MAX_SMEM_SIZE) {
     return nullptr;
   }
 
@@ -56,7 +56,7 @@ TBOperator *Graph::create_matmul_op(STensor const &A, STensor const &B) {
 }
 
 TBMatmulOp::TBMatmulOp(Graph *_graph, STensor const &A, STensor const &B)
-    : TBOperator(_graph, aso::type::TB_MATMUL_OP, A, B) {
+    : TBOperator(_graph, mirage::type::TB_MATMUL_OP, A, B) {
   STensor C;
   assert(A.num_dims == B.num_dims);
   // Check that this is not a TB-level batch matmul
@@ -66,7 +66,7 @@ TBMatmulOp::TBMatmulOp(Graph *_graph, STensor const &A, STensor const &B)
   }
   // Currently only support row-major output
   // to be consistent with cutlass
-  C.layout = aso::layout::SmemRowMajor;
+  C.layout = mirage::layout::SmemRowMajor;
   C.num_dims = A.num_dims;
   for (int i = 0; i < C.num_dims; i++) {
     C.dim[i] = A.dim[i];
@@ -92,4 +92,4 @@ TBMatmulOp::operator json() const {
 }
 
 } // namespace threadblock
-} // namespace aso
+} // namespace mirage

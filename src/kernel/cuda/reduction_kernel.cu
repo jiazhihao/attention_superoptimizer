@@ -13,18 +13,18 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/device_memory_manager.h"
-#include "aso/kernel/graph.h"
-#include "aso/kernel/reduction.h"
-#include "aso/utils/cuda_helper.h"
-#include "aso/utils/hash_utils.h"
+#include "mirage/kernel/device_memory_manager.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/kernel/reduction.h"
+#include "mirage/utils/cuda_helper.h"
+#include "mirage/utils/hash_utils.h"
 #include "cutlass/fast_math.h"
 #include <cassert>
 
-namespace aso {
+namespace mirage {
 namespace kernel {
 
-using namespace aso::type;
+using namespace mirage::type;
 
 template<typename DT>
 __global__ void execute_reduction(DT *input_ptr,
@@ -133,4 +133,4 @@ bool KNReductionOp::fingerprint(void) {
 }
 
 } // namespace kernel
-} // namespace aso
+} // namespace mirage

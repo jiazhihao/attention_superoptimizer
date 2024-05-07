@@ -1,12 +1,12 @@
-#include "aso/kernel/graph.h"
-#include "aso/search/search.h"
-#include "aso/threadblock/graph.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/search/search.h"
+#include "mirage/threadblock/graph.h"
 
 #include <iostream>
 #include <fstream>
 
-using namespace aso;
-using namespace aso::search;
+using namespace mirage;
+using namespace mirage::search;
 
 int main(int argc, char **argv) {  
   if (argc < 2) {

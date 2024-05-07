@@ -13,22 +13,22 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/device_memory_manager.h"
-#include "aso/kernel/graph.h"
-#include "aso/kernel/matmul.h"
-#include "aso/utils/cuda_helper.h"
-#include "aso/utils/hash_utils.h"
+#include "mirage/kernel/device_memory_manager.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/kernel/matmul.h"
+#include "mirage/utils/cuda_helper.h"
+#include "mirage/utils/hash_utils.h"
 #include <cassert>
 
-namespace aso {
+namespace mirage {
 namespace kernel {
 
-using namespace aso::type;
+using namespace mirage::type;
 
 bool KNMatmulOp::profile(ProfileResult &result) {
   float alpha = 1.0f, beta = 0.0f;
-  aso::kernel::DeviceMemoryManager *dmm =
-      aso::kernel::DeviceMemoryManager::get_instance();
+  mirage::kernel::DeviceMemoryManager *dmm =
+      mirage::kernel::DeviceMemoryManager::get_instance();
   void *A = input_tensors[0].data_ptr;
   void *B = input_tensors[1].data_ptr;
   void *C = output_tensors[0].data_ptr;
@@ -51,11 +51,11 @@ bool KNMatmulOp::profile(ProfileResult &result) {
   assert(row_C == row_A);
   assert(column_C == column_B);
   cudaDataType_t type_A =
-      aso::utils::to_cuda_datatype(input_tensors[0].data_type);
+      mirage::utils::to_cuda_datatype(input_tensors[0].data_type);
   cudaDataType_t type_B =
-      aso::utils::to_cuda_datatype(input_tensors[1].data_type);
+      mirage::utils::to_cuda_datatype(input_tensors[1].data_type);
   cudaDataType_t type_C =
-      aso::utils::to_cuda_datatype(output_tensors[0].data_type);
+      mirage::utils::to_cuda_datatype(output_tensors[0].data_type);
   // TODO: currently set the default to CUBLAS_COMPUTE_16F for best performance
   cublasComputeType_t compute_type = CUBLAS_COMPUTE_16F;
   cublasOperation_t trans_A = CUBLAS_OP_N;
@@ -142,9 +142,9 @@ bool KNMatmulOp::profile(ProfileResult &result) {
   return true;
 }
 
-__global__ void compute_matmul_fingerprint(aso::type::FPType *A_ptr,
-                                           aso::type::FPType *B_ptr,
-                                           aso::type::FPType *C_ptr,
+__global__ void compute_matmul_fingerprint(mirage::type::FPType *A_ptr,
+                                           mirage::type::FPType *B_ptr,
+                                           mirage::type::FPType *C_ptr,
                                            int num_batches,
                                            int m,
                                            int n,
@@ -203,4 +203,4 @@ bool KNMatmulOp::fingerprint(void) {
 }
 
 } // namespace kernel
-} // namespace aso
+} // namespace mirage

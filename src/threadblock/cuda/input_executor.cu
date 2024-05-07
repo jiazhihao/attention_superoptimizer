@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#include "aso/threadblock/operator.h"
+#include "mirage/threadblock/operator.h"
 
-namespace aso {
+namespace mirage {
 namespace threadblock {} // namespace threadblock
-} // namespace aso
+} // namespace mirage

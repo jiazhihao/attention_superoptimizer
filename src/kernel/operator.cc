@@ -13,21 +13,21 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/operator.h"
-#include "aso/kernel/device_memory_manager.h"
-#include "aso/kernel/graph.h"
+#include "mirage/kernel/operator.h"
+#include "mirage/kernel/device_memory_manager.h"
+#include "mirage/kernel/graph.h"
 
-namespace aso {
+namespace mirage {
 namespace kernel {
 
-KNOperator::KNOperator(aso::type::KNOperatorType _type) : op_type(_type) {}
+KNOperator::KNOperator(mirage::type::KNOperatorType _type) : op_type(_type) {}
 
-KNOperator::KNOperator(aso::type::KNOperatorType _type, DTensor const &A)
+KNOperator::KNOperator(mirage::type::KNOperatorType _type, DTensor const &A)
     : op_type(_type) {
   input_tensors.push_back(A);
 }
 
-KNOperator::KNOperator(aso::type::KNOperatorType _type,
+KNOperator::KNOperator(mirage::type::KNOperatorType _type,
                        DTensor const &A,
                        DTensor const &B)
     : op_type(_type) {
@@ -35,7 +35,7 @@ KNOperator::KNOperator(aso::type::KNOperatorType _type,
   input_tensors.push_back(B);
 }
 
-KNOperator::KNOperator(aso::type::KNOperatorType _type,
+KNOperator::KNOperator(mirage::type::KNOperatorType _type,
                        std::vector<DTensor> const &inputs)
     : op_type(_type) {
   for (auto const &i : inputs) {
@@ -46,17 +46,26 @@ KNOperator::KNOperator(aso::type::KNOperatorType _type,
 KNOperator::~KNOperator() {}
 
 DTensor Graph::new_input(std::vector<int> const &dims,
-                         aso::type::DataType data_type,
-                         aso::layout::DmemLayout layout) {
+                         mirage::type::DataType data_type,
+                         mirage::layout::DmemLayout layout) {
   KNOperator *op = create_input_op(dims, data_type, layout);
   assert(op != nullptr);
   operators.push_back(op);
   return op->output_tensors[0];
 }
 
+DTensor* Graph::new_input_ptr(std::vector<int> const &dims,
+                              mirage::type::DataType data_type,
+                              mirage::layout::DmemLayout layout) {
+  KNOperator *op = create_input_op(dims, data_type, layout);
+  assert(op != nullptr);
+  operators.push_back(op);
+  return &op->output_tensors[0];
+}
+
 KNOperator *Graph::create_input_op(std::vector<int> const &dims,
-                                   aso::type::DataType data_type,
-                                   aso::layout::DmemLayout layout) {
+                                   mirage::type::DataType data_type,
+                                   mirage::layout::DmemLayout layout) {
   DTensor tensor;
   tensor.layout = layout;
   tensor.num_dims = dims.size();
@@ -77,9 +86,9 @@ KNOperator *Graph::create_input_op(std::vector<int> const &dims,
 }
 
 KNInputOp::KNInputOp(std::vector<int> const &dims,
-                     aso::type::DataType data_type,
-                     aso::layout::DmemLayout layout)
-    : KNOperator(aso::type::KN_INPUT_OP) {
+                     mirage::type::DataType data_type,
+                     mirage::layout::DmemLayout layout)
+    : KNOperator(mirage::type::KN_INPUT_OP) {
   DTensor tensor;
   tensor.num_dims = dims.size();
   for (int i = tensor.num_dims - 1; i >= 0; i--) {
@@ -110,4 +119,4 @@ KNInputOp::operator json() const {
 }
 
 } // namespace kernel
-} // namespace aso
+} // namespace mirage

@@ -13,17 +13,17 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/operator.h"
-#include "aso/utils/cuda_helper.h"
+#include "mirage/kernel/operator.h"
+#include "mirage/utils/cuda_helper.h"
 
 #include "cutlass/cutlass.h"
 #include "cutlass/fast_math.h"
 #include "cutlass/matrix_coord.h"
 
-namespace aso {
+namespace mirage {
 namespace kernel {
 
-using namespace aso::type;
+using namespace mirage::type;
 
 template <typename DT>
 __global__ void init_input(DTensor const A, size_t num_elements) {
@@ -43,7 +43,7 @@ bool KNInputOp::profile(ProfileResult &profile) {
   int num_blocks =
       (output_tensors[0].num_elements() + num_threads_per_blk - 1) /
       num_threads_per_blk;
-  if (output_tensors[0].data_type == aso::type::DT_FLOAT16) {
+  if (output_tensors[0].data_type == mirage::type::DT_FLOAT16) {
     init_input<cutlass::half_t><<<num_blocks, num_threads_per_blk>>>(
         output_tensors[0], output_tensors[0].num_elements());
   } else {
@@ -73,4 +73,4 @@ bool KNInputOp::fingerprint(void) {
 }
 
 } // namespace kernel
-} // namespace aso
+} // namespace mirage

@@ -1,13 +1,13 @@
-#include "aso/search/search.h"
-#include "aso/kernel/customized.h"
-#include "aso/search/dim_strategy.h"
-#include "aso/search/op_utils.h"
-#include "aso/utils/containers.h"
+#include "mirage/search/search.h"
+#include "mirage/kernel/customized.h"
+#include "mirage/search/dim_strategy.h"
+#include "mirage/search/op_utils.h"
+#include "mirage/utils/containers.h"
 
 #include <fstream>
 #include <iostream>
 
-namespace aso {
+namespace mirage {
 namespace search {
 
 KernelGraphGenerator::KernelGraphGenerator(
@@ -450,7 +450,7 @@ void KernelGraphGenerator::generate_kernel_graphs() {
 
   printf("Total kernel graphs explored: %d\n", num_total_kernel_graphs);
   printf("Random tests performed: %d\n", num_total_random_tests);
-  printf("Valid kernel graphs explored: %d", num_valid_kernel_graphs);
+  printf("Valid kernel graphs explored: %d\n", num_valid_kernel_graphs);
 }
 
 void KernelGraphGenerator::fingerprint_eval() {
@@ -548,10 +548,12 @@ void KernelGraphGenerator::pattern_eval() {
 bool KernelGraphGenerator::verify(SearchContext<DTensor> &c,
                                   kernel::Graph const &g) {
   ++num_total_kernel_graphs;
-  if (num_total_kernel_graphs % 10000 == 1) {
-    save_checkpoint();
-    printf("Checkpoint saved. Total kernel graphs explored: %d\n",
+  if (num_total_kernel_graphs % 100 == 1) {
+    printf("Total kernel graphs explored: %d.\n",
            num_total_kernel_graphs);
+    if (num_total_kernel_graphs % 10000 == 1) {
+      save_checkpoint();
+    }
   }
 
   size_t num_outputs = 0;
@@ -643,6 +645,7 @@ std::vector<layout::SmemLayout> KernelGraphGenerator::get_valid_output_layout(
     }
     default:
       assert("Unsupported op type");
+      return {};
   }
 }
 
@@ -753,4 +756,4 @@ void KernelGraphGenerator::recovery_from_checkpoint(
   num_valid_kernel_graphs = checkpoint.num_valid_kernel_graphs;
 }
 } // namespace search
-} // namespace aso
+} // namespace mirage
