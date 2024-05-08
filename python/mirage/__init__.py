@@ -1,6 +1,4 @@
 from .core import *
-import onnx
-from onnx import helper, TensorProto, numpy_helper
 
 class InputNotFoundError(Exception):
     """Raised when cannot find input tensors """

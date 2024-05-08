@@ -1,8 +1,8 @@
-#include "aso/kernel/graph.h"
-#include "aso/threadblock/cuda/input_loader.h"
-#include "aso/threadblock/cuda/matmul.h"
-#include "aso/threadblock/cuda/output_saver.h"
-#include "aso/threadblock/graph.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/threadblock/cuda/input_loader.h"
+#include "mirage/threadblock/cuda/matmul.h"
+#include "mirage/threadblock/cuda/output_saver.h"
+#include "mirage/threadblock/graph.h"
 
 #include <fstream>
 #include <iostream>
@@ -11,8 +11,8 @@
 
 #include "common.h"
 
-using namespace aso::threadblock;
-using namespace aso::kernel;
+using namespace mirage::threadblock;
+using namespace mirage::kernel;
 
 __global__ void launch_matmul_kernel(
     DTensor D_A, STensor A, DTensor D_B, STensor B, DTensor D_C, STensor C) {
@@ -33,14 +33,14 @@ __global__ void launch_matmul_kernel(
   cutlass::MatrixCoord matrix_offset = {tb_offset_row, tb_offset_column};
 
   // load A & B
-  aso::threadblock::GenericInputLoader loader_A(smem_buffer,
+  mirage::threadblock::GenericInputLoader loader_A(smem_buffer,
                                                 D_A,
                                                 A,
                                                 threadIdx.x,
                                                 blockDim.x,
                                                 matrix_offset,
                                                 global_offset);
-  aso::threadblock::GenericInputLoader loader_B(smem_buffer,
+  mirage::threadblock::GenericInputLoader loader_B(smem_buffer,
                                                 D_B,
                                                 B,
                                                 threadIdx.x,
@@ -58,7 +58,7 @@ __global__ void launch_matmul_kernel(
                                  cutlass::canonical_lane_idx());
 
   // output C
-  aso::threadblock::GenericOutputSaver saver(smem_buffer,
+  mirage::threadblock::GenericOutputSaver saver(smem_buffer,
                                              D_C,
                                              C,
                                              threadIdx.x,
@@ -70,8 +70,8 @@ __global__ void launch_matmul_kernel(
 
 TEST(threadblock_tests, matmul) {
 
-  aso::kernel::Graph kgraph;
-  aso::threadblock::Graph bgraph = create_single_threadblock_graph(128);
+  mirage::kernel::Graph kgraph;
+  mirage::threadblock::Graph bgraph = create_single_threadblock_graph(128);
 
   constexpr int m = 64, n = 64, k = 64;
 
@@ -89,12 +89,12 @@ TEST(threadblock_tests, matmul) {
       C_ref.device_data(), C_ours.device_data(), C_ours.capacity());
   C_ref.sync_host();
 
-  aso::kernel::DTensor D_A = kgraph.new_input(
-      {m, k}, aso::type::DT_FLOAT16, aso::layout::DmemLayout::DmemRowMajor);
-  aso::kernel::DTensor D_B = kgraph.new_input(
-      {k, n}, aso::type::DT_FLOAT16, aso::layout::DmemLayout::DmemColumnMajor);
-  aso::kernel::DTensor D_C_ours = kgraph.new_input(
-      {m, n}, aso::type::DT_FLOAT16, aso::layout::DmemLayout::DmemRowMajor);
+  mirage::kernel::DTensor D_A = kgraph.new_input(
+      {m, k}, mirage::type::DT_FLOAT16, mirage::layout::DmemLayout::DmemRowMajor);
+  mirage::kernel::DTensor D_B = kgraph.new_input(
+      {k, n}, mirage::type::DT_FLOAT16, mirage::layout::DmemLayout::DmemColumnMajor);
+  mirage::kernel::DTensor D_C_ours = kgraph.new_input(
+      {m, n}, mirage::type::DT_FLOAT16, mirage::layout::DmemLayout::DmemRowMajor);
 
   // copy inputs
   cutlass::device_memory::copy_device_to_device(
@@ -106,18 +106,18 @@ TEST(threadblock_tests, matmul) {
       B.device_data(),
       B.capacity());
 
-  aso::threadblock::STensor A_s = bgraph.new_input(
+  mirage::threadblock::STensor A_s = bgraph.new_input(
       D_A,
       {0, -1, -1},
       -1,
-      aso::layout::SmemRowMajorTensorOpMultiplicand_Crosswise64);
-  aso::threadblock::STensor B_s = bgraph.new_input(
+      mirage::layout::SmemRowMajorTensorOpMultiplicand_Crosswise64);
+  mirage::threadblock::STensor B_s = bgraph.new_input(
       D_B,
       {0, -1, -1},
       -1,
-      aso::layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64);
-  aso::threadblock::STensor C_s =
-      bgraph.new_input(D_C_ours, {0, -1, -1}, -1, aso::layout::SmemRowMajor);
+      mirage::layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64);
+  mirage::threadblock::STensor C_s =
+      bgraph.new_input(D_C_ours, {0, -1, -1}, -1, mirage::layout::SmemRowMajor);
 
   int smem_size = 48 * 1024; // 48 KB
   launch_matmul_kernel<<<bgraph.grid_dim, bgraph.block_dim, smem_size>>>(
@@ -161,18 +161,18 @@ TEST(threadblock_tests, matmul) {
 }
 
 int wtf(int argc, char **argv) {
-  using namespace aso;
+  using namespace mirage;
   kernel::Graph graph;
   kernel::DTensor A = graph.new_input({4096, 1024},
-                                      aso::type::DT_FLOAT16,
-                                      aso::layout::DmemLayout::DmemRowMajor);
+                                      mirage::type::DT_FLOAT16,
+                                      mirage::layout::DmemLayout::DmemRowMajor);
   kernel::DTensor B = graph.new_input({1024, 4096},
-                                      aso::type::DT_FLOAT16,
-                                      aso::layout::DmemLayout::DmemColumnMajor);
+                                      mirage::type::DT_FLOAT16,
+                                      mirage::layout::DmemLayout::DmemColumnMajor);
 
   {
     threadblock::ExecutionPlan plan;
-    plan.ops.push_back({aso::type::TB_MATMUL_OP, {{0, 0}, {1, 0}}});
+    plan.ops.push_back({mirage::type::TB_MATMUL_OP, {{0, 0}, {1, 0}}});
     plan.input_map.push_back({0, -1, -1});
     plan.input_map.push_back({-1, 1, -1});
     plan.output_map = {0, 1, -1};

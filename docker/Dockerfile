@@ -13,17 +13,10 @@
 # limitations under the License.
 #
 
-#FROM nvidia/cuda:12.2.0-devel-ubuntu20.04
-#FROM nvidia/cuda:12.2.0-devel-ubuntu20.04
 FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu20.04
 
 RUN apt-get update && apt-get install -y --no-install-recommends wget sudo binutils git && \
     rm -rf /var/lib/apt/lists/*
-
-#RUN wget -c https://developer.download.nvidia.com/compute/cudnn/redist/cudnn/linux-x86_64/cudnn-linux-x86_64-8.9.3.28_cuda12-archive.tar.xz && \
-#    tar -xf cudnn-linux-x86_64-8.9.3.28_cuda12-archive.tar.xz -C /usr/local && \
-#    rm cudnn-linux-x86_64-8.9.3.28_cuda12-archive.tar.xz && \
-#    ldconfig
 
 RUN wget -c https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
     mv Miniconda3-latest-Linux-x86_64.sh ~/Miniconda3-latest-Linux-x86_64.sh && \
@@ -46,4 +39,4 @@ COPY install_mirage.sh /install/install_mirage.sh
 RUN bash /install/install_mirage.sh
 
 WORKDIR /usr/mirage
-#RUN chmod -R a+w /usr/TASO
+#RUN chmod -R a+w /usr/mirage

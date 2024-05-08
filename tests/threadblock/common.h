@@ -1,4 +1,4 @@
-#include "aso/threadblock/graph.h"
+#include "mirage/threadblock/graph.h"
 #include "cutlass/cutlass.h"
 #include "cutlass/util/reference/device/tensor_fill.h"
 #include "cutlass/util/reference/host/gemm.h"
@@ -10,7 +10,7 @@
 // All functions in this file is for convenience and assumes there is only 1
 // threadblock.
 
-namespace aso {
+namespace mirage {
 namespace threadblock {
 
 inline Graph create_single_threadblock_graph(unsigned int num_threads) {
@@ -99,7 +99,7 @@ void zero_fill_tensor(cutlass::HostTensor<Element, Layout> &host_tensor) {
 }
 
 template <typename DT>
-__global__ void random_fill_device_tensor(aso::kernel::DTensor const dtensor,
+__global__ void random_fill_device_tensor(mirage::kernel::DTensor const dtensor,
                                           int num_elements,
                                           unsigned long long seed = 0) {
   int i = threadIdx.x + blockIdx.x * blockDim.x;
@@ -129,4 +129,4 @@ __global__ void
 }
 
 } // namespace threadblock
-} // namespace aso
+} // namespace mirage
