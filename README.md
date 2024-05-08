@@ -57,7 +57,7 @@ The above search procedure takes around 4 hours and discovers 69 potential tenso
 ```bash
 python demo/demo_group_query_attention_spec_decode.py --checkpoint demo/checkpoint_group_query_attn_spec_decode.json
 ```
-This program outputs 69 Triton programs saved in the `demo` folder. The performance of these programs on a NVIDIA A100 GPU is shown as follows. Note that some generated programs perform small matrix multiplications within a thread block. These programs cannot be directly supporrted by the current Triton compiler, as it requires all dimensions of a matrix multiplication must be at least 16. The best program discovered by Mirage is 2x faster than FlashDecoding and 1.5x faster than FlashInfer.
+This program outputs 69 Triton programs saved in the `demo` folder. The performance of these programs on a NVIDIA A100 GPU is shown as follows. Note that some generated programs perform small matrix multiplications within a thread block. These programs cannot be directly supported by the current Triton compiler, as it requires all dimensions of a matrix multiplication must be at least 16. The best program discovered by Mirage is 2x faster than FlashDecoding and 1.5x faster than FlashInfer.
 
 <p align="center">
 <img src="img/group_query_attnetion_spec_decode.png?raw=true" alt="Group Query Attention SpecDecode" height="320"/>
