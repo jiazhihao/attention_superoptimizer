@@ -164,28 +164,6 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
-# Multi-Query Attention Speculative Decoding
-if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
-  set(CPP_EXAMPLES_DIR cpp_examples)
-  set(CPP_EXAMPLES_BIN multi_query_attn_spec_decode)
-  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
-  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
-  set_target_properties(${CPP_EXAMPLES_BIN}
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
-endif()
-
-# Multi-Query Attention Prefilling
-if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
-  set(CPP_EXAMPLES_DIR cpp_examples)
-  set(CPP_EXAMPLES_BIN multi_query_attn_prefill)
-  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
-  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
-  set_target_properties(${CPP_EXAMPLES_BIN}
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
-endif()
-
 # Group-Query Attention Incremental Decoding
 if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   set(CPP_EXAMPLES_DIR cpp_examples)
@@ -217,28 +195,6 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
   target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
-endif()
-
-# Group-Query Attention Spec Decoding
-if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
-  set(CPP_EXAMPLES_DIR cpp_examples)
-  set(CPP_EXAMPLES_BIN group_query_attn_spec_decode)
-  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
-  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
-  set_target_properties(${CPP_EXAMPLES_BIN}
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
-endif()
-
-# Group-Query Attention Prefilling
-if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
-  set(CPP_EXAMPLES_DIR cpp_examples)
-  set(CPP_EXAMPLES_BIN group_query_attn_prefill)
-  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
-  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
-  set_target_properties(${CPP_EXAMPLES_BIN}
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
 endif()
 
 # Multi-Head Attention Incremental Decoding
@@ -274,28 +230,6 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
-# Multi-Head Attention Speculative Decoding
-if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
-  set(CPP_EXAMPLES_DIR cpp_examples)
-  set(CPP_EXAMPLES_BIN multi_head_attn_spec_decode)
-  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
-  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
-  set_target_properties(${CPP_EXAMPLES_BIN}
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
-endif()
-
-# Multi-Head Attention Prefilling
-if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
-  set(CPP_EXAMPLES_DIR cpp_examples)
-  set(CPP_EXAMPLES_BIN multi_head_attn_prefill)
-  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
-  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
-  set_target_properties(${CPP_EXAMPLES_BIN}
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
-endif()
-
 # LoRA
 if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   set(CPP_EXAMPLES_DIR cpp_examples)
@@ -327,17 +261,6 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
   target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
-endif()
-
-# MoE
-if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
-  set(CPP_EXAMPLES_DIR cpp_examples)
-  set(CPP_EXAMPLES_BIN moe)
-  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
-  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
-  set_target_properties(${CPP_EXAMPLES_BIN}
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
 endif()
 
 if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")

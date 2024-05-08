@@ -34,8 +34,9 @@ struct GeneratorConfig {
   std::vector<layout::SmemLayout> smem_layout_to_explore;
   int reduction_dimx;
 
-  void GeneratorConfig::print_config() const;
+  void print_config() const;
 
+  static GeneratorConfig get_default_config();
   static GeneratorConfig get_attention_default_config();
   static GeneratorConfig get_mlp_default_config();
 };

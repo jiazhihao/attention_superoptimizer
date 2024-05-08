@@ -286,11 +286,11 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         bgraph.reduction_to_dimx(my_inputs[0], reduce_dim);
         break;
       }
-      case aso::type::TB_CONCAT_0_OP:
-      case aso::type::TB_CONCAT_1_OP:
-      case aso::type::TB_CONCAT_2_OP: {
+      case mirage::type::TB_CONCAT_0_OP:
+      case mirage::type::TB_CONCAT_1_OP:
+      case mirage::type::TB_CONCAT_2_OP: {
         assert(my_inputs.size() == 2);
-        int concat_dim = op->op_type - aso::type::TB_CONCAT_FIRST_OP_ID;
+        int concat_dim = op->op_type - mirage::type::TB_CONCAT_FIRST_OP_ID;
         bgraph.concat(my_inputs[0], my_inputs[1], concat_dim);
         break;
       }

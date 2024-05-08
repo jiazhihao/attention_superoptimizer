@@ -253,7 +253,7 @@ std::vector<std::vector<int>> DimStrategy::get_nary_input(int num_tensors,
                                                           int n) {
   std::vector<std::vector<int>> result;
   std::vector<int> cur;
-  aso::search::get_nary_input(n, num_tensors, cur, result);
+  mirage::search::get_nary_input(n, num_tensors, cur, result);
   return result;
 }
 
