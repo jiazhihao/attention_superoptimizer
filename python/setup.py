@@ -18,9 +18,9 @@ import sysconfig
 from setuptools import find_packages
 
 # need to use distutils.core for correct placement of cython dll
-if "--inplace" in sys.argv:                                                
+if "--inplace" in sys.argv:
     from distutils.core import setup
-    from distutils.extension import Extension                              
+    from distutils.extension import Extension
 else:
     from setuptools import setup
     from setuptools.extension import Extension
@@ -38,8 +38,8 @@ def config_cython():
                 "mirage.%s" % fn[:-4],
                 ["%s/%s" % (path, fn)],
                 include_dirs=["../include", "../deps/json/include", "../deps/cutlass/include", "/usr/local/cuda/include"],
-                libraries=["mirage_runtime", "cudadevrt", "cudart_static", "cudnn", "cublas", "cudart", "cuda", "z3"],
-                library_dirs=["../build", "../deps/z3/build", "/usr/local/cuda/lib64", "/usr/local/cuda/lib64/stubs"],
+                libraries=["mirage_runtime", "cuda", "cudart", "cudadevrt", "cudnn", "cublas", "z3"],
+                library_dirs=["../build", "../deps/z3/build", "/usr/local/cuda/lib64", "/usr/local/cuda/lib64/stubs", "/opt/nvidia/hpc_sdk/Linux_x86_64/23.9/cuda/12.2/lib64/", "/opt/nvidia/hpc_sdk/Linux_x86_64/23.9/math_libs/12.2/lib64", "/global/common/software/nersc/pm-2023q2/sw/cudnn-8.9.3.28_cuda12/lib"],
                 extra_compile_args=["-std=c++17"],
                 extra_link_args=["-fPIC"],
                 language="c++"))
