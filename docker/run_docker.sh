@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Copyright 2024 CMU
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,26 +14,16 @@
 # limitations under the License.
 #
 
-set -e
-set -u
-set -o pipefail
+IMAGE_NAME=("$1")
+COMMAND="bash"
 
-cd /usr
-git clone --recursive -b python https://github.com/jiazhihao/attention_superoptimizer.git mirage
-# build z3
-cd /usr/mirage/deps/z3
-mkdir -p build
-cd build
-cmake ..
-make -j
-# build mirage runtime
-cd /usr/mirage
-mkdir -p build
-cd build
-export Z3_DIR=/usr/mirage/deps/z3/build
-export CUDACXX=/usr/local/cuda/bin/nvcc
-cmake ..
-make -j
-# build mirage python package
-cd /usr/mirage/python
-python setup.py install
+WORKSPACE="/usr/mirage"
+
+echo "WORKSPACE: ${WORKSPACE}"
+echo "IMAGE NAME: ${IMAGE_NAME}"
+echo "DOCKER BINARY: nvidia-docker"
+
+nvidia-docker run --rm --pid=host \
+    -it --net=host \
+    ${IMAGE_NAME} \
+    ${COMMAND[@]}
