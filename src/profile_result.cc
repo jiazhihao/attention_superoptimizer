@@ -1,8 +1,8 @@
-#include "aso/profile_result.h"
+#include "mirage/profile_result.h"
 
 #include <limits>
 
-namespace aso {
+namespace mirage {
 
 ProfileResult ProfileResult::infinity() {
   return ProfileResult{1000};

@@ -13,9 +13,9 @@
  * limitations under the License.
  */
 
-#include "aso/type.h"
+#include "mirage/type.h"
 
-namespace aso {
+namespace mirage {
 namespace type {
 
 size_t get_datatype_size(DataType type) {
@@ -36,4 +36,4 @@ size_t get_datatype_size(DataType type) {
 }
 
 } // namespace type
-} // namespace aso
+} // namespace mirage

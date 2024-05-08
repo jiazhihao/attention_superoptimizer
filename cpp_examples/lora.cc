@@ -1,8 +1,8 @@
-#include "aso/kernel/graph.h"
-#include "aso/search/search.h"
-#include "aso/threadblock/graph.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/search/search.h"
+#include "mirage/threadblock/graph.h"
 
-using namespace aso;
+using namespace mirage;
 
 int main(int argc, char **argv) {
   kernel::Graph ref_graph;
@@ -43,10 +43,10 @@ int main(int argc, char **argv) {
   std::vector<kernel::DTensor> outputs;
   {
     threadblock::ExecutionPlan plan;
-    plan.ops.push_back({aso::type::TB_MATMUL_OP, {{0, 0}, {2, 0}}});
-    plan.ops.push_back({aso::type::TB_CONCAT_1_OP, {{0, 0}, {4, 0}}});
-    plan.ops.push_back({aso::type::TB_CONCAT_0_OP, {{1, 0}, {3, 0}}});
-    plan.ops.push_back({aso::type::TB_MATMUL_OP, {{5, 0}, {6, 0}}});
+    plan.ops.push_back({mirage::type::TB_MATMUL_OP, {{0, 0}, {2, 0}}});
+    plan.ops.push_back({mirage::type::TB_CONCAT_1_OP, {{0, 0}, {4, 0}}});
+    plan.ops.push_back({mirage::type::TB_CONCAT_0_OP, {{1, 0}, {3, 0}}});
+    plan.ops.push_back({mirage::type::TB_MATMUL_OP, {{5, 0}, {6, 0}}});
     plan.input_map.push_back({-1, -1, -1});
     plan.input_map.push_back({1, -1, -1});
     plan.input_map.push_back({-1, -1, -1});

@@ -1,8 +1,8 @@
-#include "aso/kernel/graph.h"
-#include "aso/threadblock/graph.h"
-#include "aso/search/search.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/threadblock/graph.h"
+#include "mirage/search/search.h"
 
-using namespace aso;
+using namespace mirage;
 
 int main(int argc, char **argv) {
   kernel::Graph ref_graph;
@@ -39,11 +39,11 @@ int main(int argc, char **argv) {
   std::vector<kernel::DTensor> outputs;
   {
     threadblock::ExecutionPlan plan;
-    plan.ops.push_back({aso::type::TB_MATMUL_OP, {{0, 0}, {1, 0}}});
-    // plan.ops.push_back({aso::type::TB_MATMUL_OP, {{3, 0}, {2, 0}}});
-    plan.ops.push_back({aso::type::TB_EXP_OP, {{3, 0}}});
-    plan.ops.push_back({aso::type::TB_MATMUL_OP, {{4, 0}, {2, 0}}});
-    plan.ops.push_back({aso::type::TB_REDUCTION_2_OP, {{4, 0}}});
+    plan.ops.push_back({mirage::type::TB_MATMUL_OP, {{0, 0}, {1, 0}}});
+    // plan.ops.push_back({mirage::type::TB_MATMUL_OP, {{3, 0}, {2, 0}}});
+    plan.ops.push_back({mirage::type::TB_EXP_OP, {{3, 0}}});
+    plan.ops.push_back({mirage::type::TB_MATMUL_OP, {{4, 0}, {2, 0}}});
+    plan.ops.push_back({mirage::type::TB_REDUCTION_2_OP, {{4, 0}}});
     plan.input_map.push_back({0, -1, -1});
     plan.input_map.push_back({0, 2, -1});
     plan.input_map.push_back({0, 1, -1});
@@ -69,9 +69,9 @@ int main(int argc, char **argv) {
   }
   {
     threadblock::ExecutionPlan plan;
-    plan.ops.push_back({aso::type::TB_REDUCTION_2_TO_DIMX_OP, {{0, 0}}});
-    plan.ops.push_back({aso::type::TB_REDUCTION_2_OP, {{1, 0}}});
-    plan.ops.push_back({aso::type::TB_DIV_OP, {{2, 0}, {3, 0}}});
+    plan.ops.push_back({mirage::type::TB_REDUCTION_2_TO_DIMX_OP, {{0, 0}}});
+    plan.ops.push_back({mirage::type::TB_REDUCTION_2_OP, {{1, 0}}});
+    plan.ops.push_back({mirage::type::TB_DIV_OP, {{2, 0}, {3, 0}}});
     plan.input_map.push_back({0, -1, -1});
     plan.input_map.push_back({0, -1, -1});
     plan.input_smem_layouts = {

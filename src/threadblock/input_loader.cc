@@ -13,26 +13,26 @@
  * limitations under the License.
  */
 
-#include "aso/threadblock/graph.h"
-#include "aso/threadblock/operator.h"
+#include "mirage/threadblock/graph.h"
+#include "mirage/threadblock/operator.h"
 
-namespace aso {
+namespace mirage {
 namespace threadblock {
 
-STensor Graph::new_input(aso::kernel::DTensor const &dtensor,
+STensor Graph::new_input(mirage::kernel::DTensor const &dtensor,
                          int3 input_map,
                          int forloop_dim,
-                         aso::layout::SmemLayout layout) {
+                         mirage::layout::SmemLayout layout) {
   TBOperator *op = create_input_op(dtensor, input_map, forloop_dim, layout);
   assert(op != nullptr);
   operators.push_back(op);
   return op->output_tensors[0];
 }
 
-TBOperator *Graph::create_input_op(aso::kernel::DTensor const &dtensor,
+TBOperator *Graph::create_input_op(mirage::kernel::DTensor const &dtensor,
                                    int3 input_map,
                                    int forloop_dim,
-                                   aso::layout::SmemLayout layout) {
+                                   mirage::layout::SmemLayout layout) {
   STensor tensor;
   tensor.num_dims = dtensor.num_dims;
   tensor.data_type = dtensor.data_type;
@@ -76,8 +76,8 @@ TBOperator *Graph::create_input_op(aso::kernel::DTensor const &dtensor,
     // assert(tensor.dim[i] == 1);
   }
 
-  if (smem_offset + (off_t)tensor.size() > (off_t)aso::type::MAX_SMEM_SIZE) {
-    // printf("smem_offset(%d) tensor.size(%d)\n", smem_offset, tensor.size());
+  if (smem_offset + (off_t)tensor.size() > (off_t)mirage::type::MAX_SMEM_SIZE) {
+    //printf("smem_offset(%d) tensor.size(%d)\n", smem_offset, tensor.size());
     return nullptr;
   }
 
@@ -86,11 +86,11 @@ TBOperator *Graph::create_input_op(aso::kernel::DTensor const &dtensor,
 }
 
 TBInputOp::TBInputOp(Graph *_graph,
-                     aso::kernel::DTensor const &_dtensor,
+                     mirage::kernel::DTensor const &_dtensor,
                      int3 _input_map,
                      int _forloop_dim,
-                     aso::layout::SmemLayout _layout)
-    : TBOperator(_graph, aso::type::TB_INPUT_OP), dtensor(_dtensor),
+                     mirage::layout::SmemLayout _layout)
+    : TBOperator(_graph, mirage::type::TB_INPUT_OP), dtensor(_dtensor),
       input_map(_input_map), forloop_dim(_forloop_dim) {
   STensor tensor;
   tensor.layout = _layout;
@@ -153,4 +153,4 @@ TBInputOp::operator json() const {
 }
 
 } // namespace threadblock
-} // namespace aso
+} // namespace mirage

@@ -13,16 +13,16 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/device_tensor.h"
-#include "aso/utils/hash_utils.h"
+#include "mirage/kernel/device_tensor.h"
+#include "mirage/utils/hash_utils.h"
 #include <functional>
 
-namespace aso {
+namespace mirage {
 namespace kernel {
 
 DTensor::DTensor() {
-  data_type = aso::type::DT_UNKNOWN;
-  layout = aso::layout::DmemUnknownLayout;
+  data_type = mirage::type::DT_UNKNOWN;
+  layout = mirage::layout::DmemUnknownLayout;
   num_dims = 0;
   for (int i = 0; i < MAX_TENSOR_DIMS; i++) {
     dim[i] = 0;
@@ -49,12 +49,12 @@ DTensorShape DTensor::get_shape() const {
 int DTensor::next_guid = 20000;
 
 } // namespace kernel
-} // namespace aso
+} // namespace mirage
 
 namespace std {
 
-size_t hash<aso::kernel::DTensor>::operator()(
-    aso::kernel::DTensor const &tensor) const {
+size_t hash<mirage::kernel::DTensor>::operator()(
+    mirage::kernel::DTensor const &tensor) const {
   size_t ret = hash<int>()((tensor.data_type));
   hash_combine(ret, tensor.layout);
   hash_combine(ret, tensor.num_dims);

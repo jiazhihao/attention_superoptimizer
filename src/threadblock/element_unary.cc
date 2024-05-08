@@ -13,29 +13,29 @@
  * limitations under the License.
  */
 
-#include "aso/threadblock/element_unary.h"
-#include "aso/threadblock/graph.h"
-#include "aso/threadblock/operator.h"
+#include "mirage/threadblock/element_unary.h"
+#include "mirage/threadblock/graph.h"
+#include "mirage/threadblock/operator.h"
 
-namespace aso {
+namespace mirage {
 namespace threadblock {
 
 STensor Graph::exp(STensor const &input) {
-  TBOperator *op = create_elementunary_op(input, aso::type::TB_EXP_OP);
+  TBOperator *op = create_elementunary_op(input, mirage::type::TB_EXP_OP);
   assert(op != nullptr);
   operators.push_back(op);
   return op->output_tensors[0];
 }
 
 TBOperator *Graph::create_elementunary_op(STensor const &input,
-                                          aso::type::TBOperatorType _type) {
+                                          mirage::type::TBOperatorType _type) {
   TBElementUnaryOp *op = new TBElementUnaryOp(this, input, _type);
   return op;
 }
 
 TBElementUnaryOp::TBElementUnaryOp(Graph *_graph,
                                    STensor const &input,
-                                   aso::type::TBOperatorType _type)
+                                   mirage::type::TBOperatorType _type)
     : TBOperator(_graph, _type, input) {
   STensor output = input;
   output.owner_op = this;
@@ -60,4 +60,4 @@ TBElementUnaryOp::operator json() const {
 }
 
 } // namespace threadblock
-} // namespace aso
+} // namespace mirage

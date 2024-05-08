@@ -13,10 +13,10 @@
  * limitations under the License.
  */
 
-#include "aso/simulator.h"
-#include "aso/utils/cuda_helper.h"
+#include "mirage/simulator.h"
+#include "mirage/utils/cuda_helper.h"
 
-namespace aso {
+namespace mirage {
 namespace simulator {
 
 Simulator *Simulator::singleton = nullptr;
@@ -52,4 +52,4 @@ void *Simulator::allocate(size_t size_in_bytes) {
 }
 
 } // namespace simulator
-} // namespace aso
+} // namespace mirage

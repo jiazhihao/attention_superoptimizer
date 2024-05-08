@@ -1,6 +1,6 @@
-#include "aso/search/dim_strategy.h"
+#include "mirage/search/dim_strategy.h"
 
-namespace aso {
+namespace mirage {
 namespace search {
 
 DimStrategy::DimStrategy(GeneratorConfig const &config) : config(config) {}
@@ -79,7 +79,9 @@ void generate_input_map_cand(std::vector<DTensor> const &tensors,
   }
 }
 
-bool is_valid_input_map(std::vector<DTensor> const &tensors, dim3 grid_dim, std::vector<int3> const &input_maps) {
+bool is_valid_input_map(std::vector<DTensor> const &tensors,
+                        dim3 grid_dim,
+                        std::vector<int3> const &input_maps) {
   if (tensors.size() != input_maps.size()) {
     return false;
   }
@@ -103,15 +105,15 @@ std::vector<std::vector<int3>>
     DimStrategy::get_input_map_cand(std::vector<DTensor> const &tensors,
                                     dim3 grid_dim) {
   std::vector<std::vector<int3>> results;
-  if (config.imap_to_explore.size() == 1) {
-    generate_input_map_cand(
-      tensors, grid_dim, config.imap_to_explore[0], {}, results);
-  } else {
-    for (const auto &input_maps : config.imap_to_explore) {
+  if (config.imap_to_explore.empty()) {
+    for (auto const &input_maps : config.imap_comb_to_explore) {
       if (is_valid_input_map(tensors, grid_dim, input_maps)) {
         results.push_back(input_maps);
       }
     }
+  } else {
+    generate_input_map_cand(
+        tensors, grid_dim, config.imap_to_explore, {}, results);
   }
   return results;
 }
@@ -230,7 +232,10 @@ std::vector<std::vector<int>> DimStrategy::get_binary_input(int num_tensors) {
   return result;
 }
 
-void get_nary_input(int n, int num_tensors, std::vector<int> &cur, std::vector<std::vector<int>> &result) {
+void get_nary_input(int n,
+                    int num_tensors,
+                    std::vector<int> &cur,
+                    std::vector<std::vector<int>> &result) {
   if (cur.size() == n) {
     result.push_back(cur);
     return;
@@ -244,7 +249,8 @@ void get_nary_input(int n, int num_tensors, std::vector<int> &cur, std::vector<s
   }
 }
 
-std::vector<std::vector<int>> DimStrategy::get_nary_input(int num_tensors, int n) {
+std::vector<std::vector<int>> DimStrategy::get_nary_input(int num_tensors,
+                                                          int n) {
   std::vector<std::vector<int>> result;
   std::vector<int> cur;
   aso::search::get_nary_input(n, num_tensors, cur, result);
@@ -257,45 +263,17 @@ std::vector<std::vector<int>> DimStrategy::get_customized_input_cand_idx(
 
   int num_inputs = all_input.size();
 
-  int opt_level = 0;
-  if (opt_level == 0)
-  {
-    if (contains(config.tbop_to_explore, type::TBOperatorType::TB_CONCAT_THEN_MATMUL_OP)) {
-      return {{0, 1, 2, 3}};
-    }
-    if (all_input.size() == 3) {
-      return {{0, 1, 2}};
-    } else {
-      return {{num_inputs - 2, num_inputs - 1}};
-    }
-  } else if (opt_level == 1) {
-    std::vector<std::vector<int>> results {{0, 1}, {0, 1, 2}};
-    if (num_inputs >= 4) {
-      results.push_back({2, num_inputs - 1});
-    }
-    if (num_inputs >= 5) {
-      results.push_back({num_inputs - 2, num_inputs - 1});
-      // results.push_back({2, num_inputs - 2, num_inputs - 1});
-    }
-    return results;
+  if (contains(config.tbop_to_explore,
+                type::TBOperatorType::TB_CONCAT_THEN_MATMUL_OP) &&
+      all_input.size() == 4) {
+    return {{0, 1, 2, 3}};
   }
-
-  std::vector<std::vector<int>> results;
-
-  for (uint bitmap = 1; bitmap < (1u << open_tensor_idx.size()); ++bitmap) {
-    std::vector<int> input_idx;
-    for (size_t i = 0; i < open_tensor_idx.size(); ++i) {
-      if (bitmap >> i & 1) {
-        input_idx.push_back(open_tensor_idx[i]);
-      }
-    }
-    if (input_idx.size() > 1 && input_idx.size() <= MAX_NUM_THREADBLOCK_INPUT) {
-      results.push_back(input_idx);
-    }
+  if (all_input.size() == 3) {
+    return {{0, 1, 2}};
+  } else {
+    return {{num_inputs - 2, num_inputs - 1}};
   }
-
-  return results;
 }
 
 } // namespace search
-} // namespace aso
+} // namespace mirage

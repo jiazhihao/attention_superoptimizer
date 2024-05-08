@@ -1,11 +1,11 @@
-#include "aso/kernel/graph.h"
-#include "aso/search/search.h"
-#include "aso/threadblock/graph.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/search/search.h"
+#include "mirage/threadblock/graph.h"
 
 #include <iostream>
 
-using namespace aso;
-using namespace aso::search;
+using namespace mirage;
+using namespace mirage::search;
 
 bool has_no_small_tensor(kernel::Graph const &g) {
   for (auto const &op : g.operators) {

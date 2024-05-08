@@ -13,31 +13,31 @@
  * limitations under the License.
  */
 
-#include "aso/kernel/customized.h"
-#include "aso/kernel/device_memory_manager.h"
-#include "aso/threadblock/cuda/concat.h"
-#include "aso/threadblock/cuda/element_binary.h"
-#include "aso/threadblock/cuda/element_unary.h"
-#include "aso/threadblock/cuda/input_loader.h"
-#include "aso/threadblock/cuda/matmul.h"
-#include "aso/threadblock/cuda/output_saver.h"
-#include "aso/threadblock/cuda/reduction.h"
-#include "aso/threadblock/graph.h"
-#include "aso/threadblock/serializer/concat_serializer.h"
-#include "aso/threadblock/serializer/element_binary_serializer.h"
-#include "aso/threadblock/serializer/element_unary_serializer.h"
-#include "aso/threadblock/serializer/input_loader_serializer.h"
-#include "aso/threadblock/serializer/matmul_serializer.h"
-#include "aso/threadblock/serializer/output_saver_serializer.h"
-#include "aso/threadblock/serializer/reduction_serializer.h"
-#include "aso/utils/cuda_helper.h"
-#include "aso/warp/cuda/matmul.h"
+#include "mirage/kernel/customized.h"
+#include "mirage/kernel/device_memory_manager.h"
+#include "mirage/threadblock/cuda/concat.h"
+#include "mirage/threadblock/cuda/element_binary.h"
+#include "mirage/threadblock/cuda/element_unary.h"
+#include "mirage/threadblock/cuda/input_loader.h"
+#include "mirage/threadblock/cuda/matmul.h"
+#include "mirage/threadblock/cuda/output_saver.h"
+#include "mirage/threadblock/cuda/reduction.h"
+#include "mirage/threadblock/graph.h"
+#include "mirage/threadblock/serializer/concat_serializer.h"
+#include "mirage/threadblock/serializer/element_binary_serializer.h"
+#include "mirage/threadblock/serializer/element_unary_serializer.h"
+#include "mirage/threadblock/serializer/input_loader_serializer.h"
+#include "mirage/threadblock/serializer/matmul_serializer.h"
+#include "mirage/threadblock/serializer/output_saver_serializer.h"
+#include "mirage/threadblock/serializer/reduction_serializer.h"
+#include "mirage/utils/cuda_helper.h"
+#include "mirage/warp/cuda/matmul.h"
 
-namespace aso {
+namespace mirage {
 namespace kernel {
 
 __global__ void customized_kernel_function(
-    aso::threadblock::NewKernelParams const new_params, int forloop_range) {
+    mirage::threadblock::NewKernelParams const new_params, int forloop_range) {
   // since we are using cutlass, we group all threads within a threadblock
   // as a 1-D list of threads, therefore blockDim.y and blockDim.z must be
   // 1
@@ -52,8 +52,8 @@ __global__ void customized_kernel_function(
     // start executing operators
     param_idx = 0;
     for (int op = 0; op < new_params.num_operators; op++) {
-      aso::type::TBOperatorType op_type = new_params.operator_types[op];
-      if (op_type == aso::type::TB_INPUT_OP) {
+      mirage::type::TBOperatorType op_type = new_params.operator_types[op];
+      if (op_type == mirage::type::TB_INPUT_OP) {
         // Assume that InputLoaders are the first operators
         void *dtensor_ptr = new_params.dmem_input_ptrs[op];
         int3 input_matrix_row_offset_block_stride;
@@ -64,9 +64,9 @@ __global__ void customized_kernel_function(
         int global_offset_forloop_stride;
         int2 dtensor_matrix_shape, stensor_matrix_shape;
         int input_smem_offset;
-        aso::layout::DmemLayout dtensor_layout;
-        aso::layout::SmemLayout stensor_layout;
-        aso::threadblock::deserialize_input_loader_parameters(
+        mirage::layout::DmemLayout dtensor_layout;
+        mirage::layout::SmemLayout stensor_layout;
+        mirage::threadblock::deserialize_input_loader_parameters(
             new_params.parameters,
             param_idx,
             input_matrix_row_offset_block_stride,
@@ -98,7 +98,7 @@ __global__ void customized_kernel_function(
         cutlass::MatrixCoord matrix_offset = {tb_offset_row, tb_offset_column};
         cutlass::half_t *stensor_ptr =
             (cutlass::half_t *)(smem_buffer + input_smem_offset);
-        aso::threadblock::GenericInputLoader loader(dtensor_ptr,
+        mirage::threadblock::GenericInputLoader loader(dtensor_ptr,
                                                     stensor_ptr,
                                                     dtensor_matrix_shape,
                                                     stensor_matrix_shape,
@@ -109,10 +109,10 @@ __global__ void customized_kernel_function(
                                                     matrix_offset,
                                                     global_offset);
         __syncthreads();
-      } else if (op_type == aso::type::TB_OUTPUT_OP) {
+      } else if (op_type == mirage::type::TB_OUTPUT_OP) {
         // Only save outputs after forloop
         // So we do nothing for output saver
-      } else if (op_type == aso::type::TB_MATMUL_OP) {
+      } else if (op_type == mirage::type::TB_MATMUL_OP) {
         int thread_idx = threadIdx.x;
         // Broadcast the warp_id computed by lane 0 to ensure dependent code
         // is compiled as warp-uniform.
@@ -120,7 +120,7 @@ __global__ void customized_kernel_function(
         int lane_idx = threadIdx.x % 32;
         int m, n, k;
         int A_smem_offset, B_smem_offset, C_smem_offset;
-        aso::threadblock::deserialize_matmul_op_parameters(
+        mirage::threadblock::deserialize_matmul_op_parameters(
             new_params.parameters,
             param_idx,
             m,
@@ -137,38 +137,38 @@ __global__ void customized_kernel_function(
         cutlass::half_t *C_ptr =
             (cutlass::half_t *)(smem_buffer + C_smem_offset);
 
-        aso::type::ActivationType act_type =
-            aso::utils::get_matmul_activation_type(
+        mirage::type::ActivationType act_type =
+            mirage::utils::get_matmul_activation_type(
                 new_params.operator_types, op, new_params.num_operators);
 
-        if (act_type == aso::type::ACT_NONE) {
-          aso::threadblock::GenericMatmulExecutor<aso::type::ACT_NONE> executor(
+        if (act_type == mirage::type::ACT_NONE) {
+          mirage::threadblock::GenericMatmulExecutor<mirage::type::ACT_NONE> executor(
               A_ptr, B_ptr, C_ptr, m, n, k, thread_idx, warp_idx, lane_idx);
 
-        } else if (act_type == aso::type::ACT_EXP) {
+        } else if (act_type == mirage::type::ACT_EXP) {
           // fuse this matmul with next op
           int smem_offset, num_elements;
-          aso::threadblock::deserialize_elementunary_op_parameters(
+          mirage::threadblock::deserialize_elementunary_op_parameters(
               new_params.parameters, param_idx, smem_offset, num_elements);
           C_ptr = (cutlass::half_t *)(smem_buffer + smem_offset);
-          aso::threadblock::GenericMatmulExecutor<aso::type::ACT_EXP> executor(
+          mirage::threadblock::GenericMatmulExecutor<mirage::type::ACT_EXP> executor(
               A_ptr, B_ptr, C_ptr, m, n, k, thread_idx, warp_idx, lane_idx);
           op += 1;
         }
         __syncthreads();
-      } else if (op_type == aso::type::TB_EXP_OP) {
+      } else if (op_type == mirage::type::TB_EXP_OP) {
         int smem_offset, num_elements;
-        aso::threadblock::deserialize_elementunary_op_parameters(
+        mirage::threadblock::deserialize_elementunary_op_parameters(
             new_params.parameters, param_idx, smem_offset, num_elements);
         cutlass::half_t *base_ptr =
             (cutlass::half_t *)(smem_buffer + smem_offset);
-        aso::threadblock::ElementUnaryExecutor<cutlass::half_t> executor(
+        mirage::threadblock::ElementUnaryExecutor<cutlass::half_t> executor(
             op_type, base_ptr, num_elements, threadIdx.x, blockDim.x);
         __syncthreads();
-      } else if (op_type == aso::type::TB_DIV_OP) {
+      } else if (op_type == mirage::type::TB_DIV_OP) {
         int3 input1_shape, input2_shape;
         int input1_smem_offset, input2_smem_offset, output_smem_offset;
-        aso::threadblock::deserialize_elementbinary_op_parameters(
+        mirage::threadblock::deserialize_elementbinary_op_parameters(
             new_params.parameters,
             param_idx,
             input1_shape,
@@ -182,7 +182,7 @@ __global__ void customized_kernel_function(
             (cutlass::half_t *)(smem_buffer + input2_smem_offset);
         cutlass::half_t *output_ptr =
             (cutlass::half_t *)(smem_buffer + output_smem_offset);
-        aso::threadblock::ElementBinaryExecutor<cutlass::half_t> executor(
+        mirage::threadblock::ElementBinaryExecutor<cutlass::half_t> executor(
             op_type,
             input1_ptr,
             input2_ptr,
@@ -192,11 +192,11 @@ __global__ void customized_kernel_function(
             threadIdx.x,
             blockDim.x);
         __syncthreads();
-      } else if ((op_type >= aso::type::TB_REDUCTION_FIRST_OP_ID) &&
-                 (op_type <= aso::type::TB_REDUCTION_LAST_OP_ID)) {
+      } else if ((op_type >= mirage::type::TB_REDUCTION_FIRST_OP_ID) &&
+                 (op_type <= mirage::type::TB_REDUCTION_LAST_OP_ID)) {
         int output_num_elements, reduction_degree, inner_range;
         int input_smem_offset, output_smem_offset;
-        aso::threadblock::deserialize_reduction_op_parameters(
+        mirage::threadblock::deserialize_reduction_op_parameters(
             new_params.parameters,
             param_idx,
             output_num_elements,
@@ -209,7 +209,7 @@ __global__ void customized_kernel_function(
         cutlass::half_t *output_ptr =
             (cutlass::half_t *)(smem_buffer + output_smem_offset);
 
-        aso::threadblock::SimpleRedunctionExecutor<cutlass::half_t> executor(
+        mirage::threadblock::SimpleRedunctionExecutor<cutlass::half_t> executor(
             // new_params.operator_types[op],
             input_ptr,
             output_ptr,
@@ -219,12 +219,12 @@ __global__ void customized_kernel_function(
             threadIdx.x,
             blockDim.x);
         __syncthreads();
-      } else if ((op_type >= aso::type::TB_CONCAT_FIRST_OP_ID) &&
-                 (op_type <= aso::type::TB_CONCAT_LAST_OP_ID)) {
+      } else if ((op_type >= mirage::type::TB_CONCAT_FIRST_OP_ID) &&
+                 (op_type <= mirage::type::TB_CONCAT_LAST_OP_ID)) {
         int output_num_elements, A_concat_dim_size, B_concat_dim_size,
             inner_size;
         int A_smem_offset, B_smem_offset, output_smem_offset;
-        aso::threadblock::deserialize_concat_op_parameters(
+        mirage::threadblock::deserialize_concat_op_parameters(
             new_params.parameters,
             param_idx,
             output_num_elements,
@@ -245,7 +245,7 @@ __global__ void customized_kernel_function(
   int output_saver_start_idx =
       new_params.num_operators - new_params.num_dmem_outputs;
   for (int op = output_saver_start_idx; op < new_params.num_operators; op++) {
-    assert(new_params.operator_types[op] == aso::type::TB_OUTPUT_OP);
+    assert(new_params.operator_types[op] == mirage::type::TB_OUTPUT_OP);
     void *dtensor_ptr =
         new_params.dmem_output_ptrs[op - output_saver_start_idx];
     int3 output_matrix_row_offset_block_stride;
@@ -253,9 +253,9 @@ __global__ void customized_kernel_function(
     int3 global_offset_block_stride;
     int2 dtensor_matrix_shape, stensor_matrix_shape;
     int input_smem_offset, accum_smem_offset;
-    aso::layout::DmemLayout dtensor_layout;
-    aso::layout::SmemLayout stensor_layout;
-    aso::threadblock::deserialize_output_saver_parameters(
+    mirage::layout::DmemLayout dtensor_layout;
+    mirage::layout::SmemLayout stensor_layout;
+    mirage::threadblock::deserialize_output_saver_parameters(
         new_params.parameters,
         param_idx,
         output_matrix_row_offset_block_stride,
@@ -288,7 +288,7 @@ __global__ void customized_kernel_function(
     cutlass::MatrixCoord matrix_offset = {tb_offset_row, tb_offset_column};
     cutlass::half_t *stensor_ptr =
         (cutlass::half_t *)(smem_buffer + accum_smem_offset);
-    aso::threadblock::GenericOutputSaver saver(dtensor_ptr,
+    mirage::threadblock::GenericOutputSaver saver(dtensor_ptr,
                                                stensor_ptr,
                                                dtensor_matrix_shape,
                                                stensor_matrix_shape,
@@ -305,11 +305,11 @@ __global__ void customized_kernel_function(
 }
 
 __global__ void compute_customizedop_fingerprint(
-    aso::threadblock::NewKernelParams new_params,
+    mirage::threadblock::NewKernelParams new_params,
     int forloop_range,
-    aso::type::FPType *exp_lookup_table,
-    aso::type::FPType *div_p_lookup_table,
-    aso::type::FPType *div_q_lookup_table) {
+    mirage::type::FPType *exp_lookup_table,
+    mirage::type::FPType *div_p_lookup_table,
+    mirage::type::FPType *div_q_lookup_table) {
   // since we are using cutlass, we group all threads within a threadblock
   // as a 1-D list of threads, therefore blockDim.y and blockDim.z must be
   // 1
@@ -325,9 +325,9 @@ __global__ void compute_customizedop_fingerprint(
     // start executing operators
     for (int op = 0; op < new_params.num_operators; op++) {
       switch (new_params.operator_types[op]) {
-        case aso::type::TB_INPUT_OP: {
-          aso::type::FPType *dtensor_ptr =
-              (aso::type::FPType *)new_params.dmem_input_ptrs[op];
+        case mirage::type::TB_INPUT_OP: {
+          mirage::type::FPType *dtensor_ptr =
+              (mirage::type::FPType *)new_params.dmem_input_ptrs[op];
           int3 input_matrix_row_offset_block_stride;
           int3 input_matrix_column_offset_block_stride;
           int input_matrix_row_offset_forloop_stride;
@@ -336,9 +336,9 @@ __global__ void compute_customizedop_fingerprint(
           int global_offset_forloop_stride;
           int2 dtensor_matrix_shape, stensor_matrix_shape;
           int input_smem_offset;
-          aso::layout::DmemLayout dtensor_layout;
-          aso::layout::SmemLayout stensor_layout;
-          aso::threadblock::deserialize_input_loader_parameters(
+          mirage::layout::DmemLayout dtensor_layout;
+          mirage::layout::SmemLayout stensor_layout;
+          mirage::threadblock::deserialize_input_loader_parameters(
               new_params.parameters,
               param_idx,
               input_matrix_row_offset_block_stride,
@@ -371,9 +371,9 @@ __global__ void compute_customizedop_fingerprint(
                               i * global_offset_forloop_stride;
           cutlass::MatrixCoord matrix_offset = {tb_offset_row,
                                                 tb_offset_column};
-          aso::type::FPType *stensor_ptr =
-              (aso::type::FPType *)(smem_buffer + input_smem_offset);
-          aso::threadblock::TBInputLoaderFingerprinter fp(dtensor_ptr,
+          mirage::type::FPType *stensor_ptr =
+              (mirage::type::FPType *)(smem_buffer + input_smem_offset);
+          mirage::threadblock::TBInputLoaderFingerprinter fp(dtensor_ptr,
                                                           stensor_ptr,
                                                           dtensor_matrix_shape,
                                                           stensor_matrix_shape,
@@ -386,15 +386,15 @@ __global__ void compute_customizedop_fingerprint(
           __syncthreads();
           break;
         }
-        case aso::type::TB_OUTPUT_OP: {
+        case mirage::type::TB_OUTPUT_OP: {
           int3 output_matrix_row_offset_block_stride;
           int3 output_matrix_column_offset_block_stride;
           int3 global_offset_block_stride;
           int2 dtensor_matrix_shape, stensor_matrix_shape;
           int input_smem_offset, accum_smem_offset;
-          aso::layout::DmemLayout dtensor_layout;
-          aso::layout::SmemLayout stensor_layout;
-          aso::threadblock::deserialize_output_saver_parameters(
+          mirage::layout::DmemLayout dtensor_layout;
+          mirage::layout::SmemLayout stensor_layout;
+          mirage::threadblock::deserialize_output_saver_parameters(
               new_params.parameters,
               param_idx,
               output_matrix_row_offset_block_stride,
@@ -406,11 +406,11 @@ __global__ void compute_customizedop_fingerprint(
               stensor_layout,
               input_smem_offset,
               accum_smem_offset);
-          aso::type::FPType *input_stensor_ptr =
-              (aso::type::FPType *)(smem_buffer + input_smem_offset);
-          aso::type::FPType *accum_stensor_ptr =
-              (aso::type::FPType *)(smem_buffer + accum_smem_offset);
-          aso::threadblock::TBOutputAccumFingerprinter fp(input_stensor_ptr,
+          mirage::type::FPType *input_stensor_ptr =
+              (mirage::type::FPType *)(smem_buffer + input_smem_offset);
+          mirage::type::FPType *accum_stensor_ptr =
+              (mirage::type::FPType *)(smem_buffer + accum_smem_offset);
+          mirage::threadblock::TBOutputAccumFingerprinter fp(input_stensor_ptr,
                                                           accum_stensor_ptr,
                                                           stensor_matrix_shape,
                                                           (i == 0),
@@ -420,8 +420,8 @@ __global__ void compute_customizedop_fingerprint(
           // Step 2: Save final output to dmem if this is the last forloop
           if (i == forloop_range - 1) {
             assert(op >= output_saver_start_idx);
-            aso::type::FPType *dtensor_ptr =
-                (aso::type::FPType *)
+            mirage::type::FPType *dtensor_ptr =
+                (mirage::type::FPType *)
                     new_params.dmem_output_ptrs[op - output_saver_start_idx];
             int tb_offset_row =
                 blockIdx.x * output_matrix_row_offset_block_stride.x +
@@ -440,7 +440,7 @@ __global__ void compute_customizedop_fingerprint(
                                 blockIdx.z * global_offset_block_stride.z;
             cutlass::MatrixCoord matrix_offset = {tb_offset_row,
                                                   tb_offset_column};
-            aso::threadblock::TBOutputSaverFingerprinter fp(
+            mirage::threadblock::TBOutputSaverFingerprinter fp(
                 dtensor_ptr,
                 accum_stensor_ptr,
                 dtensor_matrix_shape,
@@ -456,10 +456,10 @@ __global__ void compute_customizedop_fingerprint(
           }
           break;
         }
-        case aso::type::TB_MATMUL_OP: {
+        case mirage::type::TB_MATMUL_OP: {
           int m, n, k;
           int A_smem_offset, B_smem_offset, C_smem_offset;
-          aso::threadblock::deserialize_matmul_op_parameters(
+          mirage::threadblock::deserialize_matmul_op_parameters(
               new_params.parameters,
               param_idx,
               m,
@@ -468,25 +468,25 @@ __global__ void compute_customizedop_fingerprint(
               A_smem_offset,
               B_smem_offset,
               C_smem_offset);
-          aso::type::FPType *A_ptr =
-              (aso::type::FPType *)(smem_buffer + A_smem_offset);
-          aso::type::FPType *B_ptr =
-              (aso::type::FPType *)(smem_buffer + B_smem_offset);
-          aso::type::FPType *C_ptr =
-              (aso::type::FPType *)(smem_buffer + C_smem_offset);
+          mirage::type::FPType *A_ptr =
+              (mirage::type::FPType *)(smem_buffer + A_smem_offset);
+          mirage::type::FPType *B_ptr =
+              (mirage::type::FPType *)(smem_buffer + B_smem_offset);
+          mirage::type::FPType *C_ptr =
+              (mirage::type::FPType *)(smem_buffer + C_smem_offset);
 
-          aso::threadblock::TBMatmulFingerprinter fp(
+          mirage::threadblock::TBMatmulFingerprinter fp(
               A_ptr, B_ptr, C_ptr, m, n, k, threadIdx.x, blockDim.x);
           __syncthreads();
           break;
         }
-        case aso::type::TB_EXP_OP: {
+        case mirage::type::TB_EXP_OP: {
           int smem_offset, num_elements;
-          aso::threadblock::deserialize_elementunary_op_parameters(
+          mirage::threadblock::deserialize_elementunary_op_parameters(
               new_params.parameters, param_idx, smem_offset, num_elements);
-          aso::type::FPType *base_ptr =
-              (aso::type::FPType *)(smem_buffer + smem_offset);
-          aso::threadblock::TBElementUnaryFingerPrinter fp(
+          mirage::type::FPType *base_ptr =
+              (mirage::type::FPType *)(smem_buffer + smem_offset);
+          mirage::threadblock::TBElementUnaryFingerPrinter fp(
               new_params.operator_types[op],
               exp_lookup_table /*lookup_table*/,
               base_ptr,
@@ -496,10 +496,10 @@ __global__ void compute_customizedop_fingerprint(
           __syncthreads();
           break;
         }
-        case aso::type::TB_DIV_OP: {
+        case mirage::type::TB_DIV_OP: {
           int3 input1_shape, input2_shape;
           int input1_smem_offset, input2_smem_offset, output_smem_offset;
-          aso::threadblock::deserialize_elementbinary_op_parameters(
+          mirage::threadblock::deserialize_elementbinary_op_parameters(
               new_params.parameters,
               param_idx,
               input1_shape,
@@ -507,13 +507,13 @@ __global__ void compute_customizedop_fingerprint(
               input1_smem_offset,
               input2_smem_offset,
               output_smem_offset);
-          aso::type::FPType *input1_ptr =
-              (aso::type::FPType *)(smem_buffer + input1_smem_offset);
-          aso::type::FPType *input2_ptr =
-              (aso::type::FPType *)(smem_buffer + input2_smem_offset);
-          aso::type::FPType *output_ptr =
-              (aso::type::FPType *)(smem_buffer + output_smem_offset);
-          aso::threadblock::TBElementBinaryFingerPrinter fp(
+          mirage::type::FPType *input1_ptr =
+              (mirage::type::FPType *)(smem_buffer + input1_smem_offset);
+          mirage::type::FPType *input2_ptr =
+              (mirage::type::FPType *)(smem_buffer + input2_smem_offset);
+          mirage::type::FPType *output_ptr =
+              (mirage::type::FPType *)(smem_buffer + output_smem_offset);
+          mirage::threadblock::TBElementBinaryFingerPrinter fp(
               new_params.operator_types[op],
               div_p_lookup_table /*div_p_lookup*/,
               div_q_lookup_table /*div_q_lookup*/,
@@ -527,15 +527,15 @@ __global__ void compute_customizedop_fingerprint(
           __syncthreads();
           break;
         }
-        case aso::type::TB_REDUCTION_0_OP:
-        case aso::type::TB_REDUCTION_1_OP:
-        case aso::type::TB_REDUCTION_2_OP:
-        case aso::type::TB_REDUCTION_0_TO_DIMX_OP:
-        case aso::type::TB_REDUCTION_1_TO_DIMX_OP:
-        case aso::type::TB_REDUCTION_2_TO_DIMX_OP: {
+        case mirage::type::TB_REDUCTION_0_OP:
+        case mirage::type::TB_REDUCTION_1_OP:
+        case mirage::type::TB_REDUCTION_2_OP:
+        case mirage::type::TB_REDUCTION_0_TO_DIMX_OP:
+        case mirage::type::TB_REDUCTION_1_TO_DIMX_OP:
+        case mirage::type::TB_REDUCTION_2_TO_DIMX_OP: {
           int output_num_elements, reduction_degree, inner_range;
           int input_smem_offset, output_smem_offset;
-          aso::threadblock::deserialize_reduction_op_parameters(
+          mirage::threadblock::deserialize_reduction_op_parameters(
               new_params.parameters,
               param_idx,
               output_num_elements,
@@ -543,11 +543,11 @@ __global__ void compute_customizedop_fingerprint(
               inner_range,
               input_smem_offset,
               output_smem_offset);
-          aso::type::FPType *output_ptr =
-              (aso::type::FPType *)(smem_buffer + output_smem_offset);
-          aso::type::FPType *input_ptr =
-              (aso::type::FPType *)(smem_buffer + input_smem_offset);
-          aso::threadblock::TBReductionFingerprinter fp(
+          mirage::type::FPType *output_ptr =
+              (mirage::type::FPType *)(smem_buffer + output_smem_offset);
+          mirage::type::FPType *input_ptr =
+              (mirage::type::FPType *)(smem_buffer + input_smem_offset);
+          mirage::threadblock::TBReductionFingerprinter fp(
               new_params.operator_types[op],
               input_ptr,
               output_ptr,
@@ -559,13 +559,13 @@ __global__ void compute_customizedop_fingerprint(
           __syncthreads();
           break;
         }
-        case aso::type::TB_CONCAT_0_OP:
-        case aso::type::TB_CONCAT_1_OP:
-        case aso::type::TB_CONCAT_2_OP: {
+        case mirage::type::TB_CONCAT_0_OP:
+        case mirage::type::TB_CONCAT_1_OP:
+        case mirage::type::TB_CONCAT_2_OP: {
           int output_num_elements, A_concat_dim_size, B_concat_dim_size,
               inner_size;
           int A_smem_offset, B_smem_offset, output_smem_offset;
-          aso::threadblock::deserialize_concat_op_parameters(
+          mirage::threadblock::deserialize_concat_op_parameters(
               new_params.parameters,
               param_idx,
               output_num_elements,
@@ -575,13 +575,13 @@ __global__ void compute_customizedop_fingerprint(
               A_smem_offset,
               B_smem_offset,
               output_smem_offset);
-          aso::type::FPType *A_ptr =
-              (aso::type::FPType *)(smem_buffer + A_smem_offset);
-          aso::type::FPType *B_ptr =
-              (aso::type::FPType *)(smem_buffer + B_smem_offset);
-          aso::type::FPType *output_ptr =
-              (aso::type::FPType *)(smem_buffer + output_smem_offset);
-          aso::threadblock::TBConcatFingerprinter fp(A_ptr,
+          mirage::type::FPType *A_ptr =
+              (mirage::type::FPType *)(smem_buffer + A_smem_offset);
+          mirage::type::FPType *B_ptr =
+              (mirage::type::FPType *)(smem_buffer + B_smem_offset);
+          mirage::type::FPType *output_ptr =
+              (mirage::type::FPType *)(smem_buffer + output_smem_offset);
+          mirage::threadblock::TBConcatFingerprinter fp(A_ptr,
                                                      B_ptr,
                                                      output_ptr,
                                                      output_num_elements,
@@ -603,8 +603,8 @@ __global__ void compute_customizedop_fingerprint(
 }
 
 void KNCustomizedOp::run() {
-  // aso::threadblock::KernelParams params = bgraph.get_kernel_params();
-  aso::threadblock::NewKernelParams new_params =
+  // mirage::threadblock::KernelParams params = bgraph.get_kernel_params();
+  mirage::threadblock::NewKernelParams new_params =
       bgraph.get_new_kernel_params(false /*fingerprint_kernel*/);
   customized_kernel_function<<<bgraph.grid_dim,
                                bgraph.block_dim,
@@ -614,7 +614,7 @@ void KNCustomizedOp::run() {
 
 bool KNCustomizedOp::profile(ProfileResult &result) {
   printf("smem_offset = %d\n", bgraph.smem_offset);
-  int max_smem_size = aso::type::MAX_SMEM_SIZE;
+  int max_smem_size = mirage::type::MAX_SMEM_SIZE;
   assert(bgraph.smem_offset <= max_smem_size);
   if (bgraph.smem_offset > 48 * 1024) {
     checkCUDA(cudaFuncSetAttribute(customized_kernel_function,
@@ -625,8 +625,8 @@ bool KNCustomizedOp::profile(ProfileResult &result) {
   cudaEvent_t events[2];
   checkCUDA(cudaEventCreate(&events[0]));
   checkCUDA(cudaEventCreate(&events[1]));
-  // aso::threadblock::KernelParams params = bgraph.get_kernel_params();
-  aso::threadblock::NewKernelParams new_params =
+  // mirage::threadblock::KernelParams params = bgraph.get_kernel_params();
+  mirage::threadblock::NewKernelParams new_params =
       bgraph.get_new_kernel_params(false /*fingerprint_kernel*/);
   for (int i = 0; i < 1024; i++) {
     customized_kernel_function<<<bgraph.grid_dim,
@@ -653,13 +653,13 @@ bool KNCustomizedOp::profile(ProfileResult &result) {
 }
 
 bool KNCustomizedOp::fingerprint(void) {
-  int max_smem_size = aso::type::MAX_SMEM_SIZE;
-  // aso::threadblock::KernelParams params = bgraph.get_kernel_params();
-  aso::threadblock::NewKernelParams new_params =
+  int max_smem_size = mirage::type::MAX_SMEM_SIZE;
+  // mirage::threadblock::KernelParams params = bgraph.get_kernel_params();
+  mirage::threadblock::NewKernelParams new_params =
       bgraph.get_new_kernel_params(true /*fingerprint_kernel*/);
   assert(bgraph.smem_offset <= max_smem_size);
-  aso::kernel::DeviceMemoryManager *dmm =
-      aso::kernel::DeviceMemoryManager::get_instance();
+  mirage::kernel::DeviceMemoryManager *dmm =
+      mirage::kernel::DeviceMemoryManager::get_instance();
   if (bgraph.smem_offset > 48 * 1024) {
     checkCUDA(cudaFuncSetAttribute(compute_customizedop_fingerprint,
                                    cudaFuncAttributeMaxDynamicSharedMemorySize,
@@ -678,4 +678,4 @@ bool KNCustomizedOp::fingerprint(void) {
 }
 
 } // namespace kernel
-} // namespace aso
+} // namespace mirage

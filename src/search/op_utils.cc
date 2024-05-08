@@ -1,7 +1,7 @@
-#include "aso/search/op_utils.h"
-#include "aso/utils/containers.h"
+#include "mirage/search/op_utils.h"
+#include "mirage/utils/containers.h"
 
-namespace aso {
+namespace mirage {
 namespace search {
 
 bool is_binary(type::TBOperatorType op) {
@@ -339,4 +339,4 @@ TBOperator *create_op(threadblock::Graph &g,
 }
 
 } // namespace search
-} // namespace aso
+} // namespace mirage
