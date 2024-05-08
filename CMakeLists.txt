@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
-project(ASO LANGUAGES C CXX CUDA)
+project(MIRAGE LANGUAGES C CXX CUDA)
 
 message(STATUS "CMake Version: ${CMAKE_VERSION}")
 
@@ -23,11 +23,11 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_LIST_DIR}/cmake)
 set(CMAKE_CUDA_ARCHITECTURES "70;75;80;86;89;90")
 #set(CUTLASS_NVCC_ARCHS "80;86")
 
-file(GLOB_RECURSE ASO_SRCS
+file(GLOB_RECURSE MIRAGE_SRCS
   src/*.cc
 )
 
-file(GLOB_RECURSE ASO_CUDA_SRCS
+file(GLOB_RECURSE MIRAGE_CUDA_SRCS
   src/*.cu
 )
 
@@ -59,13 +59,13 @@ if (NOT "${USE_CUDA}" STREQUAL "OFF")
   include(cmake/cuda.cmake)
   find_cuda(${USE_CUDA})
   if (CUDA_FOUND)
-    list(APPEND ASO_SRCS ${ASO_CUDA_SRCS})
+    list(APPEND MIRAGE_SRCS ${MIRAGE_CUDA_SRCS})
     include_directories(${CUDA_INCLUDE_DIRS})
     message(STATUS "CUDA_INCLUDE_DIR=" ${CUDA_INCLUDE_DIRS})
-    list(APPEND ASO_LINK_LIBS ${CUDA_CUDART_LIBRARY})
-    list(APPEND ASO_LINK_LIBS ${CUDA_CUDA_LIBRARY})
-    list(APPEND ASO_LINK_LIBS ${CUDA_CUDNN_LIBRARY})
-    list(APPEND ASO_LINK_LIBS ${CUDA_CUBLAS_LIBRARY})
+    list(APPEND MIRAGE_LINK_LIBS ${CUDA_CUDART_LIBRARY})
+    list(APPEND MIRAGE_LINK_LIBS ${CUDA_CUDA_LIBRARY})
+    list(APPEND MIRAGE_LINK_LIBS ${CUDA_CUDNN_LIBRARY})
+    list(APPEND MIRAGE_LINK_LIBS ${CUDA_CUBLAS_LIBRARY})
   else()
     message(FATAL_ERROR "Cannot find CUDA, USE_CUDA=" ${USE_CUDA})
   endif(CUDA_FOUND)
@@ -76,7 +76,7 @@ set(CUTLASS_DIR ${PROJECT_SOURCE_DIR}/deps/cutlass)
 include_directories(deps/cutlass/include)
 include_directories(deps/cutlass/tools/util/include)
 
-#include_directories(${ASO_INCLUDE_DIRS})
+#include_directories(${MIRAGE_INCLUDE_DIRS})
 
 #set Z3
 find_package(Z3 REQUIRED)
@@ -85,17 +85,17 @@ message(STATUS "Found Z3 ${Z3_VERSION_STRING}")
 message(STATUS "Z3_DIR: ${Z3_DIR}")
 include_directories(${Z3_CXX_INCLUDE_DIRS})
 #target_link_libraries(mirage_runtime PUBLIC ${Z3_LIBRARIES})
-list(APPEND ASO_LINK_LIBS ${Z3_LIBRARIES})
+list(APPEND MIRAGE_LINK_LIBS ${Z3_LIBRARIES})
 
 add_subdirectory(deps/json)
-list(APPEND ASO_LINK_LIBS nlohmann_json::nlohmann_json)
+list(APPEND MIRAGE_LINK_LIBS nlohmann_json::nlohmann_json)
 
 #add_subdirectory(deps/z3 z3 EXCLUDE_FROM_ALL)
 #include_directories(deps/z3/src/api/c++)
 #include_directories(deps/z3/src/api)
-#list(APPEND ASO_LINK_LIBS z3)
+#list(APPEND MIRAGE_LINK_LIBS z3)
 
-add_library(mirage_runtime ${ASO_SRCS})
+add_library(mirage_runtime ${MIRAGE_SRCS})
 
 # Note(zhihao): CUDA_SEPARABLE_COMPILATION is non-compatible with
 # cython's installation, since enabling separable compilation
@@ -110,7 +110,7 @@ set_target_properties(mirage_runtime PROPERTIES CUDA_ARCHITECTURES "70;75;80;86;
 
 target_compile_features(mirage_runtime PUBLIC cxx_std_17)
 
-target_link_libraries(mirage_runtime ${ASO_LINK_LIBS})
+target_link_libraries(mirage_runtime ${MIRAGE_LINK_LIBS})
 
 target_include_directories(mirage_runtime
   PUBLIC ${PROJECT_SOURCE_DIR}/include)
@@ -303,10 +303,10 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
-option(ASO_BUILD_UNIT_TEST "build unit tests" OFF)
+option(MIRAGE_BUILD_UNIT_TEST "build unit tests" OFF)
 
 # GTest
-if (ASO_BUILD_UNIT_TEST)
+if (MIRAGE_BUILD_UNIT_TEST)
   enable_testing()
   find_package(GTest)
   if(NOT GTest_FOUND)
