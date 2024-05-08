@@ -20,8 +20,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
 #add_subdirectory(deps/cutlass)
 
-set(CMAKE_CUDA_ARCHITECTURES native)
-set(CUTLASS_NVCC_ARCHS "80;86")
+set(CMAKE_CUDA_ARCHITECTURES "70;75;80;86;89;90")
+#set(CUTLASS_NVCC_ARCHS "80;86")
 
 file(GLOB_RECURSE ASO_SRCS
   src/*.cc
@@ -39,7 +39,11 @@ include(deps/cutlass/CUDA.cmake)
 string(REPLACE "." ";" CUDA_VERSION_PARTS ${CUDA_VERSION})
 list(GET CUDA_VERSION_PARTS 0 CUDA_VERSION_MAJOR)
 list(GET CUDA_VERSION_PARTS 1 CUDA_VERSION_MINOR)
-list(APPEND CMAKE_CUDA_FLAGS "-D__CUDACC_VER_MAJOR__=${CUDA_VERSION_MAJOR} -D__CUDACC_VER_MINOR__=${CUDA_VERSION_MINOR} -DCUTLASS_ARCH_MMA_SM80_ENABLED")
+list(APPEND CMAKE_CUDA_FLAGS "-D__CUDACC_VER_MAJOR__=${CUDA_VERSION_MAJOR} -D__CUDACC_VER_MINOR__=${CUDA_VERSION_MINOR}")
+
+# TODO: Currently disable CUTLASS_ARCH_MMA_SM80_ENABLED flag
+# since we target Triton to perform codegen
+#list(APPEND CMAKE_CUDA_FLAGS "-DCUTLASS_ARCH_MMA_SM80_ENABLED")
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
   message("Build in Debug mode")
@@ -102,8 +106,7 @@ add_library(mirage_runtime ${ASO_SRCS})
 #set_target_properties(mirage_runtime
 #  PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-set_target_properties(mirage_runtime PROPERTIES CUDA_ARCHITECTURES native)
-
+set_target_properties(mirage_runtime PROPERTIES CUDA_ARCHITECTURES "70;75;80;86;89;90")
 
 target_compile_features(mirage_runtime PUBLIC cxx_std_17)
 
