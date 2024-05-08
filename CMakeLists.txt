@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24 FATAL_ERROR)
-project(ASO LANGUAGES C CXX CUDA)
+project(MIRAGE LANGUAGES C CXX CUDA)
 
 message(STATUS "CMake Version: ${CMAKE_VERSION}")
 
@@ -20,14 +20,14 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
 #add_subdirectory(deps/cutlass)
 
-set(CMAKE_CUDA_ARCHITECTURES native)
-set(CUTLASS_NVCC_ARCHS "80;86")
+set(CMAKE_CUDA_ARCHITECTURES "70;75;80;86;89;90")
+#set(CUTLASS_NVCC_ARCHS "80;86")
 
-file(GLOB_RECURSE ASO_SRCS
+file(GLOB_RECURSE MIRAGE_SRCS
   src/*.cc
 )
 
-file(GLOB_RECURSE ASO_CUDA_SRCS
+file(GLOB_RECURSE MIRAGE_CUDA_SRCS
   src/*.cu
 )
 
@@ -39,7 +39,11 @@ include(deps/cutlass/CUDA.cmake)
 string(REPLACE "." ";" CUDA_VERSION_PARTS ${CUDA_VERSION})
 list(GET CUDA_VERSION_PARTS 0 CUDA_VERSION_MAJOR)
 list(GET CUDA_VERSION_PARTS 1 CUDA_VERSION_MINOR)
-list(APPEND CMAKE_CUDA_FLAGS "-D__CUDACC_VER_MAJOR__=${CUDA_VERSION_MAJOR} -D__CUDACC_VER_MINOR__=${CUDA_VERSION_MINOR} -DCUTLASS_ARCH_MMA_SM80_ENABLED")
+list(APPEND CMAKE_CUDA_FLAGS "-D__CUDACC_VER_MAJOR__=${CUDA_VERSION_MAJOR} -D__CUDACC_VER_MINOR__=${CUDA_VERSION_MINOR}")
+
+# TODO: Currently disable CUTLASS_ARCH_MMA_SM80_ENABLED flag
+# since we target Triton to perform codegen
+#list(APPEND CMAKE_CUDA_FLAGS "-DCUTLASS_ARCH_MMA_SM80_ENABLED")
 
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
   message("Build in Debug mode")
@@ -55,13 +59,13 @@ if (NOT "${USE_CUDA}" STREQUAL "OFF")
   include(cmake/cuda.cmake)
   find_cuda(${USE_CUDA})
   if (CUDA_FOUND)
-    list(APPEND ASO_SRCS ${ASO_CUDA_SRCS})
+    list(APPEND MIRAGE_SRCS ${MIRAGE_CUDA_SRCS})
     include_directories(${CUDA_INCLUDE_DIRS})
     message(STATUS "CUDA_INCLUDE_DIR=" ${CUDA_INCLUDE_DIRS})
-    list(APPEND ASO_LINK_LIBS ${CUDA_CUDART_LIBRARY})
-    list(APPEND ASO_LINK_LIBS ${CUDA_CUDA_LIBRARY})
-    list(APPEND ASO_LINK_LIBS ${CUDA_CUDNN_LIBRARY})
-    list(APPEND ASO_LINK_LIBS ${CUDA_CUBLAS_LIBRARY})
+    list(APPEND MIRAGE_LINK_LIBS ${CUDA_CUDART_LIBRARY})
+    list(APPEND MIRAGE_LINK_LIBS ${CUDA_CUDA_LIBRARY})
+    list(APPEND MIRAGE_LINK_LIBS ${CUDA_CUDNN_LIBRARY})
+    list(APPEND MIRAGE_LINK_LIBS ${CUDA_CUBLAS_LIBRARY})
   else()
     message(FATAL_ERROR "Cannot find CUDA, USE_CUDA=" ${USE_CUDA})
   endif(CUDA_FOUND)
@@ -72,7 +76,7 @@ set(CUTLASS_DIR ${PROJECT_SOURCE_DIR}/deps/cutlass)
 include_directories(deps/cutlass/include)
 include_directories(deps/cutlass/tools/util/include)
 
-#include_directories(${ASO_INCLUDE_DIRS})
+#include_directories(${MIRAGE_INCLUDE_DIRS})
 
 #set Z3
 find_package(Z3 REQUIRED)
@@ -81,17 +85,17 @@ message(STATUS "Found Z3 ${Z3_VERSION_STRING}")
 message(STATUS "Z3_DIR: ${Z3_DIR}")
 include_directories(${Z3_CXX_INCLUDE_DIRS})
 #target_link_libraries(mirage_runtime PUBLIC ${Z3_LIBRARIES})
-list(APPEND ASO_LINK_LIBS ${Z3_LIBRARIES})
+list(APPEND MIRAGE_LINK_LIBS ${Z3_LIBRARIES})
 
 add_subdirectory(deps/json)
-list(APPEND ASO_LINK_LIBS nlohmann_json::nlohmann_json)
+list(APPEND MIRAGE_LINK_LIBS nlohmann_json::nlohmann_json)
 
 #add_subdirectory(deps/z3 z3 EXCLUDE_FROM_ALL)
 #include_directories(deps/z3/src/api/c++)
 #include_directories(deps/z3/src/api)
-#list(APPEND ASO_LINK_LIBS z3)
+#list(APPEND MIRAGE_LINK_LIBS z3)
 
-add_library(mirage_runtime ${ASO_SRCS})
+add_library(mirage_runtime ${MIRAGE_SRCS})
 
 # Note(zhihao): CUDA_SEPARABLE_COMPILATION is non-compatible with
 # cython's installation, since enabling separable compilation
@@ -102,11 +106,11 @@ add_library(mirage_runtime ${ASO_SRCS})
 #set_target_properties(mirage_runtime
 #  PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 
-set_target_properties(mirage_runtime PROPERTIES CUDA_ARCHITECTURES native)
+set_target_properties(mirage_runtime PROPERTIES CUDA_ARCHITECTURES "70;75;80;86;89;90")
 
 target_compile_features(mirage_runtime PUBLIC cxx_std_17)
 
-target_link_libraries(mirage_runtime ${ASO_LINK_LIBS})
+target_link_libraries(mirage_runtime ${MIRAGE_LINK_LIBS})
 
 target_include_directories(mirage_runtime
   PUBLIC ${PROJECT_SOURCE_DIR}/include)
@@ -160,28 +164,6 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
-# Multi-Query Attention Speculative Decoding
-if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
-  set(CPP_EXAMPLES_DIR cpp_examples)
-  set(CPP_EXAMPLES_BIN multi_query_attn_spec_decode)
-  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
-  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
-  set_target_properties(${CPP_EXAMPLES_BIN}
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
-endif()
-
-# Multi-Query Attention Prefilling
-if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
-  set(CPP_EXAMPLES_DIR cpp_examples)
-  set(CPP_EXAMPLES_BIN multi_query_attn_prefill)
-  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
-  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
-  set_target_properties(${CPP_EXAMPLES_BIN}
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
-endif()
-
 # Group-Query Attention Incremental Decoding
 if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   set(CPP_EXAMPLES_DIR cpp_examples)
@@ -213,28 +195,6 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
   target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
-endif()
-
-# Group-Query Attention Spec Decoding
-if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
-  set(CPP_EXAMPLES_DIR cpp_examples)
-  set(CPP_EXAMPLES_BIN group_query_attn_spec_decode)
-  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
-  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
-  set_target_properties(${CPP_EXAMPLES_BIN}
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
-endif()
-
-# Group-Query Attention Prefilling
-if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
-  set(CPP_EXAMPLES_DIR cpp_examples)
-  set(CPP_EXAMPLES_BIN group_query_attn_prefill)
-  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
-  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
-  set_target_properties(${CPP_EXAMPLES_BIN}
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
 endif()
 
 # Multi-Head Attention Incremental Decoding
@@ -270,28 +230,6 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
-# Multi-Head Attention Speculative Decoding
-if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
-  set(CPP_EXAMPLES_DIR cpp_examples)
-  set(CPP_EXAMPLES_BIN multi_head_attn_spec_decode)
-  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
-  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
-  set_target_properties(${CPP_EXAMPLES_BIN}
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
-endif()
-
-# Multi-Head Attention Prefilling
-if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
-  set(CPP_EXAMPLES_DIR cpp_examples)
-  set(CPP_EXAMPLES_BIN multi_head_attn_prefill)
-  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
-  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
-  set_target_properties(${CPP_EXAMPLES_BIN}
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
-endif()
-
 # LoRA
 if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   set(CPP_EXAMPLES_DIR cpp_examples)
@@ -323,17 +261,6 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   set_target_properties(${CPP_EXAMPLES_BIN}
     PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
   target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
-endif()
-
-# MoE
-if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
-  set(CPP_EXAMPLES_DIR cpp_examples)
-  set(CPP_EXAMPLES_BIN moe)
-  file(GLOB CPP_EXAMPLES_SRCS ${CPP_EXAMPLES_DIR}/${CPP_EXAMPLES_BIN}.cc)
-  add_executable(${CPP_EXAMPLES_BIN} ${CPP_EXAMPLES_SRCS})
-  set_target_properties(${CPP_EXAMPLES_BIN}
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CPP_EXAMPLES_DIR})
-  target_link_libraries(${CPP_EXAMPLES_BIN} aso_runtime)
 endif()
 
 if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
@@ -376,10 +303,10 @@ if ("${BUILD_CPP_EXAMPLES}" STREQUAL "ON")
   target_link_libraries(${CPP_EXAMPLES_BIN} mirage_runtime)
 endif()
 
-option(ASO_BUILD_UNIT_TEST "build unit tests" OFF)
+option(MIRAGE_BUILD_UNIT_TEST "build unit tests" OFF)
 
 # GTest
-if (ASO_BUILD_UNIT_TEST)
+if (MIRAGE_BUILD_UNIT_TEST)
   enable_testing()
   find_package(GTest)
   if(NOT GTest_FOUND)

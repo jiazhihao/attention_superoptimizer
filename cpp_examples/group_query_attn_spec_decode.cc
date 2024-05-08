@@ -110,8 +110,6 @@ int main(int argc, char **argv) {
     total_ms = total_ms + result.run_time;
   }
   printf("[2 Block Graphs] Total runtime = %.4lfms\n", total_ms);
-<<<<<<< HEAD
-=======
   graph.generate_triton_program("test.py");
 
   clock_t st = clock();
@@ -127,6 +125,5 @@ int main(int argc, char **argv) {
 
   printf("Search time = %.4lfsec\n", (float)(et - st) / CLOCKS_PER_SEC);
 
->>>>>>> 996671b011f7150286ceaae9d2a1b26e00840a16
   return 0;
 }

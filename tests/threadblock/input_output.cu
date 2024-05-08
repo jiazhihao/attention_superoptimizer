@@ -1,7 +1,7 @@
-#include "aso/kernel/graph.h"
-#include "aso/threadblock/cuda/input_loader.h"
-#include "aso/threadblock/cuda/output_saver.h"
-#include "aso/threadblock/graph.h"
+#include "mirage/kernel/graph.h"
+#include "mirage/threadblock/cuda/input_loader.h"
+#include "mirage/threadblock/cuda/output_saver.h"
+#include "mirage/threadblock/graph.h"
 
 #include <fstream>
 #include <iostream>
@@ -10,8 +10,8 @@
 
 #include "common.h"
 
-using namespace aso::threadblock;
-using namespace aso::kernel;
+using namespace mirage::threadblock;
+using namespace mirage::kernel;
 
 __global__ void
     launch_input_output_kernel(DTensor D_In, DTensor D_Out, STensor S_tensor) {
@@ -23,7 +23,7 @@ __global__ void
   int global_offset = blockIdx.x * (64 * 64);
 
   cutlass::MatrixCoord matrix_offset = {tb_offset_row, tb_offset_column};
-  aso::threadblock::GenericInputLoader loader(smem_buffer,
+  mirage::threadblock::GenericInputLoader loader(smem_buffer,
                                               D_In,
                                               S_tensor,
                                               threadIdx.x,
@@ -31,7 +31,7 @@ __global__ void
                                               matrix_offset,
                                               global_offset);
   __syncthreads();
-  aso::threadblock::GenericOutputSaver saver(smem_buffer,
+  mirage::threadblock::GenericOutputSaver saver(smem_buffer,
                                              D_Out,
                                              S_tensor,
                                              threadIdx.x,
@@ -42,22 +42,22 @@ __global__ void
 }
 
 TEST(threadblock_tests, input_output) {
-  aso::kernel::Graph kgraph;
+  mirage::kernel::Graph kgraph;
 
   // single thread block test
-  aso::threadblock::Graph bgraph({16, 1, 1}, {128, 1, 1}, 1);
-  aso::kernel::DTensor Input =
+  mirage::threadblock::Graph bgraph({16, 1, 1}, {128, 1, 1}, 1);
+  mirage::kernel::DTensor Input =
       kgraph.new_input({16, 64, 64},
-                       aso::type::DT_FLOAT16,
-                       aso::layout::DmemLayout::DmemRowMajor);
-  aso::kernel::DTensor Output =
+                       mirage::type::DT_FLOAT16,
+                       mirage::layout::DmemLayout::DmemRowMajor);
+  mirage::kernel::DTensor Output =
       kgraph.new_input({16, 64, 64},
-                       aso::type::DT_FLOAT16,
-                       aso::layout::DmemLayout::DmemRowMajor);
-  aso::kernel::DTensor Output_Ref =
+                       mirage::type::DT_FLOAT16,
+                       mirage::layout::DmemLayout::DmemRowMajor);
+  mirage::kernel::DTensor Output_Ref =
       kgraph.new_input({16, 64, 64},
-                       aso::type::DT_FLOAT16,
-                       aso::layout::DmemLayout::DmemRowMajor);
+                       mirage::type::DT_FLOAT16,
+                       mirage::layout::DmemLayout::DmemRowMajor);
 
   int const num_threads_per_blk = 1024;
   int num_blocks =
@@ -70,8 +70,8 @@ TEST(threadblock_tests, input_output) {
              Input.num_elements() * sizeof(cutlass::half_t),
              cudaMemcpyDeviceToDevice);
 
-  aso::threadblock::STensor Input_S =
-      bgraph.new_input(Input, {0, -1, -1}, -1, aso::layout::SmemRowMajor);
+  mirage::threadblock::STensor Input_S =
+      bgraph.new_input(Input, {0, -1, -1}, -1, mirage::layout::SmemRowMajor);
 
   int smem_size = 48 * 1024; // 48 KB
   launch_input_output_kernel<<<bgraph.grid_dim, bgraph.block_dim, smem_size>>>(

@@ -200,6 +200,7 @@ public:
                             int num_threads,
                             MatrixCoord matrix_offset,
                             int global_offset) {
+#if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 800))
     int base_offset = global_offset + matrix_offset.row() * dtensor_matrix_shape.column() + matrix_offset.column();
     // Each thread loads 16 bytes using cp.async
     for (int i = thread_id * 8; i < kRow * kColumn; i += 8 * num_threads) {
@@ -210,6 +211,9 @@ public:
     }
     asm volatile("cp.async.commit_group;\n" ::);
     asm volatile("cp.async.wait_all;\n" ::);
+#else
+    assert(false && "To be implemented");
+#endif
   }
 };
 
@@ -226,6 +230,7 @@ public:
                             int num_threads,
                             MatrixCoord matrix_offset,
                             int global_offset) {
+#if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 800))
     int base_offset = global_offset + matrix_offset.column() * dtensor_matrix_shape.row() + matrix_offset.row();
     // Each thread loads 16 bytes using cp.async
     for (int i = thread_id * 8; i < kRow * kColumn; i += 8 * num_threads) {
@@ -235,6 +240,9 @@ public:
     }
     asm volatile("cp.async.commit_group;\n" ::);
     asm volatile("cp.async.wait_all;\n" ::);
+#else
+    assert(false && "To be implemented");
+#endif
   }
 };
 
