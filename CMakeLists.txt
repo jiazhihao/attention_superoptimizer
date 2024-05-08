@@ -96,6 +96,7 @@ list(APPEND ASO_LINK_LIBS nlohmann_json::nlohmann_json)
 #list(APPEND ASO_LINK_LIBS z3)
 
 add_library(mirage_runtime ${ASO_SRCS})
+<<<<<<< HEAD
 
 # Note(zhihao): CUDA_SEPARABLE_COMPILATION is non-compatible with
 # cython's installation, since enabling separable compilation
@@ -105,6 +106,19 @@ add_library(mirage_runtime ${ASO_SRCS})
 # undefined symbol: __cudaRegisterLinkedBinary_...
 #set_target_properties(mirage_runtime
 #  PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+=======
+
+# Note(zhihao): CUDA_SEPARABLE_COMPILATION is non-compatible with
+# cython's installation, since enabling separable compilation
+# will let cmake generate a seperate object file called
+# cmake_device_link.o, and cython's installation cannot
+# automatically link to that file, resulting in:
+# undefined symbol: __cudaRegisterLinkedBinary_...
+#set_target_properties(mirage_runtime
+#  PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+set_target_properties(mirage_runtime PROPERTIES CUDA_ARCHITECTURES native)
+>>>>>>> fd6fd70f0eba9fc09086ce791c5e865f239a842e
 
 set_target_properties(mirage_runtime PROPERTIES CUDA_ARCHITECTURES "70;75;80;86;89;90")
 
