@@ -69,12 +69,12 @@ macro(find_cuda use_cuda)
         ${CUDA_TOOLKIT_ROOT_DIR}/lib64
         ${CUDA_TOOLKIT_ROOT_DIR}/lib)
       find_library(CUDA_CUBLAS_LIBRARY cublas
-        #/opt/nvidia/hpc_sdk/Linux_x86_64/23.9/math_libs/12.2/lib64/
+        /opt/nvidia/hpc_sdk/Linux_x86_64/23.9/math_libs/12.2/lib64/
         ${CUDA_TOOLKIT_ROOT_DIR}/lib64
         ${CUDA_TOOLKIT_ROOT_DIR}/lib)
     endif(MSVC)
-    #list(APPEND CUDA_INCLUDE_DIRS /opt/nvidia/hpc_sdk/Linux_x86_64/23.9/math_libs/12.2/include)
-    #list(APPEND CUDA_INCLUDE_DIRS /global/common/software/nersc/pm-2023q2/sw/cudnn-8.9.3.28_cuda12/include)
+    list(APPEND CUDA_INCLUDE_DIRS /opt/nvidia/hpc_sdk/Linux_x86_64/23.9/math_libs/12.2/include)
+    list(APPEND CUDA_INCLUDE_DIRS /global/common/software/nersc/pm-2023q2/sw/cudnn-8.9.3.28_cuda12/include)
     message(STATUS "CUDA_INCLUDE_DIRS=" ${CUDA_INCLUDE_DIRS})
     message(STATUS "Found CUDA_TOOLKIT_ROOT_DIR=" ${CUDA_TOOLKIT_ROOT_DIR})
     message(STATUS "Found CUDA_CUDA_LIBRARY=" ${CUDA_CUDA_LIBRARY})
