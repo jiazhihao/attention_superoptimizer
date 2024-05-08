@@ -367,11 +367,12 @@ public:
                 __halves2half2(ptr_D[m * ThreadShape::kN / 2 + n],
                                ptr_D[m * ThreadShape::kN / 2 + n + 1]);
 
+#if (defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 600))
             __half2 D = __hfma2(A, B, C);
 
             ptr_D[m * ThreadShape::kN / 2 + n] = __low2half(D);
             ptr_D[m * ThreadShape::kN / 2 + n + 1] = __high2half(D);
-
+#endif
             if (false && threadIdx.x == 0) {
               printf("--------A----%d %f %f\n",
                      threadIdx.x,

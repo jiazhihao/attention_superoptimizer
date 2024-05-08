@@ -33,5 +33,26 @@ In addition, Mirage also finds other mugraphs that outperform these manually des
 ```python
 graphs = mi.optimize(graph, griddims=[(2, 16, 1), (2, 16, 4)])
 ```
-The search is configured by the following parameters (`griddims` is the one you are likely to reset for your problem size).
+The search is configured by the following parameters (`griddims` is the one you are likely to reset for your problem sizes). Some parameters are highly specific to mugraphs, we `
 
+* `griddims`: the number of thread blocks along each dimension of the grid. (default: `[(16, 1, 1), (16, 2, 1), (16, 4, 1)]`)
+* `blockdims`: the number of threads along each dimension of the thread block. (default: `[(128, 1, 1)]`)
+* `imaps`: potential mappings between data dimensions of an input tensor and `griddims` (default: `[(0, -1, -1), (0, 1, -1), (0, 2, -1), (0, -1, 1)]`). Note that `-1` indicates the input tensor is replicated across thread blocks along that grid dimension.
+* `omaps`: potential mappings between data dimensions of an output tensor and `griddims` (default: `[(0, -1, -1), (0, 1, -1), (0, 2, -1), (0, 2, 1)]`).
+* `fmaps`: potential mappings between data dimensions of an input tensor and the for-loop dimension of the thread block (default: `[-1, 1, 2]`). Again, `-1` indicates the input tensor is replicated across different for-loop iterations.
+* `franges`: possible for-loop ranges to be considered during the search (default: `1, 4, 8, 16`).
+
+Note that the default values for these parameters are tailored for multi-head/multi-query/group-query attention. Except for `griddims`, which depends on the problem sizes, the default values for other parameters are sufficient to discover FlashAttn, FlashDecoding, and many other optimized attention kernerls.
+
+The above code snippet returns `graphs`, a list of mugraphs discovered by Mirage that are functionally equivalent to the input program. Mirage uses a probabilistic equivalence verification mechanism to ensure that all discovered mugraphs are equivalent to the inpout. Finally, we can generate Triton programs from these mugraphs.
+
+```python
+for i, graph in enumerate(graphs):
+    graph.generate_triton_program("generated_program_{}.py".format(i))
+```
+
+The above search procedure takes around 4 hours and discovers 69 potential tensor programs for implementing group-query attention. To bypass the search and directly check the generated programs, we can start from a previous checkpoint of the search by running
+```bash
+python demo/demo_group_query_attention_spec_decode.py --checkpoint demo/checkpoint_group_query_attn_spec_decode.json
+```
+This returns 69 Triton programs. The performance of these programs on a NVIDIA A100 GPU is as follows. Note that some generated programs perform small matrix multiplications within a thread block. These programs cannot be directly supporrted by Triton, which requires a minimum of 16x16x16 matrix multiplication.
