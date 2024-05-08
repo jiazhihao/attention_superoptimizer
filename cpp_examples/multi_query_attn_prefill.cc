@@ -1,5 +1,6 @@
 #include "mirage/kernel/graph.h"
 #include "mirage/threadblock/graph.h"
+#include "mirage/search/search.h"
 #include "common.h"
 
 using namespace mirage;

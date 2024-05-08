@@ -81,9 +81,7 @@ int main(int argc, char **argv) {
 
   clock_t st = clock();
   search::GeneratorConfig config =
-      search::GeneratorConfig::get_mlp_default_config();
-  config.tbop_to_explore.push_back(type::TBOperatorType::TB_CONCAT_THEN_MATMUL_OP);
-  config.grid_dim_to_explore = {{128, 1, 1}};
+      search::GeneratorConfig::get_lora_default_config();
   search::KernelGraphGenerator gen(ref_graph, config, "checkpoint_lora.json");
   gen.generate_kernel_graphs();
 

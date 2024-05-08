@@ -39,6 +39,7 @@ struct GeneratorConfig {
   static GeneratorConfig get_default_config();
   static GeneratorConfig get_attention_default_config();
   static GeneratorConfig get_mlp_default_config();
+  static GeneratorConfig get_lora_default_config();
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(GeneratorConfig,
