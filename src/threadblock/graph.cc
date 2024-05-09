@@ -297,7 +297,8 @@ NewKernelParams Graph::get_new_kernel_params(bool fingerprint) const {
             (int)input.num_elements());
         break;
       }
-      case mirage::type::TB_DIV_OP: {
+      case mirage::type::TB_DIV_OP: 
+      case mirage::type::TB_ADD_OP: {
         assert(operators[i]->input_tensors.size() == 2);
         assert(operators[i]->output_tensors.size() == 1);
         mirage::threadblock::STensor input1 = operators[i]->input_tensors[0];
@@ -477,6 +478,7 @@ Graph::operator json() const {
             {"grid_dim", grid_dim},
             {"block_dim", block_dim},
             {"forloop_range", forloop_range},
+            {"reduction_dimx", reduction_dimx},
             {"operators", {}},
             {"smem_offset", smem_offset}};
   for (TBOperator *const op : operators) {

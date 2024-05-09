@@ -184,6 +184,16 @@ void KernelGraphGenerator::generate_next_tb_operator(
       assert(g.operators.back() == new_op);
       delete g.operators.back();
       g.operators.pop_back();
+      if (op_type == type::TBOperatorType::TB_CONCAT_THEN_MATMUL_OP) {
+        assert(g.operators.back()->op_type ==
+               type::TB_CONCAT_FIRST_OP_ID + output.num_dims - 2);
+        delete g.operators.back();
+        g.operators.pop_back();
+        assert(g.operators.back()->op_type ==
+               type::TB_CONCAT_FIRST_OP_ID + output.num_dims - 1);
+        delete g.operators.back();
+        g.operators.pop_back();
+      }
       callstack.back().input_idx_explored.insert(input_idx);
     }
     callstack.back().tbop_explored.insert(op_type);
@@ -202,9 +212,8 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
   if (verify(c, g)) {
     ++num_valid_kernel_graphs;
     // std::ofstream ofs;
-    // ofs.open("generated_graphs.txt", std::ofstream::out | std::ofstream::app);
-    // ofs << json(g) << std::endl;
-    // ofs.close();
+    // ofs.open("generated_graphs.txt", std::ofstream::out |
+    // std::ofstream::app); ofs << json(g) << std::endl; ofs.close();
     generated_graphs.push_back(json(g));
     // update_best_graph(g);
     std::cerr << "kernel graph candidate: " << json(g) << std::endl;
@@ -331,8 +340,10 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
                     continue;
                   }
                   SearchContext<STensor> tb_context;
-                  threadblock::Graph tb_graph(
-                      grid_dim, block_dim, forloop_range, type::TB_REDUCTION_DIMX);
+                  threadblock::Graph tb_graph(grid_dim,
+                                              block_dim,
+                                              forloop_range,
+                                              config.reduction_dimx);
 
                   bool input_created = true;
                   for (size_t i = 0; i < input_tensors.size(); ++i) {
@@ -425,6 +436,7 @@ void KernelGraphGenerator::generate_next_kn_operator(SearchContext<DTensor> &c,
 void KernelGraphGenerator::generate_kernel_graphs() {
   pattern_eval();
   fingerprint_eval();
+  generated_graphs.push_back(json(computation_graph));
 
   kernel::Graph g;
   SearchContext<DTensor> c;
@@ -479,6 +491,9 @@ void KernelGraphGenerator::process_outputs() {
 
 bool KernelGraphGenerator::check_pattern(
     std::shared_ptr<AlgebraicPattern> pattern) {
+  if (!pattern) {
+    return false;
+  }
   for (auto const &final_pattern : final_patterns) {
     if (pattern->subpattern_to(*final_pattern)) {
       return true;
@@ -507,6 +522,12 @@ void KernelGraphGenerator::pattern_eval() {
                      computation_graph_patterns.at(op->input_tensors[0]),
                      computation_graph_patterns.at(op->input_tensors[1])))});
         break;
+      case type::KNOperatorType::KN_ADD_OP:
+        computation_graph_patterns.insert(
+            {op->output_tensors[0],
+             std::make_shared<Add>(
+                 computation_graph_patterns.at(op->input_tensors[0]),
+                 computation_graph_patterns.at(op->input_tensors[1]))});
       case type::KNOperatorType::KN_REDUCTION_0_OP:
         computation_graph_patterns.insert(
             {op->output_tensors[0],
@@ -575,7 +596,7 @@ bool KernelGraphGenerator::verify(SearchContext<DTensor> &c,
 
   ++num_total_random_tests;
 
-  // std::cout << "random testing: " << json(g) << std::endl;
+  std::cout << "random testing: " << json(g) << std::endl;
 
   for (auto const &op : g.operators) {
     op->fingerprint();
@@ -604,6 +625,16 @@ bool KernelGraphGenerator::have_same_fingerprint(
 std::vector<layout::SmemLayout> KernelGraphGenerator::get_valid_output_layout(
     threadblock::TBOperator const *op, int idx) {
   assert(idx == 0);
+  config.smem_layout_to_explore = {
+      layout::SmemRowMajor,
+      layout::SmemColumnMajor,
+      // layout::SmemRowMajorTensorOpMultiplicand_Crosswise16,
+      layout::SmemRowMajorTensorOpMultiplicand_Crosswise32,
+      layout::SmemRowMajorTensorOpMultiplicand_Crosswise64,
+      // layout::SmemColumnMajorTensorOpMultiplicand_Crosswise16,
+      layout::SmemColumnMajorTensorOpMultiplicand_Crosswise32,
+      layout::SmemColumnMajorTensorOpMultiplicand_Crosswise64,
+  };
   switch (op->op_type) {
     case type::TBOperatorType::TB_INPUT_OP:
       return config.smem_layout_to_explore;
@@ -623,11 +654,27 @@ std::vector<layout::SmemLayout> KernelGraphGenerator::get_valid_output_layout(
         return {};
       }
     }
-    case type::TBOperatorType::TB_OUTPUT_OP:
+    case type::TBOperatorType::TB_OUTPUT_OP: {
+      if (op->input_tensors[0].layout == layout::SmemRowMajor ||
+          op->input_tensors[0].layout ==
+              layout::SmemRowMajorTensorOpMultiplicand_Crosswise16 ||
+          op->input_tensors[0].layout ==
+              layout::SmemRowMajorTensorOpMultiplicand_Crosswise32 ||
+          op->input_tensors[0].layout ==
+              layout::SmemRowMajorTensorOpMultiplicand_Crosswise64) {
+        return {op->input_tensors[0].layout};
+      } else {
+        return {};
+      }
+    }
     case type::TBOperatorType::TB_EXP_OP: {
       return {op->input_tensors[0].layout};
     }
-    case type::TBOperatorType::TB_DIV_OP: {
+    case type::TBOperatorType::TB_DIV_OP:
+    case type::TBOperatorType::TB_ADD_OP:
+    case type::TBOperatorType::TB_CONCAT_0_OP:
+    case type::TBOperatorType::TB_CONCAT_1_OP:
+    case type::TBOperatorType::TB_CONCAT_2_OP: {
       return {op->input_tensors[0].layout};
     }
     case type::TBOperatorType::TB_REDUCTION_0_OP:
@@ -699,7 +746,10 @@ void KernelGraphGenerator::optimize_layout(
   }
 
   for (layout::DmemLayout layout :
-       {layout::DmemRowMajor /*, layout::DmemColumnMajor*/}) {
+       {layout::DmemRowMajor, layout::DmemColumnMajor}) {
+    if (g.operators[op_idx]->op_type == type::KN_MATMUL_OP && layout != layout::DmemRowMajor) {
+      continue;
+    }
     g.operators[op_idx]->output_tensors[ts_idx].layout = layout;
     for (KNOperator *op : g.operators) {
       for (DTensor &dtensor : op->input_tensors) {
@@ -713,7 +763,7 @@ void KernelGraphGenerator::optimize_layout(
 }
 
 void KernelGraphGenerator::update_best_graph(kernel::Graph &g) {
-  std::cerr << "kernel graph candidate: " << json(g) << std::endl;
+  // std::cerr << "kernel graph candidate: " << json(g) << std::endl;
   ProfileResult result{0};
   for (auto op : g.operators) {
     ProfileResult op_result;
@@ -723,6 +773,7 @@ void KernelGraphGenerator::update_best_graph(kernel::Graph &g) {
   if (result.run_time < best_profile_result.run_time) {
     best_graph = json(g);
     best_profile_result = result;
+    save_checkpoint();
   }
   return;
 }

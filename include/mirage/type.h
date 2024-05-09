@@ -98,6 +98,7 @@ enum TBOperatorType {
   TB_CONCAT_1_OP = 2201,
   TB_CONCAT_2_OP = 2202,
   TB_CONCAT_LAST_OP_ID = 2210,
+  TB_CONCAT_THEN_MATMUL_OP = 2011,
   TB_CUSTOMIZED_OP = 2999
 };
 
@@ -118,6 +119,9 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
         {TB_REDUCTION_0_TO_DIMX_OP, "tb_reduction_0_to_dimx_op"},
         {TB_REDUCTION_1_TO_DIMX_OP, "tb_reduction_1_to_dimx_op"},
         {TB_REDUCTION_2_TO_DIMX_OP, "tb_reduction_2_to_dimx_op"},
+        {TB_CONCAT_0_OP, "tb_concat_0_op"},
+        {TB_CONCAT_1_OP, "tb_concat_1_op"},
+        {TB_CONCAT_2_OP, "tb_concat_2_op"},
         {TB_CONCAT_0_OP, "tb_concat_0_op"},
         {TB_CONCAT_1_OP, "tb_concat_1_op"},
         {TB_CONCAT_2_OP, "tb_concat_2_op"},

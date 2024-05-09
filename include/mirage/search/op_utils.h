@@ -38,6 +38,10 @@ std::shared_ptr<AlgebraicPattern>
                 std::shared_ptr<AlgebraicPattern> opd);
 std::shared_ptr<AlgebraicPattern>
     get_pattern(type::KNOperatorType op,
+                std::vector<DTensor> const &tensors,
+                std::vector<std::shared_ptr<AlgebraicPattern>> const &opds);
+std::shared_ptr<AlgebraicPattern>
+    get_pattern(type::KNOperatorType op,
                 DTensor const &input1,
                 DTensor const &input2,
                 std::shared_ptr<AlgebraicPattern> lhs,
@@ -48,24 +52,10 @@ std::shared_ptr<AlgebraicPattern>
                 STensor const &input2,
                 std::shared_ptr<AlgebraicPattern> lhs,
                 std::shared_ptr<AlgebraicPattern> rhs);
-
-template <typename OpType, typename TensorType>
-std::shared_ptr<AlgebraicPattern> get_pattern(
-    OpType op,
-    std::vector<TensorType> const &input_tensors,
-    std::vector<std::shared_ptr<AlgebraicPattern>> const &input_patterns) {
-  if (input_patterns.size() == 1) {
-    return get_pattern(op, input_tensors[0], input_patterns[0]);
-  }
-  if (input_tensors.size() == 2) {
-    return get_pattern(op,
-                       input_tensors[0],
-                       input_tensors[1],
-                       input_patterns[0],
-                       input_patterns[1]);
-  }
-  assert(false && "Unsupported op");
-}
+std::shared_ptr<AlgebraicPattern>
+    get_pattern(type::TBOperatorType op,
+                std::vector<STensor> const &tensors,
+                std::vector<std::shared_ptr<AlgebraicPattern>> const &opds);
 
 KNOperator *create_op(kernel::Graph &g,
                       type::KNOperatorType type,

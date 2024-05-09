@@ -70,14 +70,40 @@ int main(int argc, char **argv) {
   assert(ref_graph.operators.back()->output_tensors[0].has_same_fingerprint(
       graph.operators.back()->output_tensors[0]));
 
-  return 0;
   clock_t st = clock();
-  search::GeneratorConfig config = search::GeneratorConfig::get_default_config();
-  config.grid_dim_to_explore = {{40, 4, 1}, {40, 1, 1}};
+  search::GeneratorConfig config;
+  config.knop_to_explore = {
+    type::KN_MATMUL_OP,
+    type::KN_EXP_OP,
+    // type::KN_CUSTOMIZED_OP,
+  };
+  config.tbop_to_explore = {
+    type::TB_MATMUL_OP,
+    type::TB_EXP_OP,
+    type::TB_REDUCTION_1_TO_DIMX_OP,
+    type::TB_REDUCTION_2_TO_DIMX_OP,
+  };
+  config.imap_to_explore = {
+    {
+      {0, -1, -1},
+      {0, 2, -1},
+      {0, 1, -1},
+    }
+  };
+  config.omap_to_explore = {
+    {0, -1, -1},
+    {0, 1, -1},
+    {0, 2, -1},
+  };
+  config.grid_dim_to_explore = {{8, 4, 1}, {8, 16, 1}, {8, 32, 1}};
+  config.block_dim_to_explore = {{128, 1, 1}};
+  config.fmap_to_explore = {-1, 1, 2};
+  config.frange_to_explore = {4, 8, 16, 32};
+  config.reduction_dimx = 64;
   search::KernelGraphGenerator gen(
       ref_graph,
       config,
-      "checkpoint_multi_head_attn_inc_decode.json");
+      "checkpoint_moe.json");
   gen.generate_kernel_graphs();
 
   clock_t et = clock();

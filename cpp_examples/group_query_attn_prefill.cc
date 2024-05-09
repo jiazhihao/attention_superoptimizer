@@ -1,5 +1,6 @@
 #include "mirage/kernel/graph.h"
 #include "mirage/threadblock/graph.h"
+#include "mirage/search/search.h"
 #include "common.h"
 
 using namespace mirage;
@@ -109,5 +110,24 @@ int main(int argc, char **argv) {
     total_ms = total_ms + result.run_time;
   }
   printf("[2 Block Graphs] Total runtime = %.4lfms\n", total_ms);
+  return 0;
+
+  clock_t st = clock();
+  search::GeneratorConfig config =
+      search::GeneratorConfig::get_attention_default_config();
+  config.grid_dim_to_explore = {{2 * batch_size, 16, 4},
+                                {2 * batch_size, 8, 4},
+                                {2 * batch_size, 16, 1},
+                                {2 * batch_size, 8, 1}};
+  std::string checkpoint_file_name = "checkpoint_group_query_attn_prefill_bs" +
+                                     std::to_string(batch_size) + ".json";
+  search::KernelGraphGenerator gen(
+      ref_graph, config, checkpoint_file_name.data());
+  gen.generate_kernel_graphs();
+
+  clock_t et = clock();
+
+  printf("Search time = %.4lfsec\n", (float)(et - st) / CLOCKS_PER_SEC);
+
   return 0;
 }

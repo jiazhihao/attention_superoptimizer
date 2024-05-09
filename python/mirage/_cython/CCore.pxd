@@ -80,4 +80,5 @@ cdef extern from "mirage/search/search_c.h" namespace "mirage::search_c":
                              vector[MDim3] blockdims,
                              vector[int] fmaps,
                              vector[int] franges,
-                             const char * check_point_file_path)
+                             const char * check_point_file_path,
+                             const char * default_config)

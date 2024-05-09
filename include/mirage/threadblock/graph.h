@@ -48,6 +48,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ExecutionPlan,
                                    input_smem_layouts,
                                    output_map,
                                    forloop_range,
+                                   reduction_dimx,
                                    grid_dim,
                                    block_dim)
 

@@ -79,12 +79,42 @@ void generate_input_map_cand(std::vector<DTensor> const &tensors,
   }
 }
 
+bool is_valid_input_map(std::vector<DTensor> const &tensors,
+                        dim3 grid_dim,
+                        std::vector<int3> const &input_maps) {
+  if (tensors.size() != input_maps.size()) {
+    return false;
+  }
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    DTensor const &tensor = tensors[i];
+    int3 input_map = input_maps[i];
+    if (tensor.num_dims <= input_map.x || tensor.num_dims <= input_map.y ||
+        tensor.num_dims <= input_map.z) {
+      return false;
+    }
+    if ((input_map.x != -1 && tensor.dim[input_map.x] % grid_dim.x != 0) ||
+        (input_map.y != -1 && tensor.dim[input_map.y] % grid_dim.y != 0) ||
+        (input_map.z != -1 && tensor.dim[input_map.z] % grid_dim.z != 0)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 std::vector<std::vector<int3>>
     DimStrategy::get_input_map_cand(std::vector<DTensor> const &tensors,
                                     dim3 grid_dim) {
   std::vector<std::vector<int3>> results;
-  generate_input_map_cand(
-      tensors, grid_dim, config.imap_to_explore, {}, results);
+  if (config.imap_to_explore.empty()) {
+    for (auto const &input_maps : config.imap_comb_to_explore) {
+      if (is_valid_input_map(tensors, grid_dim, input_maps)) {
+        results.push_back(input_maps);
+      }
+    }
+  } else {
+    generate_input_map_cand(
+        tensors, grid_dim, config.imap_to_explore, {}, results);
+  }
   return results;
 }
 
@@ -202,47 +232,47 @@ std::vector<std::vector<int>> DimStrategy::get_binary_input(int num_tensors) {
   return result;
 }
 
+void get_nary_input(int n,
+                    int num_tensors,
+                    std::vector<int> &cur,
+                    std::vector<std::vector<int>> &result) {
+  if (cur.size() == n) {
+    result.push_back(cur);
+    return;
+  }
+  for (int i = 0; i < num_tensors; ++i) {
+    if (!contains(cur, i)) {
+      cur.push_back(i);
+      get_nary_input(n, num_tensors, cur, result);
+      cur.pop_back();
+    }
+  }
+}
+
+std::vector<std::vector<int>> DimStrategy::get_nary_input(int num_tensors,
+                                                          int n) {
+  std::vector<std::vector<int>> result;
+  std::vector<int> cur;
+  mirage::search::get_nary_input(n, num_tensors, cur, result);
+  return result;
+}
+
 std::vector<std::vector<int>> DimStrategy::get_customized_input_cand_idx(
     std::vector<DTensor> const &all_input,
     std::vector<int> const &open_tensor_idx) {
 
   int num_inputs = all_input.size();
 
-  int opt_level = 0;
-  if (opt_level == 0)
-  {
-    if (all_input.size() == 3) {
-      return {{0, 1, 2}};
-    } else {
-      return {{num_inputs - 2, num_inputs - 1}};
-    }
-  } else if (opt_level == 1) {
-    std::vector<std::vector<int>> results {{0, 1}, {0, 1, 2}};
-    if (num_inputs >= 4) {
-      results.push_back({2, num_inputs - 1});
-    }
-    if (num_inputs >= 5) {
-      results.push_back({num_inputs - 2, num_inputs - 1});
-      // results.push_back({2, num_inputs - 2, num_inputs - 1});
-    }
-    return results;
+  if (contains(config.tbop_to_explore,
+                type::TBOperatorType::TB_CONCAT_THEN_MATMUL_OP) &&
+      all_input.size() == 4) {
+    return {{0, 1, 2, 3}};
   }
-
-  std::vector<std::vector<int>> results;
-
-  for (uint bitmap = 1; bitmap < (1u << open_tensor_idx.size()); ++bitmap) {
-    std::vector<int> input_idx;
-    for (size_t i = 0; i < open_tensor_idx.size(); ++i) {
-      if (bitmap >> i & 1) {
-        input_idx.push_back(open_tensor_idx[i]);
-      }
-    }
-    if (input_idx.size() > 1 && input_idx.size() <= MAX_NUM_THREADBLOCK_INPUT) {
-      results.push_back(input_idx);
-    }
+  if (all_input.size() == 3) {
+    return {{0, 1, 2}};
+  } else {
+    return {{num_inputs - 2, num_inputs - 1}};
   }
-
-  return results;
 }
 
 } // namespace search

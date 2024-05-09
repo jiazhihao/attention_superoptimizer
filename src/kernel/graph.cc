@@ -97,6 +97,16 @@ void from_json(json const &j, Graph &g) {
         guid_mapping[output.guid] = guidO;
         break;
       }
+      case type::KNOperatorType::KN_ADD_OP: {
+        size_t guidA, guidB, guidO;
+        jop.at("input_tensors")[0].at("guid").get_to(guidA);
+        jop.at("input_tensors")[1].at("guid").get_to(guidB);
+        jop.at("output_tensors")[0].at("guid").get_to(guidO);
+        DTensor const &output =
+            g.add(get_tensor_from_guid(guidA), get_tensor_from_guid(guidB));
+        guid_mapping[output.guid] = guidO;
+        break;
+      }
       case type::KNOperatorType::KN_REDUCTION_0_OP:
       case type::KNOperatorType::KN_REDUCTION_1_OP:
       case type::KNOperatorType::KN_REDUCTION_2_OP: {
@@ -123,6 +133,22 @@ void from_json(json const &j, Graph &g) {
           size_t guidO;
           jop.at("output_tensors")[i].at("guid").get_to(guidO);
           guid_mapping[outputs[i].guid] = guidO;
+        }
+
+        // Synchronize layouts with bgraph
+        KNCustomizedOp *op = dynamic_cast<KNCustomizedOp *>(g.operators.back());
+        assert(op->bgraph.operators.size() == jop.at("bgraph").at("operators").size());
+        for (size_t i = 0; i < op->bgraph.operators.size(); ++i) {
+          threadblock::TBOperator *bop = op->bgraph.operators[i];
+          json jbop = jop.at("bgraph").at("operators")[i];
+          assert(bop->input_tensors.size() == jbop.at("input_tensors").size());
+          assert(bop->output_tensors.size() == jbop.at("output_tensors").size());
+          for (size_t j = 0; j < bop->input_tensors.size(); ++j) {
+            jbop.at("input_tensors")[j].at("layout").get_to(bop->input_tensors[j].layout);
+          }
+          for (size_t j = 0; j < bop->output_tensors.size(); ++j) {
+            jbop.at("output_tensors")[j].at("layout").get_to(bop->output_tensors[j].layout);
+          }
         }
         break;
       }

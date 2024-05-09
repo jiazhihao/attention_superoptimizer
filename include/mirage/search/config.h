@@ -25,27 +25,35 @@ struct GeneratorConfig {
   std::vector<type::KNOperatorType> knop_to_explore;
   std::vector<type::TBOperatorType> tbop_to_explore;
   std::vector<int3> imap_to_explore;
+  std::vector<std::vector<int3>> imap_comb_to_explore;
   std::vector<int3> omap_to_explore;
   std::vector<dim3> grid_dim_to_explore;
   std::vector<dim3> block_dim_to_explore;
   std::vector<int> fmap_to_explore;
   std::vector<int> frange_to_explore;
   std::vector<layout::SmemLayout> smem_layout_to_explore;
+  int reduction_dimx;
+
+  void print_config() const;
 
   static GeneratorConfig get_default_config();
-  void print_config() const;
+  static GeneratorConfig get_attention_default_config();
+  static GeneratorConfig get_mlp_default_config();
+  static GeneratorConfig get_lora_default_config();
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(GeneratorConfig,
                                    knop_to_explore,
                                    tbop_to_explore,
                                    imap_to_explore,
+                                   imap_comb_to_explore,
                                    omap_to_explore,
                                    grid_dim_to_explore,
                                    block_dim_to_explore,
                                    fmap_to_explore,
                                    frange_to_explore,
-                                   smem_layout_to_explore)
+                                   smem_layout_to_explore,
+                                   reduction_dimx)
 
 } // namespace search
 } // namespace mirage

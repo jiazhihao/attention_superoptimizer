@@ -101,6 +101,11 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         bgraph.exp(my_inputs[0]);
         break;
       }
+      case mirage::type::TB_ADD_OP: {
+        assert(my_inputs.size() == 2);
+        bgraph.add(my_inputs[0], my_inputs[1]);
+        break;
+      }
       case mirage::type::TB_DIV_OP: {
         assert(my_inputs.size() == 2);
         bgraph.div(my_inputs[0], my_inputs[1]);
@@ -187,6 +192,7 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
   plan.grid_dim = _graph.grid_dim;
   plan.block_dim = _graph.block_dim;
   plan.forloop_range = _graph.forloop_range;
+  plan.reduction_dimx = _graph.reduction_dimx;
 
   for (auto const &op : _graph.operators) {
     std::vector<STensor> my_inputs;
@@ -254,6 +260,11 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         bgraph.exp(my_inputs[0]);
         break;
       }
+      case mirage::type::TB_ADD_OP: {
+        assert(my_inputs.size() == 2);
+        bgraph.add(my_inputs[0], my_inputs[1]);
+        break;
+      }
       case mirage::type::TB_DIV_OP: {
         assert(my_inputs.size() == 2);
         bgraph.div(my_inputs[0], my_inputs[1]);
@@ -273,6 +284,14 @@ KNCustomizedOp::KNCustomizedOp(std::vector<DTensor> const &_inputs,
         assert(my_inputs.size() == 1);
         int reduce_dim = op->op_type - mirage::type::TB_REDUCTION_0_TO_DIMX_OP;
         bgraph.reduction_to_dimx(my_inputs[0], reduce_dim);
+        break;
+      }
+      case mirage::type::TB_CONCAT_0_OP:
+      case mirage::type::TB_CONCAT_1_OP:
+      case mirage::type::TB_CONCAT_2_OP: {
+        assert(my_inputs.size() == 2);
+        int concat_dim = op->op_type - mirage::type::TB_CONCAT_FIRST_OP_ID;
+        bgraph.concat(my_inputs[0], my_inputs[1], concat_dim);
         break;
       }
       default: {

@@ -235,7 +235,7 @@ cdef class PyGraph:
         cfilepath = py_byte_string
         self.p_graph.generate_triton_program(cfilepath)
 
-def optimize(PyGraph input_graph, *, list imaps = None, list omaps = None, list griddims = None, list blockdims = None, list fmaps = None, list franges = None, str previous_checkpoint = None):
+def optimize(PyGraph input_graph, *, list imaps = None, list omaps = None, list griddims = None, list blockdims = None, list fmaps = None, list franges = None, str previous_checkpoint = None, str default_config = None):
     # set cimaps
     cdef vector[MInt3] cimaps
     cimaps.resize(0)
@@ -295,7 +295,12 @@ def optimize(PyGraph input_graph, *, list imaps = None, list omaps = None, list 
     if previous_checkpoint is not None:
         py_byte_string = previous_checkpoint.encode('UTF-8')
         cfilepath = py_byte_string
-    num = cython_optimize(input_graph.p_graph, 1024, cnewgraphs, cimaps, comaps, cgriddims, cblockdims, cfmaps, cfranges, cfilepath)
+    # convert config description
+    cdef char* cconfig = NULL
+    if default_config is not None:
+        py_byte_string = default_config.encode('UTF-8')
+        cconfig = py_byte_string
+    num = cython_optimize(input_graph.p_graph, 1024, cnewgraphs, cimaps, comaps, cgriddims, cblockdims, cfmaps, cfranges, cfilepath, cconfig)
     new_graphs = list()
     for i in range(num):
         ptr = ctypes.cast(<unsigned long long>cnewgraphs[i], ctypes.c_void_p)
