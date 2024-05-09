@@ -22,6 +22,7 @@ int cython_optimize(mirage::kernel::Graph const *input_graph,
                     std::vector<MDim3> block_dim_to_explore,
                     std::vector<int> fmap_to_explore,
                     std::vector<int> frange_to_explore,
-                    const char *check_point_file_path);
+                    const char *check_point_file_path,
+                    const char *default_config);
 } // namespace search_c
 } // namespace mirage

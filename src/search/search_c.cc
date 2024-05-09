@@ -20,7 +20,8 @@ int cython_optimize(mirage::kernel::Graph const *input_graph,
                     std::vector<MDim3> block_dim_to_explore,
                     std::vector<int> fmap_to_explore,
                     std::vector<int> frange_to_explore,
-                    const char *check_point_file_path) {
+                    const char *check_point_file_path,
+                    const char *default_config) {
   // Load from a checkpoint
   if (check_point_file_path != nullptr) {
     search::KernelGraphGenerator gen(check_point_file_path);
@@ -39,6 +40,15 @@ int cython_optimize(mirage::kernel::Graph const *input_graph,
     return num;
   } else {
     search::GeneratorConfig config = search::GeneratorConfig::get_default_config();
+    if (default_config != nullptr) {
+      if (!strcmp(default_config, "attention")) {
+        config = search::GeneratorConfig::get_attention_default_config();
+      } else if (!strcmp(default_config, "lora")) {
+        config = search::GeneratorConfig::get_lora_default_config();
+      } else if (!strcmp(default_config, "mlp")) {
+        config = search::GeneratorConfig::get_mlp_default_config();
+      }
+    }
     // Customized imaps
     if (imap_to_explore.size() > 0) {
       config.imap_to_explore.clear();
