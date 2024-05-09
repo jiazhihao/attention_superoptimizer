@@ -7,35 +7,6 @@
 using namespace mirage;
 using namespace mirage::search;
 
-bool has_no_small_tensor(kernel::Graph const &g) {
-  for (auto const &op : g.operators) {
-    if (op->op_type == type::KN_CUSTOMIZED_OP) {
-      for (auto const &bop : static_cast<kernel::KNCustomizedOp *>(op)->bgraph.operators) {
-        if (bop->op_type == type::TB_OUTPUT_OP) {
-          for (auto const &output : bop->output_tensors) {
-            for (int d = output.num_dims - 2; d < output.num_dims; ++d) {
-              if (output.dim[d] < 8) {
-                std::cerr << output.dim[0] << ", " << output.dim[1] << ", " << output.dim[2] << std::endl;
-                return false;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  return true;
-}
-
-bool filter(kernel::Graph const &g) {
-  for (auto const &op : g.operators) {
-    if (op->op_type == type::KN_CUSTOMIZED_OP) {
-      return false;
-    }
-  }
-  return true;
-}
-
 int main(int argc, char **argv) {
   if (argc < 2) {
     std::cerr << "Missing checkpoint file" << std::endl;
