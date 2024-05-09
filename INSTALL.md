@@ -46,8 +46,9 @@ mkdir build
 cd build
 cmake ..
 make -j
+export LD_LIBRARY_PATH=/path-to-mirage/deps/z3/build:LD_LIBRARY_PATH
 ```
-This will install Z3 in the `/path-to-mirage/deps/z3/build` folder
+This will install Z3 in the `/path-to-mirage/deps/z3/build` folder and add the fold into `LD_LIBRARY_PATH`.
 
 ### Build the Mirage runtime library
 Second, you will need to build the Mirage runtime library. You will need to set `CUDACXX` and `Z3_DIR` to let cmake find the paths to CUDA and Z3 librarires.
