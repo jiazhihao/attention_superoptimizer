@@ -1,7 +1,6 @@
 # Mirage: A Multi-level Superoptimizer for Tensor Algebra
 
-Mirage is a tensor algebra superoptimizer that automatically discovers and verifies sophisticated tensor program optimizations, most of which require joint optimization of algebraic transformations, schedule transformations, and discovery of new custom kernels.
-For an input DNN model, 
+Mirage is a tensor algebra superoptimizer that automatically discovers highly-optimized tensor programs for DNNs. Mirage automatically identifies and verifies sophisticated optimizations, many of which require joint optimization at the kernel, thread block, and thread levels of the GPU compute hierarchy. For an input DNN, Mirage searches the space of potential tensor programs that are functionally equivalent to the DNN to discover highly-optimized candidates. This approach allows Mirage to find new custom kernels that outperform existing expert-designed ones. 
 
 ## Installation
 
@@ -11,7 +10,7 @@ The quickest way to try Mirage is through our prebuilt [docker images](INSTALL.m
 
 As a tensor algebra superoptimizer, Mirage can be used to optimize arbitrary DNNs. We use two examples to show how to use Mirage to automatically generate CUDA kernels for group-query attention (GQA) in LLAMA-3-70B and low-rank adapter (LoRA). These Mirage-generated kernels outperform existing manually-optimized kernels.
 
-### Superoptimize group-query attention (GQA)
+### Superoptimizing group-query attention (GQA)
 
 The follow code snippet shows how to use Mirage to automatically generate highly-optimized CUDA programs for group-query attention (GQA) in LLAMA-3-70B. We assume the model is served in half precision and is tensor model parallelized across 4 GPUs to fit in GPU device memory. Therefore, the GQA operator computes attention across 8 query heads and 2 key-value heads.
 
